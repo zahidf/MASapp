@@ -15,6 +15,7 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
+import { PrayerName, PrayerTime } from "@/types/prayer";
 import {
   extractPrayersFromTime,
   getCurrentPrayerAndNext,
@@ -25,9 +26,9 @@ import {
 export default function TodayScreen() {
   const colorScheme = useColorScheme();
   const { prayerTimes, refreshData, isLoading } = usePrayerTimes();
-  const [todaysPrayers, setTodaysPrayers] = useState(null);
-  const [currentPrayer, setCurrentPrayer] = useState(null);
-  const [nextPrayer, setNextPrayer] = useState(null);
+  const [todaysPrayers, setTodaysPrayers] = useState<PrayerTime | null>(null);
+  const [currentPrayer, setCurrentPrayer] = useState<PrayerName | null>(null);
+  const [nextPrayer, setNextPrayer] = useState<PrayerName | null>(null);
   const [timeUntilNext, setTimeUntilNext] = useState("");
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function TodayScreen() {
         setNextPrayer(next);
 
         // Update time until next prayer
-        const nextPrayerTime = todayData[`${next}_begins`];
+        const nextPrayerTime = (todayData as any)[`${next}_begins`];
         setTimeUntilNext(getTimeUntilNext(nextPrayerTime));
       }
     };

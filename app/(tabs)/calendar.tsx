@@ -9,13 +9,16 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
+import { PrayerTime } from "@/types/prayer";
 import { getMonthName } from "@/utils/dateHelpers";
 
 export default function CalendarScreen() {
   const colorScheme = useColorScheme();
   const { prayerTimes } = usePrayerTimes();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedDayData, setSelectedDayData] = useState(null);
+  const [selectedDayData, setSelectedDayData] = useState<PrayerTime | null>(
+    null
+  );
   const [showDayDetail, setShowDayDetail] = useState(false);
 
   const currentMonth = selectedDate.getMonth();
