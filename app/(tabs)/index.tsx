@@ -1,75 +1,224 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import {
+  RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { PrayerTimeCard } from "@/components/prayer/PrayerTimeCard";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { Colors } from "@/constants/Colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { usePrayerTimes } from "@/hooks/usePrayerTimes";
+import {
+  extractPrayersFromTime,
+  getCurrentPrayerAndNext,
+  getTimeUntilNext,
+  getTodayString,
+} from "@/utils/dateHelpers";
 
-export default function HomeScreen() {
+export default function TodayScreen() {
+  const colorScheme = useColorScheme();
+  const { prayerTimes, refreshData, isLoading } = usePrayerTimes();
+  const [todaysPrayers, setTodaysPrayers] = useState(null);
+  const [currentPrayer, setCurrentPrayer] = useState(null);
+  const [nextPrayer, setNextPrayer] = useState(null);
+  const [timeUntilNext, setTimeUntilNext] = useState("");
+
+  useEffect(() => {
+    const updateTodaysPrayers = () => {
+      const today = getTodayString();
+      const todayData = prayerTimes.find((pt) => pt.d_date === today);
+
+      if (todayData) {
+        setTodaysPrayers(todayData);
+        const { current, next } = getCurrentPrayerAndNext(todayData);
+        setCurrentPrayer(current);
+        setNextPrayer(next);
+
+        // Update time until next prayer
+        const nextPrayerTime = todayData[`${next}_begins`];
+        setTimeUntilNext(getTimeUntilNext(nextPrayerTime));
+      }
+    };
+
+    updateTodaysPrayers();
+    const interval = setInterval(updateTodaysPrayers, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [prayerTimes]);
+
+  const handleShare = async () => {
+    if (!todaysPrayers) return;
+
+    const prayers = extractPrayersFromTime(todaysPrayers);
+    const date = new Date(todaysPrayers.d_date);
+    const dateStr = date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    let message = `Masjid Abubakr Siddique Prayer Times\n${dateStr}\n\n`;
+    prayers.forEach((prayer) => {
+      if (prayer.jamah) {
+        message += `${prayer.name}: ${prayer.begins} (Jamah: ${prayer.jamah})\n`;
+      } else {
+        message += `${prayer.name}: ${prayer.begins}\n`;
+      }
+    });
+
+    try {
+      await Share.share({
+        message,
+        title: "Prayer Times",
+      });
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
+  };
+
+  if (!todaysPrayers) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText>Loading prayer times...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const prayers = extractPrayersFromTime(todaysPrayers);
+  const todayDate = new Date(todaysPrayers.d_date);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={isLoading} onRefresh={refreshData} />
+      }
+    >
+      <ThemedView style={styles.header}>
+        <View>
+          <ThemedText type="title" style={styles.mosqueeName}>
+            Masjid Abubakr Siddique
+          </ThemedText>
+          <ThemedText style={styles.date}>
+            {todayDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
+          </ThemedText>
+        </View>
+        <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+          <IconSymbol
+            name="square.and.arrow.up"
+            size={24}
+            color={Colors[colorScheme ?? "light"].text}
+          />
+        </TouchableOpacity>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
+
+      {nextPrayer && (
+        <ThemedView style={styles.nextPrayerCard}>
+          <ThemedText style={styles.nextPrayerLabel}>Next Prayer</ThemedText>
+          <ThemedText type="title" style={styles.nextPrayerName}>
+            {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
+          </ThemedText>
+          <ThemedText style={styles.timeUntil}>in {timeUntilNext}</ThemedText>
+        </ThemedView>
+      )}
+
+      <ThemedView style={styles.prayersList}>
+        {prayers.map((prayer, index) => (
+          <PrayerTimeCard
+            key={index}
+            prayer={prayer}
+            isActive={
+              currentPrayer === prayer.name.toLowerCase() ||
+              (currentPrayer === "sunrise" && prayer.name === "Sunrise")
+            }
+            isNext={
+              nextPrayer === prayer.name.toLowerCase() ||
+              (nextPrayer === "sunrise" && prayer.name === "Sunrise")
+            }
+          />
+        ))}
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+
+      {todaysPrayers.is_ramadan === 1 && (
+        <ThemedView style={styles.ramadanBadge}>
+          <ThemedText style={styles.ramadanText}>🌙 Ramadan</ThemedText>
+        </ThemedView>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: 20,
+    paddingTop: 60,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  mosqueeName: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  date: {
+    fontSize: 16,
+    opacity: 0.7,
+  },
+  shareButton: {
+    padding: 8,
+  },
+  nextPrayerCard: {
+    margin: 20,
+    marginTop: 0,
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: "#1B5E20",
+    alignItems: "center",
+  },
+  nextPrayerLabel: {
+    color: "#fff",
+    opacity: 0.8,
+    fontSize: 14,
+  },
+  nextPrayerName: {
+    color: "#fff",
+    fontSize: 28,
+    marginVertical: 4,
+  },
+  timeUntil: {
+    color: "#fff",
+    fontSize: 18,
+  },
+  prayersList: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  ramadanBadge: {
+    margin: 20,
+    marginTop: 0,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#F9A825",
+    alignItems: "center",
+  },
+  ramadanText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
