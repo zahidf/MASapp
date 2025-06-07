@@ -2,12 +2,16 @@ import { User } from "@/types/prayer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, ReactNode, useEffect, useState } from "react";
 
+// Development mode - set to false for production
+const DEV_MODE = __DEV__; // This uses React Native's built-in __DEV__ flag
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  devLogin: () => Promise<void>; // Development only
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await AsyncStorage.getItem("@user_data");
       if (userData) {
         setUser(JSON.parse(userData));
+      } else if (DEV_MODE) {
+        // Auto-login in development mode if no user data exists
+        const devUser: User = {
+          id: "dev-admin",
+          email: "dev@admin.local",
+          name: "Dev Admin",
+          isAdmin: true,
+        };
+        await saveUser(devUser);
       }
     } catch (error) {
       console.error("Error loading user:", error);
@@ -47,7 +60,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Mock login for development
     // In production, this would call your authentication API
 
-    // For development, accept any email with 'admin' in it as admin
+    if (DEV_MODE) {
+      // In dev mode, any email/password combo works
+      const isAdmin =
+        email.toLowerCase().includes("admin") ||
+        email.toLowerCase().includes("dev");
+
+      const mockUser: User = {
+        id: Date.now().toString(),
+        email,
+        name: email.split("@")[0],
+        isAdmin,
+      };
+
+      await saveUser(mockUser);
+      return;
+    }
+
+    // Production logic would go here
+    // For now, still using mock logic
     const isAdmin = email.toLowerCase().includes("admin");
 
     const mockUser: User = {
@@ -64,15 +95,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Mock Google login for development
     // In production, implement actual Google SSO
 
-    // For now, simulate with a test admin user
     const mockUser: User = {
-      id: "google-1",
-      email: "admin@masjidabubakr.com",
-      name: "Admin User",
+      id: "google-" + Date.now(),
+      email: DEV_MODE ? "dev.admin@gmail.com" : "admin@masjidabubakr.com",
+      name: DEV_MODE ? "Dev Admin (Google)" : "Admin User",
       isAdmin: true,
     };
 
     await saveUser(mockUser);
+  };
+
+  const devLogin = async () => {
+    if (!DEV_MODE) {
+      throw new Error("Development login only available in development mode");
+    }
+
+    const devUser: User = {
+      id: "dev-bypass",
+      email: "bypass@dev.local",
+      name: "Dev Bypass User",
+      isAdmin: true,
+    };
+
+    await saveUser(devUser);
   };
 
   const logout = async () => {
@@ -93,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         loginWithGoogle,
         logout,
+        devLogin,
       }}
     >
       {children}

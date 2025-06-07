@@ -46,17 +46,22 @@ export default function TabLayout() {
           ),
         }}
       />
-      {user?.isAdmin && (
-        <Tabs.Screen
-          name="admin"
-          options={{
-            title: "Admin",
-            tabBarIcon: ({ color }) => (
-              <IconSymbol size={28} name="person.badge.key" color={color} />
-            ),
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: "Admin",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="person.badge.key" color={color} />
+          ),
+          // Hide the tab when user is not admin, but keep the screen accessible
+          tabBarStyle: user?.isAdmin
+            ? Platform.select({
+                ios: { position: "absolute" },
+                default: {},
+              })
+            : { display: "none" },
+        }}
+      />
     </Tabs>
   );
 }
