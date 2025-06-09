@@ -24,9 +24,12 @@ export default function RootLayout() {
   useEffect(() => {
     // Load initial prayer times data
     loadPrayerTimes()
-      .then(() => setIsDataLoaded(true))
+      .then(() => {
+        console.log("Prayer times loaded successfully in root layout");
+        setIsDataLoaded(true);
+      })
       .catch((error) => {
-        console.error("Failed to load prayer times:", error);
+        console.error("Failed to load prayer times in root layout:", error);
         setIsDataLoaded(true); // Continue with error
       });
   }, []);
@@ -41,16 +44,16 @@ export default function RootLayout() {
         <ThemeProvider
           value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
-          <Stack>
+          <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen
-              name="auth/login"
+              name="auth"
               options={{
-                title: "Login",
                 presentation: "modal",
+                headerShown: false,
               }}
             />
-            <Stack.Screen name="+not-found" />
+            <Stack.Screen name="+not-found" options={{ headerShown: true }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

@@ -2,7 +2,9 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import {
+  Animated,
   Dimensions,
+  Platform,
   RefreshControl,
   ScrollView,
   Share,
@@ -37,6 +39,35 @@ export default function TodayScreen() {
   const [nextPrayer, setNextPrayer] = useState<PrayerName | null>(null);
   const [timeUntilNext, setTimeUntilNext] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [pulseAnim] = useState(new Animated.Value(1));
+
+  // Animations
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Pulse animation for current prayer
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   // Update current time every minute
   useEffect(() => {
@@ -49,49 +80,28 @@ export default function TodayScreen() {
 
   useEffect(() => {
     const updateTodaysPrayers = () => {
-      console.log(
-        "updateTodaysPrayers called, prayerTimes length:",
-        prayerTimes?.length
-      );
-
       if (!Array.isArray(prayerTimes) || prayerTimes.length === 0) {
-        console.log("No prayer times available");
         setTodaysPrayers(null);
         return;
       }
 
       const today = getTodayString();
-      console.log("Looking for prayer times for:", today);
-
       const todayData = prayerTimes.find((pt) => pt && pt.d_date === today);
-      console.log("Found today data:", !!todayData, todayData?.d_date);
 
       if (todayData && typeof todayData === "object") {
         setTodaysPrayers(todayData);
 
         try {
           const { current, next } = getCurrentPrayerAndNext(todayData);
-          console.log("Current prayer:", current, "Next prayer:", next);
-
           setCurrentPrayer(current);
           setNextPrayer(next);
 
-          // Get the time property name for the next prayer
           const nextPrayerTimeProperty = getNextPrayerTimeProperty(next);
-          console.log("Next prayer time property:", nextPrayerTimeProperty);
-
           if (nextPrayerTimeProperty && todayData[nextPrayerTimeProperty]) {
             const nextPrayerTime = todayData[nextPrayerTimeProperty] as string;
-            console.log("Next prayer time:", nextPrayerTime);
-
             const timeUntil = getTimeUntilNext(nextPrayerTime);
             setTimeUntilNext(timeUntil);
           } else {
-            console.warn(
-              "Could not find time for next prayer:",
-              next,
-              nextPrayerTimeProperty
-            );
             setTimeUntilNext("Unknown");
           }
         } catch (error) {
@@ -101,18 +111,16 @@ export default function TodayScreen() {
           setTimeUntilNext("Unknown");
         }
       } else {
-        console.log("No prayer data found for today");
         setTodaysPrayers(null);
       }
     };
 
     updateTodaysPrayers();
-    const interval = setInterval(updateTodaysPrayers, 60000); // Update every minute
+    const interval = setInterval(updateTodaysPrayers, 60000);
 
     return () => clearInterval(interval);
   }, [prayerTimes]);
 
-  // Helper function to get the correct property name for prayer times
   const getNextPrayerTimeProperty = (
     prayerName: PrayerName
   ): keyof PrayerTime | null => {
@@ -130,16 +138,12 @@ export default function TodayScreen() {
       case "isha":
         return "isha_begins";
       default:
-        console.warn("Unknown prayer name:", prayerName);
         return null;
     }
   };
 
   const handleShare = async () => {
-    if (!todaysPrayers) {
-      console.warn("No prayer times to share");
-      return;
-    }
+    if (!todaysPrayers) return;
 
     try {
       const prayers = extractPrayersFromTime(todaysPrayers);
@@ -186,7 +190,14 @@ export default function TodayScreen() {
     });
   };
 
-  // Show "no data" state when prayer times haven't been uploaded yet
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  // Enhanced loading/no data states
   if (!Array.isArray(prayerTimes) || prayerTimes.length === 0) {
     return (
       <View style={styles.container}>
@@ -196,7 +207,7 @@ export default function TodayScreen() {
         <LinearGradient
           colors={
             colorScheme === "dark"
-              ? ["#FFFF00", "#2E7D32", "#388E3C"]
+              ? ["#1B5E20", "#2E7D32", "#388E3C"]
               : ["#E8F5E9", "#C8E6C9", "#A5D6A7"]
           }
           style={styles.gradientHeader}
@@ -210,15 +221,20 @@ export default function TodayScreen() {
           </View>
 
           <View style={styles.headerContent}>
-            <ThemedText type="title" style={styles.mosqueNameEnhanced}>
+            <ThemedText style={styles.greetingText}>{getGreeting()}</ThemedText>
+            <ThemedText style={styles.mosqueNameEnhanced}>
               Masjid Abubakr Siddique
             </ThemedText>
-            <ThemedText style={styles.currentTimeText}>
-              {formatCurrentTime()}
-            </ThemedText>
-            <ThemedText style={styles.dateTextEnhanced}>
-              {formatCurrentDate()}
-            </ThemedText>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <ThemedText style={styles.currentTimeText}>
+                {formatCurrentTime()}
+              </ThemedText>
+              <ThemedText style={styles.dateTextEnhanced}>
+                {formatCurrentDate()}
+              </ThemedText>
+            </View>
           </View>
         </LinearGradient>
 
@@ -229,38 +245,39 @@ export default function TodayScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <ThemedView style={styles.noDataCardEnhanced}>
-            <View style={styles.noDataIconContainer}>
-              <IconSymbol
-                name="calendar"
-                size={48}
-                color={Colors[colorScheme ?? "light"].text}
-              />
-            </View>
-            <ThemedText type="subtitle" style={styles.noDataTitle}>
-              Prayer Times Not Available
-            </ThemedText>
-            <ThemedText style={styles.noDataText}>
-              Prayer times haven't been uploaded yet. Please contact the mosque
-              administration to upload the prayer timetable.
-            </ThemedText>
-            <TouchableOpacity
-              style={styles.refreshButtonEnhanced}
-              onPress={refreshData}
-              disabled={isLoading}
-            >
-              <IconSymbol name="arrow.clockwise" size={20} color="#fff" />
-              <ThemedText style={styles.refreshButtonText}>
-                {isLoading ? "Checking..." : "Refresh"}
+          <Animated.View style={{ opacity: fadeAnim }}>
+            <ThemedView style={styles.noDataCardEnhanced}>
+              <View style={styles.noDataIconContainer}>
+                <IconSymbol
+                  name="calendar"
+                  size={48}
+                  color={Colors[colorScheme ?? "light"].primary}
+                />
+              </View>
+              <ThemedText type="subtitle" style={styles.noDataTitle}>
+                Prayer Times Not Available
               </ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
+              <ThemedText style={styles.noDataText}>
+                Prayer times haven't been uploaded yet. Please contact the
+                mosque administration to upload the prayer timetable.
+              </ThemedText>
+              <TouchableOpacity
+                style={styles.refreshButtonEnhanced}
+                onPress={refreshData}
+                disabled={isLoading}
+              >
+                <IconSymbol name="arrow.clockwise" size={20} color="#fff" />
+                <ThemedText style={styles.refreshButtonText}>
+                  {isLoading ? "Checking..." : "Refresh"}
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </Animated.View>
         </ScrollView>
       </View>
     );
   }
 
-  // Show "no data for today" if we have prayer times but not for today
   if (!todaysPrayers) {
     return (
       <View style={styles.container}>
@@ -270,7 +287,7 @@ export default function TodayScreen() {
         <LinearGradient
           colors={
             colorScheme === "dark"
-              ? ["#FFFF00", "#2E7D32", "#388E3C"]
+              ? ["#1B5E20", "#2E7D32", "#388E3C"]
               : ["#E8F5E9", "#C8E6C9", "#A5D6A7"]
           }
           style={styles.gradientHeader}
@@ -284,15 +301,20 @@ export default function TodayScreen() {
           </View>
 
           <View style={styles.headerContent}>
-            <ThemedText type="title" style={styles.mosqueNameEnhanced}>
+            <ThemedText style={styles.greetingText}>{getGreeting()}</ThemedText>
+            <ThemedText style={styles.mosqueNameEnhanced}>
               Masjid Abubakr Siddique
             </ThemedText>
-            <ThemedText style={styles.currentTimeText}>
-              {formatCurrentTime()}
-            </ThemedText>
-            <ThemedText style={styles.dateTextEnhanced}>
-              {formatCurrentDate()}
-            </ThemedText>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <ThemedText style={styles.currentTimeText}>
+                {formatCurrentTime()}
+              </ThemedText>
+              <ThemedText style={styles.dateTextEnhanced}>
+                {formatCurrentDate()}
+              </ThemedText>
+            </View>
           </View>
         </LinearGradient>
 
@@ -303,22 +325,24 @@ export default function TodayScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <ThemedView style={styles.noDataCardEnhanced}>
-            <View style={styles.noDataIconContainer}>
-              <IconSymbol
-                name="calendar"
-                size={48}
-                color={Colors[colorScheme ?? "light"].text}
-              />
-            </View>
-            <ThemedText type="subtitle" style={styles.noDataTitle}>
-              No Prayer Times for Today
-            </ThemedText>
-            <ThemedText style={styles.noDataText}>
-              Prayer times for today are not available. The timetable may need
-              to be updated.
-            </ThemedText>
-          </ThemedView>
+          <Animated.View style={{ opacity: fadeAnim }}>
+            <ThemedView style={styles.noDataCardEnhanced}>
+              <View style={styles.noDataIconContainer}>
+                <IconSymbol
+                  name="calendar"
+                  size={48}
+                  color={Colors[colorScheme ?? "light"].primary}
+                />
+              </View>
+              <ThemedText type="subtitle" style={styles.noDataTitle}>
+                No Prayer Times for Today
+              </ThemedText>
+              <ThemedText style={styles.noDataText}>
+                Prayer times for today are not available. The timetable may need
+                to be updated.
+              </ThemedText>
+            </ThemedView>
+          </Animated.View>
         </ScrollView>
       </View>
     );
@@ -332,7 +356,7 @@ export default function TodayScreen() {
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
 
-      {/* Enhanced Header with Gradient and Logo */}
+      {/* Enhanced Header with Better Animations */}
       <LinearGradient
         colors={
           colorScheme === "dark"
@@ -350,22 +374,25 @@ export default function TodayScreen() {
         </View>
 
         <View style={styles.headerContent}>
-          <ThemedText type="title" style={styles.mosqueNameEnhanced}>
+          <ThemedText style={styles.greetingText}>{getGreeting()}</ThemedText>
+          <ThemedText style={styles.mosqueNameEnhanced}>
             Masjid Abubakr Siddique
           </ThemedText>
-          <ThemedText style={styles.currentTimeText}>
-            {formatCurrentTime()}
-          </ThemedText>
-          <ThemedText style={styles.dateTextEnhanced}>
-            {formatCurrentDate()}
-          </ThemedText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <ThemedText style={styles.currentTimeText}>
+              {formatCurrentTime()}
+            </ThemedText>
+            <ThemedText style={styles.dateTextEnhanced}>
+              {formatCurrentDate()}
+            </ThemedText>
+          </View>
         </View>
 
         <TouchableOpacity
           onPress={handleShare}
           style={styles.shareButtonEnhanced}
         >
-          <IconSymbol name="square.and.arrow.up" size={24} color="#fff" />
+          <IconSymbol name="square.and.arrow.up" size={20} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -376,120 +403,145 @@ export default function TodayScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Enhanced Next Prayer Card */}
-        {nextPrayer && (
-          <LinearGradient
-            colors={["#1B5E20", "#2E7D32"]}
-            style={styles.nextPrayerCardEnhanced}
-          >
-            <View style={styles.nextPrayerContent}>
-              <View style={styles.nextPrayerIcon}>
-                <IconSymbol name="bell" size={32} color="#fff" />
+        <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Enhanced Next Prayer Card */}
+          {nextPrayer && (
+            <LinearGradient
+              colors={["#1B5E20", "#2E7D32"]}
+              style={styles.nextPrayerCardEnhanced}
+            >
+              <View style={styles.nextPrayerContent}>
+                <Animated.View
+                  style={[
+                    styles.nextPrayerIcon,
+                    {
+                      transform: [
+                        { scale: currentPrayer === nextPrayer ? pulseAnim : 1 },
+                      ],
+                    },
+                  ]}
+                >
+                  <IconSymbol name="bell.fill" size={32} color="#fff" />
+                </Animated.View>
+                <View style={styles.nextPrayerTextContainer}>
+                  <ThemedText style={styles.nextPrayerLabel}>
+                    Next Prayer
+                  </ThemedText>
+                  <ThemedText type="title" style={styles.nextPrayerName}>
+                    {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
+                  </ThemedText>
+                  <ThemedText style={styles.timeUntilEnhanced}>
+                    in {timeUntilNext}
+                  </ThemedText>
+                </View>
               </View>
-              <View style={styles.nextPrayerTextContainer}>
-                <ThemedText style={styles.nextPrayerLabel}>
-                  Next Prayer
-                </ThemedText>
-                <ThemedText type="title" style={styles.nextPrayerName}>
-                  {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
-                </ThemedText>
-                <ThemedText style={styles.timeUntilEnhanced}>
-                  in {timeUntilNext}
-                </ThemedText>
-              </View>
-            </View>
-          </LinearGradient>
-        )}
+            </LinearGradient>
+          )}
 
-        {/* Enhanced Prayer Times List */}
-        <ThemedView style={styles.prayersListEnhanced}>
-          <View style={styles.sectionHeader}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Today's Prayer Times
-            </ThemedText>
-          </View>
-
-          {prayers.map((prayer, index) => (
-            <PrayerTimeCard
-              key={index}
-              prayer={prayer}
-              isActive={
-                currentPrayer === prayer.name.toLowerCase() ||
-                (currentPrayer === "sunrise" && prayer.name === "Sunrise")
-              }
-              isNext={
-                nextPrayer === prayer.name.toLowerCase() ||
-                (nextPrayer === "sunrise" && prayer.name === "Sunrise")
-              }
-            />
-          ))}
-        </ThemedView>
-
-        {/* Enhanced Ramadan Badge */}
-        {todaysPrayers.is_ramadan === 1 && (
-          <LinearGradient
-            colors={["#F9A825", "#FFA726"]}
-            style={styles.ramadanBadgeEnhanced}
-          >
-            <View style={styles.ramadanContent}>
-              <ThemedText style={styles.ramadanIcon}>🌙</ThemedText>
-              <ThemedText style={styles.ramadanTextEnhanced}>
-                Ramadan Kareem
+          {/* Enhanced Prayer Times List */}
+          <ThemedView style={styles.prayersListEnhanced}>
+            <View style={styles.sectionHeader}>
+              <IconSymbol
+                name="clock"
+                size={20}
+                color={Colors[colorScheme ?? "light"].primary}
+              />
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Today's Prayer Times
               </ThemedText>
             </View>
-          </LinearGradient>
-        )}
 
-        {/* Quick Actions */}
-        <ThemedView style={styles.quickActionsContainer}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Quick Actions
-          </ThemedText>
-
-          <View style={styles.quickActionsGrid}>
-            <TouchableOpacity style={styles.quickActionButton}>
-              <IconSymbol
-                name="calendar"
-                size={24}
-                color={Colors[colorScheme ?? "light"].primary}
+            {prayers.map((prayer, index) => (
+              <PrayerTimeCard
+                key={index}
+                prayer={prayer}
+                isActive={
+                  currentPrayer === prayer.name.toLowerCase() ||
+                  (currentPrayer === "sunrise" && prayer.name === "Sunrise")
+                }
+                isNext={
+                  nextPrayer === prayer.name.toLowerCase() ||
+                  (nextPrayer === "sunrise" && prayer.name === "Sunrise")
+                }
               />
-              <ThemedText style={styles.quickActionText}>Calendar</ThemedText>
-            </TouchableOpacity>
+            ))}
+          </ThemedView>
 
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={handleShare}
+          {/* Enhanced Ramadan Badge */}
+          {todaysPrayers.is_ramadan === 1 && (
+            <LinearGradient
+              colors={["#F9A825", "#FFA726"]}
+              style={styles.ramadanBadgeEnhanced}
             >
+              <View style={styles.ramadanContent}>
+                <ThemedText style={styles.ramadanIcon}>🌙</ThemedText>
+                <ThemedText style={styles.ramadanTextEnhanced}>
+                  Ramadan Kareem
+                </ThemedText>
+              </View>
+            </LinearGradient>
+          )}
+
+          {/* Enhanced Quick Actions */}
+          <ThemedView style={styles.quickActionsContainer}>
+            <View style={styles.sectionHeader}>
               <IconSymbol
-                name="square.and.arrow.up"
-                size={24}
+                name="star"
+                size={20}
                 color={Colors[colorScheme ?? "light"].primary}
               />
-              <ThemedText style={styles.quickActionText}>Share</ThemedText>
-            </TouchableOpacity>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Quick Actions
+              </ThemedText>
+            </View>
 
-            <TouchableOpacity style={styles.quickActionButton}>
-              <IconSymbol
-                name="location"
-                size={24}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <ThemedText style={styles.quickActionText}>Location</ThemedText>
-            </TouchableOpacity>
+            <View style={styles.quickActionsGrid}>
+              <TouchableOpacity style={styles.quickActionButton}>
+                <IconSymbol
+                  name="calendar"
+                  size={24}
+                  color={Colors[colorScheme ?? "light"].primary}
+                />
+                <ThemedText style={styles.quickActionText}>Calendar</ThemedText>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickActionButton}>
-              <IconSymbol
-                name="bell"
-                size={24}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <ThemedText style={styles.quickActionText}>Reminders</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </ThemedView>
+              <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={handleShare}
+              >
+                <IconSymbol
+                  name="square.and.arrow.up"
+                  size={24}
+                  color={Colors[colorScheme ?? "light"].primary}
+                />
+                <ThemedText style={styles.quickActionText}>Share</ThemedText>
+              </TouchableOpacity>
 
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
+              <TouchableOpacity style={styles.quickActionButton}>
+                <IconSymbol
+                  name="location"
+                  size={24}
+                  color={Colors[colorScheme ?? "light"].primary}
+                />
+                <ThemedText style={styles.quickActionText}>Location</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.quickActionButton}>
+                <IconSymbol
+                  name="bell"
+                  size={24}
+                  color={Colors[colorScheme ?? "light"].primary}
+                />
+                <ThemedText style={styles.quickActionText}>
+                  Reminders
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+
+          {/* Bottom Spacing */}
+          <View style={styles.bottomSpacing} />
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -501,66 +553,76 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   gradientHeader: {
-    paddingTop: StatusBar.currentHeight || 44,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 24,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 8,
+    minHeight: Platform.OS === "ios" ? 100 : 80,
   },
   logoContainer: {
-    marginRight: 16,
+    marginRight: 12,
   },
   mosqueLogo: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
     backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 8,
   },
   headerContent: {
     flex: 1,
+    justifyContent: "center",
+  },
+  greetingText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "500",
+    marginBottom: 2,
   },
   mosqueNameEnhanced: {
     fontSize: 16,
     fontWeight: "700",
     color: "#fff",
-    marginBottom: 4,
+    marginBottom: 2,
+    letterSpacing: 0.3,
   },
   currentTimeText: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "800",
     color: "#fff",
-    marginBottom: 2,
+    letterSpacing: -0.5,
   },
   dateTextEnhanced: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.9)",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.8)",
     fontWeight: "500",
   },
   shareButtonEnhanced: {
-    padding: 12,
+    padding: 8,
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 16,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   scrollContent: {
     flex: 1,
   },
   nextPrayerCardEnhanced: {
-    margin: 20,
-    borderRadius: 20,
+    margin: 16,
+    borderRadius: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 4,
     },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -569,12 +631,12 @@ const styles = StyleSheet.create({
   nextPrayerContent: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 24,
+    padding: 20,
   },
   nextPrayerIcon: {
-    marginRight: 20,
+    marginRight: 16,
     padding: 12,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 16,
   },
   nextPrayerTextContainer: {
@@ -583,25 +645,26 @@ const styles = StyleSheet.create({
   nextPrayerLabel: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     marginBottom: 4,
   },
   nextPrayerName: {
     color: "#fff",
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 4,
+    fontSize: 26,
+    fontWeight: "800",
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   timeUntilEnhanced: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
   },
   prayersListEnhanced: {
-    margin: 20,
+    margin: 16,
     marginTop: 0,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -612,133 +675,153 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   sectionHeader: {
-    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#FFFF00",
+    color: Colors.light.primary,
+    letterSpacing: 0.3,
   },
   ramadanBadgeEnhanced: {
     margin: 20,
     marginTop: 0,
-    borderRadius: 16,
-    shadowColor: "#000",
+    borderRadius: 20,
+    shadowColor: "#F9A825",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
   },
   ramadanContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
+    padding: 20,
+    gap: 12,
   },
   ramadanIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    fontSize: 28,
   },
   ramadanTextEnhanced: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "800",
     color: "#fff",
+    letterSpacing: 0.5,
   },
   quickActionsContainer: {
     margin: 20,
     marginTop: 0,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
   },
   quickActionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginTop: 12,
+    gap: 16,
   },
   quickActionButton: {
-    width: (width - 80) / 4,
+    width: (width - 80) / 2 - 8,
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    backgroundColor: "rgba(27, 94, 32, 0.05)",
-    borderRadius: 12,
-    marginBottom: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(27, 94, 32, 0.08)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(27, 94, 32, 0.15)",
+    shadowColor: "#1B5E20",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   quickActionText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#FFFF00",
-    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.light.primary,
+    marginTop: 12,
     textAlign: "center",
+    letterSpacing: 0.3,
   },
   noDataCardEnhanced: {
     margin: 20,
-    padding: 32,
-    borderRadius: 20,
+    padding: 40,
+    borderRadius: 24,
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: "rgba(27, 94, 32, 0.1)",
   },
   noDataIconContainer: {
-    padding: 20,
+    padding: 24,
     backgroundColor: "rgba(27, 94, 32, 0.1)",
-    borderRadius: 24,
-    marginBottom: 20,
+    borderRadius: 32,
+    marginBottom: 24,
   },
   noDataTitle: {
-    fontSize: 20,
+    fontSize: 22,
     textAlign: "center",
-    marginBottom: 12,
-    fontWeight: "700",
+    marginBottom: 16,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   noDataText: {
     fontSize: 16,
     opacity: 0.7,
     textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 24,
+    lineHeight: 26,
+    marginBottom: 32,
+    paddingHorizontal: 8,
   },
   refreshButtonEnhanced: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#FFFF00",
-    paddingHorizontal: 24,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 28,
     paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: "#000",
+    borderRadius: 20,
+    shadowColor: Colors.light.primary,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
   },
   refreshButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   bottomSpacing: {
-    height: 32,
+    height: Platform.OS === "ios" ? 100 : 80,
   },
 });
