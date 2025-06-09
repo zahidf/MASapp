@@ -1,79 +1,227 @@
 import { MonthlyUploadRow, PrayerTime } from "../types/prayer";
 
-export const parseYearlyCSV = (csvContent: string): PrayerTime[] => {
-  const lines = csvContent.trim().split("\n");
-  const headers = lines[0].split(",").map((h) => h.trim());
+export const parseYearlyCSV = (
+  csvContent: string | null | undefined
+): PrayerTime[] => {
+  console.log(
+    "parseYearlyCSV called with:",
+    typeof csvContent,
+    csvContent?.length
+  );
 
-  return lines.slice(1).map((line) => {
-    const values = line.split(",");
-    const prayerTime: any = {};
-
-    headers.forEach((header, index) => {
-      const value = values[index]?.trim() || "";
-
-      if (header === "is_ramadan") {
-        prayerTime[header] = parseInt(value) || 0;
-      } else {
-        prayerTime[header] = value;
-      }
-    });
-
-    // Ensure all required fields exist with defaults
-    return {
-      d_date: prayerTime.d_date || "",
-      fajr_begins: formatTime(prayerTime.fajr_begins || ""),
-      fajr_jamah: formatTime(prayerTime.fajr_jamah || ""),
-      sunrise: formatTime(prayerTime.sunrise || ""),
-      zuhr_begins: formatTime(prayerTime.zuhr_begins || ""),
-      zuhr_jamah: formatTime(prayerTime.zuhr_jamah || ""),
-      asr_mithl_1: formatTime(prayerTime.asr_mithl_1 || ""),
-      asr_mithl_2: formatTime(prayerTime.asr_mithl_2 || ""),
-      asr_jamah: formatTime(prayerTime.asr_jamah || ""),
-      maghrib_begins: formatTime(prayerTime.maghrib_begins || ""),
-      maghrib_jamah: formatTime(prayerTime.maghrib_jamah || ""),
-      isha_begins: formatTime(prayerTime.isha_begins || ""),
-      isha_jamah: formatTime(prayerTime.isha_jamah || ""),
-      is_ramadan: prayerTime.is_ramadan || 0,
-      hijri_date: prayerTime.hijri_date || "",
-    } as PrayerTime;
-  });
-};
-
-export const parseMonthlyCSV = (csvContent: string): MonthlyUploadRow[] => {
-  const lines = csvContent.trim().split("\n");
-  const headers = lines[0].split(",").map((h) => h.trim());
-
-  return lines.slice(1).map((line) => {
-    const values = line.split(",");
-    const row: any = {};
-
-    headers.forEach((header, index) => {
-      if (header === "day") {
-        row[header] = parseInt(values[index]?.trim() || "0");
-      } else {
-        row[header] = values[index]?.trim() || "";
-      }
-    });
-
-    return row as MonthlyUploadRow;
-  });
-};
-
-export const formatTime = (time: string): string => {
-  // Ensure time is in HH:MM:SS format
-  if (!time) return "00:00:00";
-
-  const parts = time.split(":");
-  if (parts.length === 2) {
-    return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}:00`;
-  } else if (parts.length === 3) {
-    return `${parts[0].padStart(2, "0")}:${parts[1].padStart(
-      2,
-      "0"
-    )}:${parts[2].padStart(2, "0")}`;
+  // Handle all possible invalid inputs
+  if (
+    !csvContent ||
+    typeof csvContent !== "string" ||
+    csvContent.trim() === ""
+  ) {
+    console.log("Invalid or empty CSV content");
+    return [];
   }
 
-  return "00:00:00";
+  try {
+    const trimmedContent = csvContent.trim();
+
+    // Split into lines and filter out empty ones
+    const allLines = trimmedContent.split(/\r?\n/);
+    const lines = allLines.filter((line) => {
+      return line && typeof line === "string" && line.trim().length > 0;
+    });
+
+    console.log("Total lines after filtering:", lines.length);
+
+    if (lines.length < 2) {
+      console.log("Not enough lines in CSV (need header + data)");
+      return [];
+    }
+
+    // Parse header
+    const headerLine = lines[0];
+    if (!headerLine || typeof headerLine !== "string") {
+      console.log("Invalid header line");
+      return [];
+    }
+
+    const headers = headerLine.split(",").map((h) => (h ? h.trim() : ""));
+    console.log("Headers:", headers);
+
+    // Parse data lines
+    const dataLines = lines.slice(1);
+    const results: PrayerTime[] = [];
+
+    for (let i = 0; i < dataLines.length; i++) {
+      const line = dataLines[i];
+      const lineNumber = i + 2; // +2 for header and 0-based index
+
+      if (!line || typeof line !== "string") {
+        console.warn(`Line ${lineNumber} is invalid:`, line);
+        continue;
+      }
+
+      try {
+        const values = line.split(",").map((v) => (v ? v.trim() : ""));
+        const prayerTime: any = {};
+
+        // Map values to headers
+        headers.forEach((header, headerIndex) => {
+          const value = values[headerIndex] || "";
+
+          if (header === "is_ramadan") {
+            prayerTime[header] = parseInt(value) || 0;
+          } else {
+            prayerTime[header] = value;
+          }
+        });
+
+        // Create the prayer time object with safe defaults
+        const result: PrayerTime = {
+          d_date: prayerTime.d_date || "",
+          fajr_begins: formatTime(prayerTime.fajr_begins),
+          fajr_jamah: formatTime(prayerTime.fajr_jamah),
+          sunrise: formatTime(prayerTime.sunrise),
+          zuhr_begins: formatTime(prayerTime.zuhr_begins),
+          zuhr_jamah: formatTime(prayerTime.zuhr_jamah),
+          asr_mithl_1: formatTime(prayerTime.asr_mithl_1),
+          asr_mithl_2: formatTime(prayerTime.asr_mithl_2),
+          asr_jamah: formatTime(prayerTime.asr_jamah),
+          maghrib_begins: formatTime(prayerTime.maghrib_begins),
+          maghrib_jamah: formatTime(prayerTime.maghrib_jamah),
+          isha_begins: formatTime(prayerTime.isha_begins),
+          isha_jamah: formatTime(prayerTime.isha_jamah),
+          is_ramadan: prayerTime.is_ramadan || 0,
+          hijri_date: prayerTime.hijri_date || "",
+        };
+
+        // Only add if we have a valid date
+        if (result.d_date && result.d_date.length > 0) {
+          results.push(result);
+        }
+      } catch (lineError) {
+        console.warn(`Error parsing line ${lineNumber}:`, lineError);
+        continue;
+      }
+    }
+
+    console.log("Successfully parsed", results.length, "prayer times");
+    return results;
+  } catch (error) {
+    console.error("Error in parseYearlyCSV:", error);
+    return [];
+  }
+};
+
+export const parseMonthlyCSV = (
+  csvContent: string | null | undefined
+): MonthlyUploadRow[] => {
+  console.log(
+    "parseMonthlyCSV called with:",
+    typeof csvContent,
+    csvContent?.length
+  );
+
+  if (
+    !csvContent ||
+    typeof csvContent !== "string" ||
+    csvContent.trim() === ""
+  ) {
+    console.log("Invalid or empty CSV content");
+    return [];
+  }
+
+  try {
+    const trimmedContent = csvContent.trim();
+    const allLines = trimmedContent.split(/\r?\n/);
+    const lines = allLines.filter((line) => {
+      return line && typeof line === "string" && line.trim().length > 0;
+    });
+
+    if (lines.length < 2) {
+      console.log("Not enough lines in CSV (need header + data)");
+      return [];
+    }
+
+    const headerLine = lines[0];
+    if (!headerLine || typeof headerLine !== "string") {
+      console.log("Invalid header line");
+      return [];
+    }
+
+    const headers = headerLine.split(",").map((h) => (h ? h.trim() : ""));
+    const dataLines = lines.slice(1);
+    const results: MonthlyUploadRow[] = [];
+
+    for (let i = 0; i < dataLines.length; i++) {
+      const line = dataLines[i];
+      const lineNumber = i + 2;
+
+      if (!line || typeof line !== "string") {
+        console.warn(`Line ${lineNumber} is invalid:`, line);
+        continue;
+      }
+
+      try {
+        const values = line.split(",").map((v) => (v ? v.trim() : ""));
+        const row: any = {};
+
+        headers.forEach((header, headerIndex) => {
+          const value = values[headerIndex] || "";
+
+          if (header === "day") {
+            row[header] = parseInt(value) || 0;
+          } else {
+            row[header] = value;
+          }
+        });
+
+        // Only add if we have a valid day
+        if (row.day && row.day > 0 && row.day <= 31) {
+          results.push(row as MonthlyUploadRow);
+        }
+      } catch (lineError) {
+        console.warn(`Error parsing line ${lineNumber}:`, lineError);
+        continue;
+      }
+    }
+
+    console.log("Successfully parsed", results.length, "monthly rows");
+    return results;
+  } catch (error) {
+    console.error("Error in parseMonthlyCSV:", error);
+    return [];
+  }
+};
+
+export const formatTime = (time: string | null | undefined): string => {
+  // Handle all possible invalid inputs
+  if (!time || typeof time !== "string" || time.trim() === "") {
+    return "00:00:00";
+  }
+
+  try {
+    const trimmedTime = time.trim();
+
+    // Check if it's already in HH:MM:SS format
+    if (/^\d{1,2}:\d{2}:\d{2}$/.test(trimmedTime)) {
+      const parts = trimmedTime.split(":");
+      return `${parts[0].padStart(2, "0")}:${parts[1].padStart(
+        2,
+        "0"
+      )}:${parts[2].padStart(2, "0")}`;
+    }
+
+    // Check if it's in HH:MM format
+    if (/^\d{1,2}:\d{2}$/.test(trimmedTime)) {
+      const parts = trimmedTime.split(":");
+      return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}:00`;
+    }
+
+    // If it doesn't match expected formats, return default
+    console.warn("Invalid time format:", time);
+    return "00:00:00";
+  } catch (error) {
+    console.error("Error formatting time:", time, error);
+    return "00:00:00";
+  }
 };
 
 export const validateYearlyData = (
@@ -86,7 +234,7 @@ export const validateYearlyData = (
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (data.length === 0) {
+  if (!data || !Array.isArray(data) || data.length === 0) {
     errors.push("No data found in CSV");
     return { isValid: false, errors, warnings };
   }
@@ -102,6 +250,11 @@ export const validateYearlyData = (
   ];
 
   data.forEach((row, index) => {
+    if (!row || typeof row !== "object") {
+      errors.push(`Row ${index + 1}: Invalid row data`);
+      return;
+    }
+
     const lineNum = index + 2; // +2 because of header and 0-based index
 
     // Check date format
@@ -113,7 +266,8 @@ export const validateYearlyData = (
 
     // Check required prayer times
     requiredFields.forEach((field) => {
-      if (!row[field as keyof PrayerTime]) {
+      const value = row[field as keyof PrayerTime];
+      if (!value || (typeof value === "string" && value.trim() === "")) {
         errors.push(`Line ${lineNum}: Missing required field '${field}'`);
       }
     });
@@ -136,7 +290,7 @@ export const validateYearlyData = (
 
     timeFields.forEach((field) => {
       const time = row[field as keyof PrayerTime] as string;
-      if (time && !time.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      if (time && time.trim() !== "" && !time.match(/^\d{2}:\d{2}:\d{2}$/)) {
         warnings.push(
           `Line ${lineNum}: Time format for '${field}' should be HH:MM:SS (found: ${time})`
         );
@@ -172,9 +326,21 @@ export const mergeMonthlyIntoYearly = (
   year: number,
   month: number
 ): PrayerTime[] => {
+  if (!Array.isArray(yearlyData)) {
+    yearlyData = [];
+  }
+
+  if (!Array.isArray(monthlyData) || monthlyData.length === 0) {
+    return yearlyData;
+  }
+
   const updatedData = [...yearlyData];
 
   monthlyData.forEach((row) => {
+    if (!row || typeof row !== "object" || !row.day) {
+      return;
+    }
+
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(
       row.day
     ).padStart(2, "0")}`;
@@ -220,6 +386,10 @@ export const mergeMonthlyIntoYearly = (
 };
 
 export const generateCSVContent = (data: PrayerTime[]): string => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return "";
+  }
+
   const headers = [
     "d_date",
     "fajr_begins",
@@ -241,7 +411,14 @@ export const generateCSVContent = (data: PrayerTime[]): string => {
   const csvLines = [headers.join(",")];
 
   data.forEach((row) => {
-    const values = headers.map((header) => row[header as keyof PrayerTime]);
+    if (!row || typeof row !== "object") {
+      return;
+    }
+
+    const values = headers.map((header) => {
+      const value = row[header as keyof PrayerTime];
+      return value !== undefined && value !== null ? String(value) : "";
+    });
     csvLines.push(values.join(","));
   });
 

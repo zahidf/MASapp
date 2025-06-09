@@ -1,67 +1,48 @@
-import { Tabs } from "expo-router";
-import React from "react";
-import { Platform } from "react-native";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { useFonts } from "expo-font";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
 
-import { HapticTab } from "@/components/HapticTab";
-import { IconSymbol } from "@/components/ui/IconSymbol";
-import TabBarBackground from "@/components/ui/TabBarBackground";
-import { Colors } from "@/constants/Colors";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { PrayerTimesProvider } from "@/contexts/PrayerTimesContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const { user } = useAuth();
+  const [loaded] = useFonts({
+    SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
+  });
+
+  // The PrayerTimesProvider will handle loading data properly
+  if (!loaded) {
+    return null;
+  }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            position: "absolute",
-          },
-          default: {},
-        }),
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Today",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: "Calendar",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="calendar" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="admin"
-        options={{
-          title: "Admin",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.badge.key" color={color} />
-          ),
-          // Hide the tab when user is not admin, but keep the screen accessible
-          tabBarStyle: user?.isAdmin
-            ? Platform.select({
-                ios: { position: "absolute" },
-                default: {},
-              })
-            : { display: "none" },
-        }}
-      />
-    </Tabs>
+    <AuthProvider>
+      <PrayerTimesProvider>
+        <ThemeProvider
+          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+        >
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="auth/login"
+              options={{
+                title: "Login",
+                presentation: "modal",
+              }}
+            />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </PrayerTimesProvider>
+    </AuthProvider>
   );
 }
