@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   highlightedText: {
-    color: "#1B5E20",
+    color: "#FFFF00",
   },
   badge: {
     fontSize: 12,
