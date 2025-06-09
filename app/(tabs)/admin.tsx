@@ -25,6 +25,7 @@ const DEV_MODE = __DEV__;
 
 export default function AdminScreen() {
   const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
   const { user, logout, devLogin } = useAuth();
   const { refreshData } = usePrayerTimes();
   const [lastUpdate, setLastUpdate] = React.useState<string | null>(null);
@@ -105,30 +106,38 @@ export default function AdminScreen() {
   // Enhanced access denied screen for non-admin users
   if (!user?.isAdmin && !DEV_MODE) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
         />
         <Animated.View
           style={[styles.accessDeniedContainer, { opacity: fadeAnim }]}
         >
-          <View style={styles.accessDeniedIcon}>
-            <IconSymbol
-              name="shield"
-              size={80}
-              color={Colors[colorScheme ?? "light"].primary}
-            />
+          <View
+            style={[
+              styles.accessDeniedIcon,
+              { backgroundColor: `${colors.primary}20` },
+            ]}
+          >
+            <IconSymbol name="shield" size={80} color={colors.primary} />
           </View>
-          <ThemedText type="title" style={styles.accessDeniedTitle}>
+          <ThemedText
+            type="title"
+            style={[styles.accessDeniedTitle, { color: colors.text }]}
+          >
             Access Restricted
           </ThemedText>
-          <ThemedText style={styles.accessDeniedText}>
+          <ThemedText
+            style={[styles.accessDeniedText, { color: `${colors.text}B3` }]}
+          >
             You need admin privileges to access this section. Please contact the
             mosque administration for access.
           </ThemedText>
 
           <View style={styles.accessDeniedActions}>
-            <TouchableOpacity style={styles.backButton}>
+            <TouchableOpacity
+              style={[styles.backButton, { backgroundColor: colors.primary }]}
+            >
               <IconSymbol name="arrow.left" size={20} color="#fff" />
               <ThemedText style={styles.backButtonText}>Go Back</ThemedText>
             </TouchableOpacity>
@@ -141,31 +150,41 @@ export default function AdminScreen() {
   // Show bypass option for non-admin users in development mode
   if (!user?.isAdmin && DEV_MODE) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
         />
         <Animated.View
           style={[styles.accessDeniedContainer, { opacity: fadeAnim }]}
         >
-          <View style={styles.devBadgeHeader}>
+          <View style={[styles.devBadgeHeader, { backgroundColor: "#FF9800" }]}>
             <ThemedText style={styles.devModeText}>
               🔧 Development Mode
             </ThemedText>
           </View>
 
-          <View style={styles.accessDeniedIcon}>
+          <View
+            style={[
+              styles.accessDeniedIcon,
+              { backgroundColor: `${colors.primary}20` },
+            ]}
+          >
             <IconSymbol
               name="person.badge.key"
               size={80}
-              color={Colors[colorScheme ?? "light"].primary}
+              color={colors.primary}
             />
           </View>
 
-          <ThemedText type="title" style={styles.accessDeniedTitle}>
+          <ThemedText
+            type="title"
+            style={[styles.accessDeniedTitle, { color: colors.text }]}
+          >
             Admin Access Required
           </ThemedText>
-          <ThemedText style={styles.accessDeniedText}>
+          <ThemedText
+            style={[styles.accessDeniedText, { color: `${colors.text}B3` }]}
+          >
             You need admin privileges to access the admin panel. In development
             mode, you can bypass this restriction.
           </ThemedText>
@@ -181,7 +200,9 @@ export default function AdminScreen() {
               </ThemedText>
             </TouchableOpacity>
 
-            <ThemedText style={styles.devBypassNote}>
+            <ThemedText
+              style={[styles.devBypassNote, { color: `${colors.text}B3` }]}
+            >
               🔧 This option is only available in development mode
             </ThemedText>
           </View>
@@ -192,7 +213,7 @@ export default function AdminScreen() {
 
   // Main admin interface for admin users
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
@@ -203,7 +224,7 @@ export default function AdminScreen() {
       >
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Enhanced Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { backgroundColor: colors.primary }]}>
             <View style={styles.titleRow}>
               <View style={styles.adminIcon}>
                 <IconSymbol name="gear.circle.fill" size={32} color="#fff" />
@@ -228,61 +249,94 @@ export default function AdminScreen() {
           </View>
 
           {/* System Status Card */}
-          <ThemedView style={styles.statusCard}>
+          <ThemedView
+            style={[styles.statusCard, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.statusHeader}>
               <IconSymbol
                 name="checkmark.circle"
                 size={24}
-                color={Colors[colorScheme ?? "light"].primary}
+                color={colors.primary}
               />
-              <ThemedText type="subtitle" style={styles.statusTitle}>
+              <ThemedText
+                type="subtitle"
+                style={[styles.statusTitle, { color: colors.text }]}
+              >
                 System Status
               </ThemedText>
             </View>
 
             {lastUpdate && (
               <View style={styles.statusRow}>
-                <ThemedText style={styles.statusLabel}>Last Updated</ThemedText>
-                <ThemedText style={styles.statusValue}>
+                <ThemedText
+                  style={[styles.statusLabel, { color: `${colors.text}B3` }]}
+                >
+                  Last Updated
+                </ThemedText>
+                <ThemedText
+                  style={[styles.statusValue, { color: colors.text }]}
+                >
                   {new Date(lastUpdate).toLocaleString()}
                 </ThemedText>
               </View>
             )}
 
             <View style={styles.statusRow}>
-              <ThemedText style={styles.statusLabel}>User Role</ThemedText>
-              <ThemedText style={styles.statusValue}>
+              <ThemedText
+                style={[styles.statusLabel, { color: `${colors.text}B3` }]}
+              >
+                User Role
+              </ThemedText>
+              <ThemedText style={[styles.statusValue, { color: colors.text }]}>
                 {user?.isAdmin ? "Administrator" : "User"}
               </ThemedText>
             </View>
 
             <View style={styles.statusRow}>
-              <ThemedText style={styles.statusLabel}>Environment</ThemedText>
-              <ThemedText style={styles.statusValue}>
+              <ThemedText
+                style={[styles.statusLabel, { color: `${colors.text}B3` }]}
+              >
+                Environment
+              </ThemedText>
+              <ThemedText style={[styles.statusValue, { color: colors.text }]}>
                 {DEV_MODE ? "Development" : "Production"}
               </ThemedText>
             </View>
           </ThemedView>
 
           {/* Prayer Times Management */}
-          <ThemedView style={styles.section}>
+          <ThemedView
+            style={[styles.section, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.sectionHeader}>
-              <IconSymbol
-                name="calendar"
-                size={24}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
+              <IconSymbol name="calendar" size={24} color={colors.primary} />
+              <ThemedText
+                type="subtitle"
+                style={[styles.sectionTitle, { color: colors.text }]}
+              >
                 Prayer Times Management
               </ThemedText>
             </View>
 
             <View style={styles.uploaderTabs}>
-              <ThemedText style={styles.tabsTitle}>Upload Options</ThemedText>
+              <ThemedText style={[styles.tabsTitle, { color: colors.primary }]}>
+                Upload Options
+              </ThemedText>
 
-              <View style={styles.uploaderContainer}>
+              <View
+                style={[
+                  styles.uploaderContainer,
+                  {
+                    backgroundColor:
+                      colorScheme === "dark" ? "#333333" : "#f8f9fa",
+                    borderColor: colorScheme === "dark" ? "#404040" : "#e9ecef",
+                  },
+                ]}
+              >
                 <View style={styles.uploaderHeader}>
-                  <ThemedText style={styles.uploaderTitle}>
+                  <ThemedText
+                    style={[styles.uploaderTitle, { color: colors.text }]}
+                  >
                     📅 Monthly Upload
                   </ThemedText>
                   <View style={styles.uploaderBadge}>
@@ -291,16 +345,32 @@ export default function AdminScreen() {
                     </ThemedText>
                   </View>
                 </View>
-                <ThemedText style={styles.uploaderDescription}>
+                <ThemedText
+                  style={[
+                    styles.uploaderDescription,
+                    { color: `${colors.text}B3` },
+                  ]}
+                >
                   Upload prayer times for a specific month. This will merge with
                   existing data.
                 </ThemedText>
                 <CSVUploader onUploadComplete={loadLastUpdate} />
               </View>
 
-              <View style={styles.uploaderContainer}>
+              <View
+                style={[
+                  styles.uploaderContainer,
+                  {
+                    backgroundColor:
+                      colorScheme === "dark" ? "#333333" : "#f8f9fa",
+                    borderColor: colorScheme === "dark" ? "#404040" : "#e9ecef",
+                  },
+                ]}
+              >
                 <View style={styles.uploaderHeader}>
-                  <ThemedText style={styles.uploaderTitle}>
+                  <ThemedText
+                    style={[styles.uploaderTitle, { color: colors.text }]}
+                  >
                     📆 Yearly Upload
                   </ThemedText>
                   <View style={[styles.uploaderBadge, styles.warningBadge]}>
@@ -309,7 +379,12 @@ export default function AdminScreen() {
                     </ThemedText>
                   </View>
                 </View>
-                <ThemedText style={styles.uploaderDescription}>
+                <ThemedText
+                  style={[
+                    styles.uploaderDescription,
+                    { color: `${colors.text}B3` },
+                  ]}
+                >
                   Upload complete year data. This will replace ALL existing
                   prayer times.
                 </ThemedText>
@@ -320,17 +395,28 @@ export default function AdminScreen() {
 
           {/* Development Tools */}
           {DEV_MODE && (
-            <ThemedView style={styles.section}>
+            <ThemedView
+              style={[styles.section, { backgroundColor: colors.surface }]}
+            >
               <View style={styles.sectionHeader}>
                 <IconSymbol name="hammer" size={24} color="#FF9800" />
-                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                <ThemedText
+                  type="subtitle"
+                  style={[styles.sectionTitle, { color: colors.text }]}
+                >
                   Development Tools
                 </ThemedText>
               </View>
 
               <View style={styles.devTools}>
                 <TouchableOpacity
-                  style={styles.devToolButton}
+                  style={[
+                    styles.devToolButton,
+                    {
+                      backgroundColor:
+                        colorScheme === "dark" ? "#404040" : "#f0f0f0",
+                    },
+                  ]}
                   onPress={() =>
                     Alert.alert(
                       "Dev Info",
@@ -343,13 +429,21 @@ export default function AdminScreen() {
                   }
                 >
                   <IconSymbol name="info.circle" size={20} color="#2196F3" />
-                  <ThemedText style={styles.devToolText}>
+                  <ThemedText
+                    style={[styles.devToolText, { color: colors.text }]}
+                  >
                     Show User Info
                   </ThemedText>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.devToolButton}
+                  style={[
+                    styles.devToolButton,
+                    {
+                      backgroundColor:
+                        colorScheme === "dark" ? "#404040" : "#f0f0f0",
+                    },
+                  ]}
                   onPress={async () => {
                     await refreshData();
                     Alert.alert("Success", "Prayer times data refreshed!");
@@ -360,7 +454,9 @@ export default function AdminScreen() {
                     size={20}
                     color="#4CAF50"
                   />
-                  <ThemedText style={styles.devToolText}>
+                  <ThemedText
+                    style={[styles.devToolText, { color: colors.text }]}
+                  >
                     Force Refresh Data
                   </ThemedText>
                 </TouchableOpacity>
@@ -369,14 +465,15 @@ export default function AdminScreen() {
           )}
 
           {/* Data Management */}
-          <ThemedView style={styles.section}>
+          <ThemedView
+            style={[styles.section, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.sectionHeader}>
-              <IconSymbol
-                name="gear"
-                size={24}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
+              <IconSymbol name="gear" size={24} color={colors.primary} />
+              <ThemedText
+                type="subtitle"
+                style={[styles.sectionTitle, { color: colors.text }]}
+              >
                 Data Management
               </ThemedText>
             </View>
@@ -391,14 +488,15 @@ export default function AdminScreen() {
           </ThemedView>
 
           {/* Account Management */}
-          <ThemedView style={styles.section}>
+          <ThemedView
+            style={[styles.section, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.sectionHeader}>
-              <IconSymbol
-                name="person"
-                size={24}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
+              <IconSymbol name="person" size={24} color={colors.primary} />
+              <ThemedText
+                type="subtitle"
+                style={[styles.sectionTitle, { color: colors.text }]}
+              >
                 Account
               </ThemedText>
             </View>
@@ -423,7 +521,6 @@ export default function AdminScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   scrollContainer: {
     flex: 1,
@@ -432,7 +529,6 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop:
       Platform.OS === "ios" ? 60 : (StatusBar.currentHeight || 24) + 20,
-    backgroundColor: Colors.light.primary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     marginBottom: 20,
@@ -512,7 +608,6 @@ const styles = StyleSheet.create({
   },
   statusLabel: {
     fontSize: 14,
-    opacity: 0.7,
     fontWeight: "500",
   },
   statusValue: {
@@ -551,14 +646,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 16,
     textAlign: "center",
-    color: Colors.light.primary,
   },
   uploaderContainer: {
-    backgroundColor: "#f8f9fa",
     padding: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e9ecef",
   },
   uploaderHeader: {
     flexDirection: "row",
@@ -586,7 +678,6 @@ const styles = StyleSheet.create({
   },
   uploaderDescription: {
     fontSize: 14,
-    opacity: 0.7,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -598,7 +689,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     padding: 16,
-    backgroundColor: "#f0f0f0",
     borderRadius: 8,
     borderLeftWidth: 4,
     borderLeftColor: "#FF9800",
@@ -660,7 +750,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     paddingVertical: 8,
-    backgroundColor: "#FF9800",
     marginHorizontal: 20,
     borderRadius: 8,
   },
@@ -672,7 +761,6 @@ const styles = StyleSheet.create({
   accessDeniedIcon: {
     marginBottom: 32,
     padding: 24,
-    backgroundColor: "rgba(27, 94, 32, 0.1)",
     borderRadius: 32,
   },
   accessDeniedTitle: {
@@ -683,7 +771,6 @@ const styles = StyleSheet.create({
   },
   accessDeniedText: {
     fontSize: 16,
-    opacity: 0.7,
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 32,
@@ -697,11 +784,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: Colors.light.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    shadowColor: Colors.light.primary,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -745,7 +830,6 @@ const styles = StyleSheet.create({
   },
   devBypassNote: {
     fontSize: 12,
-    opacity: 0.7,
     textAlign: "center",
     fontStyle: "italic",
     paddingHorizontal: 16,

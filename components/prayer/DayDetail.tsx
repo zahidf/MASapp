@@ -23,6 +23,7 @@ interface DayDetailProps {
 
 export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
   const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
   const date = new Date(prayerTime.d_date);
   const prayers = extractPrayersFromTime(prayerTime);
 
@@ -54,32 +55,42 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ThemedView style={styles.header}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <ThemedView
+        style={[
+          styles.header,
+          {
+            borderBottomColor: colorScheme === "dark" ? "#404040" : "#e0e0e0",
+          },
+        ]}
+      >
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <IconSymbol
-            name="xmark"
-            size={24}
-            color={Colors[colorScheme ?? "light"].text}
-          />
+          <IconSymbol name="xmark" size={24} color={colors.text} />
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>
-          <ThemedText type="title" style={styles.title}>
+          <ThemedText
+            type="title"
+            style={[styles.title, { color: colors.text }]}
+          >
             {date.toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
               day: "numeric",
             })}
           </ThemedText>
-          <ThemedText style={styles.year}>{date.getFullYear()}</ThemedText>
+          <ThemedText style={[styles.year, { color: `${colors.text}B3` }]}>
+            {date.getFullYear()}
+          </ThemedText>
         </View>
 
         <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
           <IconSymbol
             name="square.and.arrow.up"
             size={24}
-            color={Colors[colorScheme ?? "light"].text}
+            color={colors.text}
           />
         </TouchableOpacity>
       </ThemedView>
@@ -92,15 +103,42 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
         </ThemedView>
 
         {prayerTime.is_ramadan === 1 && (
-          <ThemedView style={styles.ramadanBadge}>
-            <ThemedText style={styles.ramadanText}>🌙 Ramadan</ThemedText>
+          <ThemedView
+            style={[
+              styles.ramadanBadge,
+              {
+                backgroundColor: colorScheme === "dark" ? "#B8860B" : "#F9A825",
+              },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.ramadanText,
+                {
+                  color: colorScheme === "dark" ? "#FFFFFF" : "#FFFFFF",
+                },
+              ]}
+            >
+              🌙 Ramadan
+            </ThemedText>
           </ThemedView>
         )}
 
         {prayerTime.hijri_date && prayerTime.hijri_date !== "0" && (
-          <ThemedView style={styles.hijriDate}>
-            <ThemedText style={styles.hijriLabel}>Hijri Date</ThemedText>
-            <ThemedText style={styles.hijriText}>
+          <ThemedView
+            style={[
+              styles.hijriDate,
+              {
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <ThemedText
+              style={[styles.hijriLabel, { color: `${colors.text}B3` }]}
+            >
+              Hijri Date
+            </ThemedText>
+            <ThemedText style={[styles.hijriText, { color: colors.text }]}>
               {prayerTime.hijri_date}
             </ThemedText>
           </ThemedView>
@@ -120,7 +158,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
   },
   closeButton: {
     padding: 8,
@@ -138,7 +175,6 @@ const styles = StyleSheet.create({
   },
   year: {
     fontSize: 16,
-    opacity: 0.7,
   },
   content: {
     flex: 1,
@@ -151,7 +187,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: "#F9A825",
     alignItems: "center",
   },
   ramadanText: {
@@ -163,12 +198,10 @@ const styles = StyleSheet.create({
     marginTop: 0,
     padding: 16,
     borderRadius: 8,
-    backgroundColor: "#f5f5f5",
     alignItems: "center",
   },
   hijriLabel: {
     fontSize: 14,
-    opacity: 0.7,
     marginBottom: 4,
   },
   hijriText: {

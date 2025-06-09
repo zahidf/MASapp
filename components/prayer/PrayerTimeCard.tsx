@@ -20,7 +20,7 @@ export function PrayerTimeCard({
   isNext,
 }: PrayerTimeCardProps) {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const colors = Colors[colorScheme ?? "light"];
 
   const getPrayerIcon = (prayerName: string) => {
     switch (prayerName.toLowerCase()) {
@@ -42,42 +42,80 @@ export function PrayerTimeCard({
 
   const cardStyle = [
     styles.card,
-    isActive && styles.activeCard,
-    isNext && styles.nextCard,
-    isDark && styles.darkCard,
+    { backgroundColor: colors.surface },
+    isActive && [
+      styles.activeCard,
+      {
+        backgroundColor: colorScheme === "dark" ? "#2E7D32" : "#E8F5E9",
+        borderColor: colors.primary,
+      },
+    ],
+    isNext && [
+      styles.nextCard,
+      {
+        backgroundColor: colorScheme === "dark" ? "#B8860B" : "#FFF3E0",
+        borderColor: colors.secondary,
+      },
+    ],
   ];
 
-  const nameStyle = [
-    styles.prayerName,
-    (isActive || isNext) && styles.highlightedText,
-    isDark && styles.darkText,
-  ];
+  const getTextColor = () => {
+    if (isActive || isNext) {
+      return colorScheme === "dark" ? "#FFFFFF" : colors.primary;
+    }
+    return colors.text;
+  };
+
+  const getIconColor = () => {
+    if (isActive || isNext) {
+      return colorScheme === "dark" ? "#FFFFFF" : "#FFFFFF";
+    }
+    return colors.primary;
+  };
 
   return (
     <ThemedView style={cardStyle}>
       <View style={styles.leftSection}>
-        <View style={[styles.iconContainer, isActive && styles.activeIcon]}>
+        <View
+          style={[
+            styles.iconContainer,
+            {
+              backgroundColor:
+                isActive || isNext ? colors.primary : `${colors.primary}20`,
+            },
+          ]}
+        >
           <IconSymbol
             name={getPrayerIcon(prayer.name)}
             size={20}
-            color={
-              isActive || isNext
-                ? "#fff"
-                : Colors[colorScheme ?? "light"].primary
-            }
+            color={getIconColor()}
           />
         </View>
         <View style={styles.prayerInfo}>
-          <ThemedText style={nameStyle}>{prayer.name}</ThemedText>
+          <ThemedText style={[styles.prayerName, { color: getTextColor() }]}>
+            {prayer.name}
+          </ThemedText>
           {isActive && (
             <View style={styles.statusBadge}>
-              <View style={styles.activeDot} />
-              <ThemedText style={styles.badgeText}>Current</ThemedText>
+              <View
+                style={[
+                  styles.activeDot,
+                  {
+                    backgroundColor:
+                      colorScheme === "dark" ? "#81C784" : "#4CAF50",
+                  },
+                ]}
+              />
+              <ThemedText style={[styles.badgeText, { color: getTextColor() }]}>
+                Current
+              </ThemedText>
             </View>
           )}
           {isNext && !isActive && (
             <View style={[styles.statusBadge, styles.nextBadge]}>
-              <ThemedText style={styles.badgeText}>Next</ThemedText>
+              <ThemedText style={[styles.badgeText, { color: getTextColor() }]}>
+                Next
+              </ThemedText>
             </View>
           )}
         </View>
@@ -85,24 +123,29 @@ export function PrayerTimeCard({
 
       <View style={styles.rightSection}>
         <View style={styles.timeContainer}>
-          <ThemedText style={styles.timeLabel}>Begins</ThemedText>
           <ThemedText
-            style={[
-              styles.time,
-              (isActive || isNext) && styles.highlightedText,
-            ]}
+            style={[styles.timeLabel, { color: `${getTextColor()}80` }]}
           >
+            Begins
+          </ThemedText>
+          <ThemedText style={[styles.time, { color: getTextColor() }]}>
             {formatTimeForDisplay(prayer.begins)}
           </ThemedText>
         </View>
 
         {prayer.jamah && prayer.jamah.trim() !== "" && (
           <View style={styles.timeContainer}>
-            <ThemedText style={styles.timeLabel}>Jamah</ThemedText>
+            <ThemedText
+              style={[styles.timeLabel, { color: `${getTextColor()}80` }]}
+            >
+              Jamah
+            </ThemedText>
             <ThemedText
               style={[
                 styles.jamahTime,
-                (isActive || isNext) && styles.highlightedText,
+                {
+                  color: isActive || isNext ? getTextColor() : colors.primary,
+                },
               ]}
             >
               {formatTimeForDisplay(prayer.jamah)}
@@ -122,7 +165,6 @@ const styles = StyleSheet.create({
     padding: 20,
     marginVertical: 8,
     borderRadius: 16,
-    backgroundColor: "#f8f9fa",
     borderWidth: 2,
     borderColor: "transparent",
     shadowColor: "#000",
@@ -134,21 +176,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  darkCard: {
-    backgroundColor: "#2a2a2a",
-  },
   activeCard: {
-    backgroundColor: "#E8F5E9",
-    borderColor: "#1B5E20",
-    shadowColor: "#1B5E20",
     shadowOpacity: 0.2,
     elevation: 8,
     transform: [{ scale: 1.02 }],
   },
   nextCard: {
-    backgroundColor: "#FFF3E0",
-    borderColor: "#F9A825",
-    shadowColor: "#F9A825",
     shadowOpacity: 0.15,
     elevation: 6,
   },
@@ -162,12 +195,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(27, 94, 32, 0.1)",
     justifyContent: "center",
     alignItems: "center",
-  },
-  activeIcon: {
-    backgroundColor: "#1B5E20",
   },
   prayerInfo: {
     flex: 1,
@@ -177,12 +206,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
     marginBottom: 4,
-  },
-  darkText: {
-    color: "#fff",
-  },
-  highlightedText: {
-    color: "#1B5E20",
   },
   statusBadge: {
     flexDirection: "row",
@@ -196,12 +219,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#4CAF50",
   },
   badgeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#1B5E20",
     opacity: 0.8,
   },
   rightSection: {
@@ -215,7 +236,6 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     fontSize: 11,
-    opacity: 0.6,
     marginBottom: 4,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -230,6 +250,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.3,
-    color: "#1B5E20",
   },
 });

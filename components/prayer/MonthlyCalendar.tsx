@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { PrayerTime } from "@/types/prayer";
 import { getDaysInMonth, getTodayString } from "@/utils/dateHelpers";
@@ -20,7 +21,7 @@ export function MonthlyCalendar({
   onDaySelect,
 }: MonthlyCalendarProps) {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const colors = Colors[colorScheme ?? "light"];
   const today = getTodayString();
 
   const daysInMonth = getDaysInMonth(year, month);
@@ -45,27 +46,36 @@ export function MonthlyCalendar({
       const isToday = dateStr === today;
       const isRamadan = dayData?.is_ramadan === 1;
 
+      const cellStyle = [
+        styles.dayCell,
+        isToday && [styles.todayCell, { backgroundColor: colors.primary }],
+        isRamadan &&
+          !isToday && [
+            styles.ramadanCell,
+            {
+              backgroundColor: colorScheme === "dark" ? "#3E2723" : "#FFF3E0",
+            },
+          ],
+      ];
+
+      const textStyle = [
+        styles.dayText,
+        { color: colors.text },
+        isToday && [
+          styles.todayText,
+          { color: colorScheme === "dark" ? "#FFFFFF" : "#FFFFFF" },
+        ],
+        !dayData && [styles.disabledText, { color: `${colors.text}40` }],
+      ];
+
       days.push(
         <TouchableOpacity
           key={day}
-          style={[
-            styles.dayCell,
-            isToday && styles.todayCell,
-            isRamadan && styles.ramadanCell,
-          ]}
+          style={cellStyle}
           onPress={() => onDaySelect(day)}
           disabled={!dayData}
         >
-          <ThemedText
-            style={[
-              styles.dayText,
-              isToday && styles.todayText,
-              !dayData && styles.disabledText,
-              isDark && styles.darkText,
-            ]}
-          >
-            {day}
-          </ThemedText>
+          <ThemedText style={textStyle}>{day}</ThemedText>
           {isRamadan && <ThemedText style={styles.ramadanIcon}>🌙</ThemedText>}
         </TouchableOpacity>
       );
@@ -78,7 +88,10 @@ export function MonthlyCalendar({
     <ThemedView style={styles.container}>
       <View style={styles.weekDaysRow}>
         {weekDays.map((day) => (
-          <ThemedText key={day} style={styles.weekDayText}>
+          <ThemedText
+            key={day}
+            style={[styles.weekDayText, { color: `${colors.text}B3` }]}
+          >
             {day}
           </ThemedText>
         ))}
@@ -103,7 +116,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 14,
     fontWeight: "600",
-    opacity: 0.7,
   },
   calendarGrid: {
     flexDirection: "row",
@@ -119,19 +131,13 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 16,
   },
-  darkText: {
-    color: "#fff",
-  },
   todayCell: {
-    backgroundColor: "#1B5E20",
     borderRadius: 8,
   },
   todayText: {
-    color: "#fff",
     fontWeight: "600",
   },
   ramadanCell: {
-    backgroundColor: "#FFF3E0",
     borderRadius: 8,
   },
   ramadanIcon: {
@@ -141,6 +147,6 @@ const styles = StyleSheet.create({
     right: 2,
   },
   disabledText: {
-    opacity: 0.3,
+    // Opacity handled through color prop above
   },
 });

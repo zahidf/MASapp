@@ -6,6 +6,7 @@ import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { parseYearlyCSV, validateYearlyData } from "@/utils/csvParser";
@@ -19,6 +20,7 @@ export function YearlyCSVUploader({
   onUploadComplete,
 }: YearlyCSVUploaderProps) {
   const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
   const { refreshData } = usePrayerTimes();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isUploading, setIsUploading] = useState(false);
@@ -185,21 +187,30 @@ export function YearlyCSVUploader({
   return (
     <ThemedView style={styles.container}>
       <View style={styles.yearSelector}>
-        <ThemedText style={styles.selectorLabel}>Target Year</ThemedText>
+        <ThemedText
+          style={[styles.selectorLabel, { color: `${colors.text}CC` }]}
+        >
+          Target Year
+        </ThemedText>
         <View style={styles.yearPickerContainer}>
           {years.map((year) => (
             <TouchableOpacity
               key={year.value}
               style={[
                 styles.yearOption,
-                selectedYear === year.value && styles.selectedOption,
+                {
+                  backgroundColor:
+                    selectedYear === year.value
+                      ? colors.primary
+                      : `${colors.text}10`,
+                },
               ]}
               onPress={() => setSelectedYear(year.value)}
             >
               <ThemedText
                 style={[
                   styles.optionText,
-                  selectedYear === year.value && styles.selectedText,
+                  { color: selectedYear === year.value ? "#fff" : colors.text },
                 ]}
               >
                 {year.label}
@@ -225,23 +236,88 @@ export function YearlyCSVUploader({
       </TouchableOpacity>
 
       {previewData && (
-        <ThemedView style={styles.previewCard}>
-          <ThemedText style={styles.previewTitle}>File Preview</ThemedText>
+        <ThemedView
+          style={[
+            styles.previewCard,
+            {
+              backgroundColor: colorScheme === "dark" ? "#2E7D32" : "#E8F5E9",
+              borderLeftColor: colorScheme === "dark" ? "#81C784" : "#4CAF50",
+            },
+          ]}
+        >
+          <ThemedText
+            style={[
+              styles.previewTitle,
+              {
+                color: colorScheme === "dark" ? "#81C784" : "#2E7D32",
+              },
+            ]}
+          >
+            File Preview
+          </ThemedText>
           <View style={styles.previewRow}>
-            <ThemedText style={styles.previewLabel}>Total Days:</ThemedText>
-            <ThemedText style={styles.previewValue}>
+            <ThemedText
+              style={[
+                styles.previewLabel,
+                {
+                  color: `${colorScheme === "dark" ? "#81C784" : "#2E7D32"}CC`,
+                },
+              ]}
+            >
+              Total Days:
+            </ThemedText>
+            <ThemedText
+              style={[
+                styles.previewValue,
+                {
+                  color: colorScheme === "dark" ? "#81C784" : "#2E7D32",
+                },
+              ]}
+            >
               {previewData.totalRows}
             </ThemedText>
           </View>
           <View style={styles.previewRow}>
-            <ThemedText style={styles.previewLabel}>Date Range:</ThemedText>
-            <ThemedText style={styles.previewValue}>
+            <ThemedText
+              style={[
+                styles.previewLabel,
+                {
+                  color: `${colorScheme === "dark" ? "#81C784" : "#2E7D32"}CC`,
+                },
+              ]}
+            >
+              Date Range:
+            </ThemedText>
+            <ThemedText
+              style={[
+                styles.previewValue,
+                {
+                  color: colorScheme === "dark" ? "#81C784" : "#2E7D32",
+                },
+              ]}
+            >
               {previewData.dateRange}
             </ThemedText>
           </View>
           <View style={styles.previewRow}>
-            <ThemedText style={styles.previewLabel}>Sample Dates:</ThemedText>
-            <ThemedText style={styles.previewValue}>
+            <ThemedText
+              style={[
+                styles.previewLabel,
+                {
+                  color: `${colorScheme === "dark" ? "#81C784" : "#2E7D32"}CC`,
+                },
+              ]}
+            >
+              Sample Dates:
+            </ThemedText>
+            <ThemedText
+              style={[
+                styles.previewValue,
+                {
+                  color: colorScheme === "dark" ? "#81C784" : "#2E7D32",
+                },
+              ]}
+            >
               {previewData.sampleDates.join(", ")}
             </ThemedText>
           </View>
@@ -250,17 +326,39 @@ export function YearlyCSVUploader({
 
       {selectedFile && !isUploading && (
         <TouchableOpacity style={styles.clearButton} onPress={clearSelection}>
-          <ThemedText style={styles.clearButtonText}>
+          <ThemedText style={[styles.clearButtonText, { color: colors.error }]}>
             Clear Selection
           </ThemedText>
         </TouchableOpacity>
       )}
 
-      <ThemedView style={styles.infoCard}>
-        <ThemedText style={styles.infoTitle}>
+      <ThemedView
+        style={[
+          styles.infoCard,
+          {
+            backgroundColor: colorScheme === "dark" ? "#1565C0" : "#E3F2FD",
+            borderLeftColor: colorScheme === "dark" ? "#42A5F5" : "#2196F3",
+          },
+        ]}
+      >
+        <ThemedText
+          style={[
+            styles.infoTitle,
+            {
+              color: colorScheme === "dark" ? "#42A5F5" : "#1976D2",
+            },
+          ]}
+        >
           📄 CSV Format Requirements
         </ThemedText>
-        <ThemedText style={styles.infoText}>
+        <ThemedText
+          style={[
+            styles.infoText,
+            {
+              color: colorScheme === "dark" ? "#42A5F5" : "#1976D2",
+            },
+          ]}
+        >
           • Header row with field names{"\n"}• d_date: YYYY-MM-DD format{"\n"}•
           Prayer times: HH:MM:SS or HH:MM format{"\n"}• Required: fajr_begins,
           zuhr_begins, asr_mithl_1, maghrib_begins, isha_begins{"\n"}• Optional:
@@ -268,9 +366,24 @@ export function YearlyCSVUploader({
         </ThemedText>
       </ThemedView>
 
-      <ThemedView style={styles.warningCard}>
+      <ThemedView
+        style={[
+          styles.warningCard,
+          {
+            backgroundColor: colorScheme === "dark" ? "#E65100" : "#FFF3E0",
+            borderLeftColor: colorScheme === "dark" ? "#FF9800" : "#FF9800",
+          },
+        ]}
+      >
         <IconSymbol name="exclamationmark.triangle" size={20} color="#FF9800" />
-        <ThemedText style={styles.warningText}>
+        <ThemedText
+          style={[
+            styles.warningText,
+            {
+              color: colorScheme === "dark" ? "#FFB74D" : "#E65100",
+            },
+          ]}
+        >
           Warning: This will replace ALL existing prayer time data. Make sure to
           backup current data before proceeding.
         </ThemedText>
@@ -289,7 +402,6 @@ const styles = StyleSheet.create({
   selectorLabel: {
     fontSize: 14,
     fontWeight: "600",
-    opacity: 0.8,
   },
   yearPickerContainer: {
     flexDirection: "row",
@@ -299,17 +411,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: "rgba(0,0,0,0.05)",
-  },
-  selectedOption: {
-    backgroundColor: "#1B5E20",
   },
   optionText: {
     fontSize: 14,
-  },
-  selectedText: {
-    color: "#fff",
-    fontWeight: "600",
   },
   uploadButton: {
     flexDirection: "row",
@@ -330,17 +434,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   previewCard: {
-    backgroundColor: "#E8F5E9",
     padding: 16,
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: "#4CAF50",
   },
   previewTitle: {
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 12,
-    color: "#2E7D32",
   },
   previewRow: {
     flexDirection: "row",
@@ -349,7 +450,6 @@ const styles = StyleSheet.create({
   },
   previewLabel: {
     fontSize: 14,
-    opacity: 0.8,
     flex: 1,
   },
   previewValue: {
@@ -363,41 +463,33 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   clearButtonText: {
-    color: "#d32f2f",
     fontSize: 14,
   },
   infoCard: {
-    backgroundColor: "#E3F2FD",
     padding: 16,
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: "#2196F3",
   },
   infoTitle: {
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
-    color: "#1976D2",
   },
   infoText: {
     fontSize: 12,
     lineHeight: 18,
-    color: "#1976D2",
   },
   warningCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    backgroundColor: "#FFF3E0",
     padding: 16,
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF9800",
   },
   warningText: {
     fontSize: 12,
     lineHeight: 18,
-    color: "#E65100",
     flex: 1,
   },
 });

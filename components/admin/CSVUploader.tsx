@@ -6,6 +6,7 @@ import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { mergeMonthlyIntoYearly, parseMonthlyCSV } from "@/utils/csvParser";
@@ -18,6 +19,7 @@ interface CSVUploaderProps {
 
 export function CSVUploader({ onUploadComplete }: CSVUploaderProps) {
   const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
   const { prayerTimes, refreshData } = usePrayerTimes();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -133,21 +135,33 @@ export function CSVUploader({ onUploadComplete }: CSVUploaderProps) {
     <ThemedView style={styles.container}>
       <View style={styles.selectors}>
         <View style={styles.selector}>
-          <ThemedText style={styles.selectorLabel}>Month</ThemedText>
+          <ThemedText
+            style={[styles.selectorLabel, { color: `${colors.text}CC` }]}
+          >
+            Month
+          </ThemedText>
           <View style={styles.pickerContainer}>
             {months.map((month) => (
               <TouchableOpacity
                 key={month.value}
                 style={[
                   styles.monthOption,
-                  selectedMonth === month.value && styles.selectedOption,
+                  {
+                    backgroundColor:
+                      selectedMonth === month.value
+                        ? colors.primary
+                        : `${colors.text}10`,
+                  },
                 ]}
                 onPress={() => setSelectedMonth(month.value)}
               >
                 <ThemedText
                   style={[
                     styles.optionText,
-                    selectedMonth === month.value && styles.selectedText,
+                    {
+                      color:
+                        selectedMonth === month.value ? "#fff" : colors.text,
+                    },
                   ]}
                 >
                   {month.label.substring(0, 3)}
@@ -158,21 +172,32 @@ export function CSVUploader({ onUploadComplete }: CSVUploaderProps) {
         </View>
 
         <View style={styles.selector}>
-          <ThemedText style={styles.selectorLabel}>Year</ThemedText>
+          <ThemedText
+            style={[styles.selectorLabel, { color: `${colors.text}CC` }]}
+          >
+            Year
+          </ThemedText>
           <View style={styles.yearPickerContainer}>
             {years.map((year) => (
               <TouchableOpacity
                 key={year.value}
                 style={[
                   styles.yearOption,
-                  selectedYear === year.value && styles.selectedOption,
+                  {
+                    backgroundColor:
+                      selectedYear === year.value
+                        ? colors.primary
+                        : `${colors.text}10`,
+                  },
                 ]}
                 onPress={() => setSelectedYear(year.value)}
               >
                 <ThemedText
                   style={[
                     styles.optionText,
-                    selectedYear === year.value && styles.selectedText,
+                    {
+                      color: selectedYear === year.value ? "#fff" : colors.text,
+                    },
                   ]}
                 >
                   {year.label}
@@ -203,7 +228,7 @@ export function CSVUploader({ onUploadComplete }: CSVUploaderProps) {
           style={styles.clearButton}
           onPress={() => setSelectedFile(null)}
         >
-          <ThemedText style={styles.clearButtonText}>
+          <ThemedText style={[styles.clearButtonText, { color: colors.error }]}>
             Clear Selection
           </ThemedText>
         </TouchableOpacity>
@@ -225,7 +250,6 @@ const styles = StyleSheet.create({
   selectorLabel: {
     fontSize: 14,
     fontWeight: "600",
-    opacity: 0.8,
   },
   pickerContainer: {
     flexDirection: "row",
@@ -240,7 +264,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: "rgba(0,0,0,0.05)",
     minWidth: 45,
     alignItems: "center",
   },
@@ -248,17 +271,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: "rgba(0,0,0,0.05)",
-  },
-  selectedOption: {
-    backgroundColor: "#1B5E20",
   },
   optionText: {
     fontSize: 14,
-  },
-  selectedText: {
-    color: "#fff",
-    fontWeight: "600",
+    fontWeight: "500",
   },
   uploadButton: {
     flexDirection: "row",
@@ -283,7 +299,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   clearButtonText: {
-    color: "#d32f2f",
     fontSize: 14,
+    fontWeight: "500",
   },
 });
