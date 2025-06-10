@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import React, { useCallback, useState } from "react";
@@ -8,6 +9,7 @@ import {
   Dimensions,
   Modal,
   Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   TouchableOpacity,
@@ -97,6 +99,18 @@ export default function CalendarScreen() {
     );
   };
 
+  const jumpToToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+  };
+
+  const isCurrentMonth = () => {
+    const today = new Date();
+    return (
+      currentMonth === today.getMonth() && currentYear === today.getFullYear()
+    );
+  };
+
   const handleExport = async () => {
     setIsExporting(true);
 
@@ -111,7 +125,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = await generatePDFHTML([selectedDayData], "day"); // Add await here
+          html = await generatePDFHTML([selectedDayData], "day");
           const dayDate = new Date(selectedDayData.d_date);
           filename = `prayer-times-${dayDate.toISOString().split("T")[0]}.pdf`;
           break;
@@ -123,7 +137,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = await generatePDFHTML(monthData, "month"); // Add await here
+          html = await generatePDFHTML(monthData, "month");
           filename = `prayer-times-${getMonthName(
             currentMonth
           )}-${currentYear}.pdf`;
@@ -138,7 +152,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = await generatePDFHTML(yearData, "year"); // Add await here
+          html = await generatePDFHTML(yearData, "year");
           filename = `prayer-times-${currentYear}.pdf`;
           break;
       }
@@ -178,23 +192,47 @@ export default function CalendarScreen() {
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
 
-      <Animated.ScrollView
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Enhanced Header */}
-          <ThemedView style={styles.header}>
-            <View style={styles.headerTop}>
-              <ThemedText type="title" style={styles.title}>
+          {/* Enhanced Header - Matching Homepage */}
+          <LinearGradient
+            colors={
+              colorScheme === "dark"
+                ? ["#1B5E20", "#2E7D32", "#388E3C"]
+                : ["#E8F5E9", "#C8E6C9", "#A5D6A7"]
+            }
+            style={styles.gradientHeader}
+          >
+            <View style={styles.logoContainer}>
+              <IconSymbol name="calendar" size={48} color="#fff" />
+            </View>
+
+            <View style={styles.headerContent}>
+              <ThemedText style={styles.greetingText}>Prayer Times</ThemedText>
+              <ThemedText style={styles.mosqueNameEnhanced}>
                 Prayer Calendar
               </ThemedText>
+              <ThemedText style={styles.dateTextEnhanced}>
+                {getMonthName(currentMonth)} {currentYear}
+              </ThemedText>
+            </View>
+
+            <View style={styles.headerActionsColumn}>
+              {!isCurrentMonth() && (
+                <TouchableOpacity
+                  style={styles.todayButtonHeader}
+                  onPress={jumpToToday}
+                >
+                  <IconSymbol name="house" size={16} color="#fff" />
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
-                style={[
-                  styles.exportButton,
-                  { backgroundColor: colors.primary },
-                ]}
+                style={styles.exportButtonHeader}
                 onPress={() => setShowExportModal(true)}
               >
                 <IconSymbol
@@ -202,29 +240,36 @@ export default function CalendarScreen() {
                   size={20}
                   color="#fff"
                 />
-                <ThemedText style={styles.exportButtonText}>Export</ThemedText>
               </TouchableOpacity>
             </View>
-            <ThemedText
-              style={[styles.subtitle, { color: `${colors.text}B3` }]}
-            >
-              Tap any day to view detailed prayer times
-            </ThemedText>
-          </ThemedView>
+          </LinearGradient>
 
-          {/* Month/Year Selector */}
+          {/* Month Navigation */}
           <ThemedView
-            style={[styles.monthSelector, { backgroundColor: colors.surface }]}
+            style={[
+              styles.monthNavigation,
+              { backgroundColor: colors.surface },
+            ]}
           >
             <TouchableOpacity
               onPress={() => handleMonthChange("prev")}
-              style={styles.monthButton}
+              style={[
+                styles.navButton,
+                {
+                  backgroundColor: `${colors.primary}15`,
+                  borderColor: colors.primary,
+                },
+              ]}
             >
-              <IconSymbol name="chevron.left" size={24} color={colors.text} />
+              <IconSymbol
+                name="chevron.left"
+                size={24}
+                color={colors.primary}
+              />
             </TouchableOpacity>
 
-            <View style={styles.monthYearDisplay}>
-              <ThemedText style={styles.monthText}>
+            <View style={styles.monthDisplay}>
+              <ThemedText style={[styles.monthText, { color: colors.text }]}>
                 {getMonthName(currentMonth)}
               </ThemedText>
               <ThemedText
@@ -236,102 +281,125 @@ export default function CalendarScreen() {
 
             <TouchableOpacity
               onPress={() => handleMonthChange("next")}
-              style={styles.monthButton}
+              style={[
+                styles.navButton,
+                {
+                  backgroundColor: `${colors.primary}15`,
+                  borderColor: colors.primary,
+                },
+              ]}
             >
-              <IconSymbol name="chevron.right" size={24} color={colors.text} />
+              <IconSymbol
+                name="chevron.right"
+                size={24}
+                color={colors.primary}
+              />
             </TouchableOpacity>
           </ThemedView>
 
-          {/* Today Button */}
-          {today.startsWith(
-            `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`
-          ) && (
-            <TouchableOpacity
-              style={[
-                styles.todayButton,
-                { backgroundColor: colors.secondary },
-              ]}
-              onPress={() => {
-                const todayDay = parseInt(today.split("-")[2]);
-                handleDaySelect(todayDay);
-              }}
-            >
-              <IconSymbol name="calendar" size={16} color="#fff" />
-              <ThemedText style={styles.todayButtonText}>
-                Jump to Today
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-
-          {/* Calendar Grid */}
-          {hasDataForMonth ? (
-            <MonthlyCalendar
-              month={currentMonth}
-              year={currentYear}
-              monthData={monthData}
-              onDaySelect={handleDaySelect}
-            />
-          ) : (
-            <ThemedView style={styles.noDataContainer}>
-              <IconSymbol
-                name="calendar"
-                size={48}
-                color={`${colors.text}40`}
+          {/* Calendar Content */}
+          <View style={styles.calendarContent}>
+            {hasDataForMonth ? (
+              <MonthlyCalendar
+                month={currentMonth}
+                year={currentYear}
+                monthData={monthData}
+                onDaySelect={handleDaySelect}
               />
-              <ThemedText
-                style={[styles.noDataText, { color: `${colors.text}80` }]}
+            ) : (
+              <ThemedView
+                style={[
+                  styles.noDataContainer,
+                  { backgroundColor: colors.surface },
+                ]}
               >
-                No prayer times available for {getMonthName(currentMonth)}{" "}
-                {currentYear}
-              </ThemedText>
-            </ThemedView>
-          )}
+                <View style={styles.noDataIconContainer}>
+                  <IconSymbol
+                    name="calendar"
+                    size={64}
+                    color={colors.primary}
+                  />
+                </View>
+                <ThemedText
+                  style={[styles.noDataTitle, { color: colors.text }]}
+                >
+                  No Prayer Times Available
+                </ThemedText>
+                <ThemedText
+                  style={[styles.noDataText, { color: `${colors.text}80` }]}
+                >
+                  Prayer times for {getMonthName(currentMonth)} {currentYear}{" "}
+                  haven't been uploaded yet.
+                </ThemedText>
+              </ThemedView>
+            )}
+          </View>
 
-          {/* Quick Stats */}
+          {/* Quick Actions */}
           {hasDataForMonth && (
             <ThemedView
-              style={[
-                styles.statsContainer,
-                { backgroundColor: colors.surface },
-              ]}
+              style={[styles.quickActions, { backgroundColor: colors.surface }]}
             >
               <ThemedText
-                style={[styles.statsTitle, { color: colors.primary }]}
+                style={[styles.quickActionsTitle, { color: colors.primary }]}
               >
-                Month Overview
+                Quick Actions
               </ThemedText>
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
+
+              <View style={styles.actionsGrid}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: `${colors.primary}15` },
+                  ]}
+                  onPress={() => {
+                    setExportType("month");
+                    setShowExportModal(true);
+                  }}
+                >
+                  <IconSymbol
+                    name="square.and.arrow.down"
+                    size={24}
+                    color={colors.primary}
+                  />
                   <ThemedText
-                    style={[styles.statValue, { color: colors.text }]}
+                    style={[styles.actionButtonText, { color: colors.primary }]}
                   >
-                    {monthData.length}
+                    Export Month
                   </ThemedText>
-                  <ThemedText
-                    style={[styles.statLabel, { color: `${colors.text}80` }]}
+                </TouchableOpacity>
+
+                {!isCurrentMonth() && (
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: `${colors.secondary}15` },
+                    ]}
+                    onPress={jumpToToday}
                   >
-                    Days with Data
-                  </ThemedText>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <ThemedText
-                    style={[styles.statValue, { color: colors.text }]}
-                  >
-                    {monthData.filter((d) => d.is_ramadan === 1).length}
-                  </ThemedText>
-                  <ThemedText
-                    style={[styles.statLabel, { color: `${colors.text}80` }]}
-                  >
-                    Ramadan Days
-                  </ThemedText>
-                </View>
+                    <IconSymbol
+                      name="house"
+                      size={24}
+                      color={colors.secondary}
+                    />
+                    <ThemedText
+                      style={[
+                        styles.actionButtonText,
+                        { color: colors.secondary },
+                      ]}
+                    >
+                      Go to Today
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
               </View>
             </ThemedView>
           )}
 
           {/* Legend */}
-          <ThemedView style={styles.legend}>
+          <ThemedView
+            style={[styles.legend, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.legendItem}>
               <View
                 style={[
@@ -345,6 +413,7 @@ export default function CalendarScreen() {
                 Today
               </ThemedText>
             </View>
+
             <View style={styles.legendItem}>
               <View
                 style={[
@@ -365,7 +434,7 @@ export default function CalendarScreen() {
             </View>
           </ThemedView>
         </Animated.View>
-      </Animated.ScrollView>
+      </ScrollView>
 
       {/* Day Detail Modal */}
       <Modal
@@ -394,7 +463,10 @@ export default function CalendarScreen() {
             style={[styles.exportModal, { backgroundColor: colors.background }]}
           >
             <View style={styles.exportModalHeader}>
-              <ThemedText type="subtitle" style={styles.exportModalTitle}>
+              <ThemedText
+                type="subtitle"
+                style={[styles.exportModalTitle, { color: colors.text }]}
+              >
                 Export Prayer Times
               </ThemedText>
               <TouchableOpacity
@@ -432,29 +504,31 @@ export default function CalendarScreen() {
                   size={24}
                   color={exportType === "day" ? "#fff" : colors.text}
                 />
-                <ThemedText
-                  style={[
-                    styles.exportOptionText,
-                    { color: exportType === "day" ? "#fff" : colors.text },
-                  ]}
-                >
-                  Selected Day
-                </ThemedText>
-                {selectedDayData && (
+                <View style={styles.exportOptionContent}>
                   <ThemedText
                     style={[
-                      styles.exportOptionSubtext,
-                      {
-                        color:
-                          exportType === "day"
-                            ? "#ffffffB3"
-                            : `${colors.text}80`,
-                      },
+                      styles.exportOptionText,
+                      { color: exportType === "day" ? "#fff" : colors.text },
                     ]}
                   >
-                    {new Date(selectedDayData.d_date).toLocaleDateString()}
+                    Selected Day
                   </ThemedText>
-                )}
+                  {selectedDayData && (
+                    <ThemedText
+                      style={[
+                        styles.exportOptionSubtext,
+                        {
+                          color:
+                            exportType === "day"
+                              ? "#ffffffB3"
+                              : `${colors.text}80`,
+                        },
+                      ]}
+                    >
+                      {new Date(selectedDayData.d_date).toLocaleDateString()}
+                    </ThemedText>
+                  )}
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -474,27 +548,29 @@ export default function CalendarScreen() {
                   size={24}
                   color={exportType === "month" ? "#fff" : colors.text}
                 />
-                <ThemedText
-                  style={[
-                    styles.exportOptionText,
-                    { color: exportType === "month" ? "#fff" : colors.text },
-                  ]}
-                >
-                  Current Month
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.exportOptionSubtext,
-                    {
-                      color:
-                        exportType === "month"
-                          ? "#ffffffB3"
-                          : `${colors.text}80`,
-                    },
-                  ]}
-                >
-                  {getMonthName(currentMonth)} {currentYear}
-                </ThemedText>
+                <View style={styles.exportOptionContent}>
+                  <ThemedText
+                    style={[
+                      styles.exportOptionText,
+                      { color: exportType === "month" ? "#fff" : colors.text },
+                    ]}
+                  >
+                    Current Month
+                  </ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.exportOptionSubtext,
+                      {
+                        color:
+                          exportType === "month"
+                            ? "#ffffffB3"
+                            : `${colors.text}80`,
+                      },
+                    ]}
+                  >
+                    {getMonthName(currentMonth)} {currentYear}
+                  </ThemedText>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -514,27 +590,29 @@ export default function CalendarScreen() {
                   size={24}
                   color={exportType === "year" ? "#fff" : colors.text}
                 />
-                <ThemedText
-                  style={[
-                    styles.exportOptionText,
-                    { color: exportType === "year" ? "#fff" : colors.text },
-                  ]}
-                >
-                  Full Year
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.exportOptionSubtext,
-                    {
-                      color:
-                        exportType === "year"
-                          ? "#ffffffB3"
-                          : `${colors.text}80`,
-                    },
-                  ]}
-                >
-                  {currentYear}
-                </ThemedText>
+                <View style={styles.exportOptionContent}>
+                  <ThemedText
+                    style={[
+                      styles.exportOptionText,
+                      { color: exportType === "year" ? "#fff" : colors.text },
+                    ]}
+                  >
+                    Full Year
+                  </ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.exportOptionSubtext,
+                      {
+                        color:
+                          exportType === "year"
+                            ? "#ffffffB3"
+                            : `${colors.text}80`,
+                      },
+                    ]}
+                  >
+                    {currentYear}
+                  </ThemedText>
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -572,6 +650,7 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -579,101 +658,185 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: Platform.OS === "ios" ? 100 : 80,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop:
-      Platform.OS === "ios" ? 60 : (StatusBar.currentHeight || 24) + 20,
+  gradientHeader: {
+    paddingTop: Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 24,
     paddingBottom: 16,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  exportButton: {
+    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  exportButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  monthSelector: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 8,
+    minHeight: Platform.OS === "ios" ? 100 : 80,
   },
-  monthButton: {
-    padding: 8,
+  logoContainer: {
+    marginRight: 12,
   },
-  monthYearDisplay: {
-    alignItems: "center",
+  headerContent: {
+    flex: 1,
+    justifyContent: "center",
   },
-  monthText: {
-    fontSize: 20,
-    fontWeight: "700",
+  greetingText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "500",
     marginBottom: 2,
   },
-  yearText: {
+  mosqueNameEnhanced: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 2,
+    letterSpacing: 0.3,
+  },
+  dateTextEnhanced: {
     fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
     fontWeight: "500",
   },
-  todayButton: {
-    flexDirection: "row",
+  headerActionsColumn: {
+    flexDirection: "column",
     alignItems: "center",
     gap: 8,
-    alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginBottom: 16,
+    marginLeft: 8,
   },
-  todayButtonText: {
-    color: "#fff",
-    fontSize: 14,
+  todayButtonHeader: {
+    padding: 8,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 12,
+  },
+  exportButtonHeader: {
+    padding: 8,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 12,
+  },
+  monthNavigation: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginVertical: 16,
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  navButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+  },
+  monthDisplay: {
+    alignItems: "center",
+    flex: 1,
+  },
+  monthText: {
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  yearText: {
+    fontSize: 16,
     fontWeight: "600",
+  },
+  calendarContent: {
+    flex: 1,
+    marginHorizontal: 20,
   },
   noDataContainer: {
     alignItems: "center",
     justifyContent: "center",
     padding: 60,
-    margin: 20,
-    borderRadius: 16,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  noDataIconContainer: {
+    padding: 24,
+    backgroundColor: "rgba(27, 94, 32, 0.1)",
+    borderRadius: 32,
+    marginBottom: 24,
+  },
+  noDataTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 12,
+    letterSpacing: 0.3,
   },
   noDataText: {
     fontSize: 16,
-    fontWeight: "500",
     textAlign: "center",
-    marginTop: 16,
+    lineHeight: 24,
+    paddingHorizontal: 16,
   },
-  statsContainer: {
+  quickActions: {
     margin: 20,
+    padding: 24,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  quickActionsTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  actionsGrid: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  legend: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 32,
+    margin: 20,
+    marginTop: 0,
     padding: 20,
     borderRadius: 16,
     shadowColor: "#000",
@@ -685,60 +848,25 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  statsTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  statItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: "rgba(0,0,0,0.1)",
-  },
-  legend: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
   legendColor: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
   legendRamadanIcon: {
-    fontSize: 12,
+    fontSize: 14,
   },
   legendText: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
   modalOverlay: {
     flex: 1,
@@ -750,69 +878,84 @@ const styles = StyleSheet.create({
   exportModal: {
     width: "100%",
     maxWidth: 400,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 24,
+    padding: 32,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 16,
+    shadowRadius: 24,
+    elevation: 24,
   },
   exportModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   exportModalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
   },
   exportModalSubtitle: {
-    fontSize: 14,
-    marginBottom: 24,
+    fontSize: 16,
+    marginBottom: 32,
+    lineHeight: 24,
   },
   exportOptions: {
-    gap: 12,
-    marginBottom: 24,
+    gap: 16,
+    marginBottom: 32,
   },
   exportOption: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
+    gap: 16,
+    padding: 20,
+    borderRadius: 16,
     borderWidth: 2,
   },
-  exportOptionText: {
-    fontSize: 16,
-    fontWeight: "600",
+  exportOptionContent: {
     flex: 1,
   },
+  exportOptionText: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
   exportOptionSubtext: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "500",
   },
   exportConfirmButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    padding: 16,
-    borderRadius: 12,
+    gap: 12,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
   },
   exportingButton: {
     opacity: 0.7,
   },
   exportConfirmText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 });
