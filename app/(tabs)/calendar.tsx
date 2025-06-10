@@ -111,7 +111,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = generatePDFHTML([selectedDayData], "day");
+          html = await generatePDFHTML([selectedDayData], "day"); // Add await here
           const dayDate = new Date(selectedDayData.d_date);
           filename = `prayer-times-${dayDate.toISOString().split("T")[0]}.pdf`;
           break;
@@ -123,7 +123,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = generatePDFHTML(monthData, "month");
+          html = await generatePDFHTML(monthData, "month"); // Add await here
           filename = `prayer-times-${getMonthName(
             currentMonth
           )}-${currentYear}.pdf`;
@@ -138,7 +138,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = generatePDFHTML(yearData, "year");
+          html = await generatePDFHTML(yearData, "year"); // Add await here
           filename = `prayer-times-${currentYear}.pdf`;
           break;
       }
