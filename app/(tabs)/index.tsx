@@ -1,7 +1,11 @@
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   Platform,
@@ -12,6 +16,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -24,25 +29,68 @@ import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { PrayerName, PrayerTime } from "@/types/prayer";
 import {
   extractPrayersFromTime,
+  formatTimeForDisplay,
   getCurrentPrayerAndNext,
+  getMonthName,
   getTimeUntilNext,
   getTodayString,
 } from "@/utils/dateHelpers";
+import { generatePDFHTML } from "@/utils/pdfGenerator";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
+
+type ViewMode = "daily" | "monthly";
 
 export default function TodayScreen() {
   const colorScheme = useColorScheme();
   const { prayerTimes, refreshData, isLoading } = usePrayerTimes();
+  const [viewMode, setViewMode] = useState<ViewMode>("daily");
   const [todaysPrayers, setTodaysPrayers] = useState<PrayerTime | null>(null);
   const [currentPrayer, setCurrentPrayer] = useState<PrayerName | null>(null);
   const [nextPrayer, setNextPrayer] = useState<PrayerName | null>(null);
   const [timeUntilNext, setTimeUntilNext] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isPrinting, setIsPrinting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [monthData, setMonthData] = useState<PrayerTime[]>([]);
 
-  // Animations
+  const colors = Colors[colorScheme ?? "light"];
+  const today = getTodayString();
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
+  useEffect(() => {
+    if (!prayerTimes || prayerTimes.length === 0) {
+      setMonthData([]);
+      return;
+    }
+
+    const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(
+      2,
+      "0"
+    )}-01`;
+    const monthEnd = `${currentYear}-${String(currentMonth + 1).padStart(
+      2,
+      "0"
+    )}-31`;
+
+    console.log("🗓️ Filtering monthly data:", { monthStart, monthEnd });
+
+    const filtered = prayerTimes
+      .filter((pt) => {
+        if (!pt || !pt.d_date) return false;
+        return pt.d_date >= monthStart && pt.d_date <= monthEnd;
+      })
+      .sort((a, b) => a.d_date.localeCompare(b.d_date));
+
+    console.log("📊 Filtered monthly data:", filtered.length, "items");
+    console.log("Sample filtered data:", filtered.slice(0, 3));
+
+    setMonthData(filtered);
+  }, [prayerTimes, currentMonth, currentYear]);
+
   useEffect(() => {
     Animated.sequence([
       Animated.timing(fadeAnim, {
@@ -52,7 +100,6 @@ export default function TodayScreen() {
       }),
     ]).start();
 
-    // Pulse animation for current prayer
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -69,24 +116,25 @@ export default function TodayScreen() {
     ).start();
   }, []);
 
-  // Update current time every minute
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
-
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
     const updateTodaysPrayers = () => {
+      console.log("🔍 Finding today's prayers for:", today);
+
       if (!Array.isArray(prayerTimes) || prayerTimes.length === 0) {
+        console.log("❌ No prayer times available");
         setTodaysPrayers(null);
         return;
       }
 
-      const today = getTodayString();
       const todayData = prayerTimes.find((pt) => pt && pt.d_date === today);
+      console.log("📅 Today's data found:", todayData ? "YES" : "NO");
 
       if (todayData && typeof todayData === "object") {
         setTodaysPrayers(todayData);
@@ -105,7 +153,6 @@ export default function TodayScreen() {
             setTimeUntilNext("Unknown");
           }
         } catch (error) {
-          console.error("Error updating prayer status:", error);
           setCurrentPrayer(null);
           setNextPrayer("fajr");
           setTimeUntilNext("Unknown");
@@ -117,9 +164,8 @@ export default function TodayScreen() {
 
     updateTodaysPrayers();
     const interval = setInterval(updateTodaysPrayers, 60000);
-
     return () => clearInterval(interval);
-  }, [prayerTimes]);
+  }, [prayerTimes, today]);
 
   const getNextPrayerTimeProperty = (
     prayerName: PrayerName
@@ -164,12 +210,50 @@ export default function TodayScreen() {
         }
       });
 
-      await Share.share({
-        message,
-        title: "Prayer Times",
-      });
+      await Share.share({ message, title: "Prayer Times" });
     } catch (error) {
       console.error("Error sharing:", error);
+    }
+  };
+
+  const handlePrint = async () => {
+    setIsPrinting(true);
+
+    try {
+      let html = "";
+
+      if (viewMode === "daily" && todaysPrayers) {
+        html = await generatePDFHTML([todaysPrayers], "day");
+      } else if (viewMode === "monthly") {
+        if (monthData.length === 0) {
+          Alert.alert("Error", "No data available for current month");
+          setIsPrinting(false);
+          return;
+        }
+        html = await generatePDFHTML(monthData, "month");
+      } else {
+        Alert.alert("Error", "No data available to print");
+        setIsPrinting(false);
+        return;
+      }
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+
+      if (Platform.OS === "ios") {
+        await Sharing.shareAsync(uri, {
+          UTI: ".pdf",
+          mimeType: "application/pdf",
+        });
+      } else {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          dialogTitle: "Share Prayer Times PDF",
+        });
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to generate PDF. Please try again.");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -197,7 +281,404 @@ export default function TodayScreen() {
     return "Good Evening";
   };
 
-  // Enhanced loading/no data states
+  const renderMonthlyTimetable = () => {
+    console.log(
+      "🗓️ Rendering monthly timetable with:",
+      monthData.length,
+      "items"
+    );
+
+    if (monthData.length === 0) {
+      return (
+        <ThemedView
+          style={[styles.noDataCard, { backgroundColor: colors.surface }]}
+        >
+          <View style={styles.noDataIconContainer}>
+            <IconSymbol name="calendar" size={48} color={colors.primary} />
+          </View>
+          <ThemedText type="subtitle" style={styles.noDataTitle}>
+            No Monthly Data Available
+          </ThemedText>
+          <ThemedText style={styles.noDataText}>
+            Prayer times for {getMonthName(currentMonth)} {currentYear} haven't
+            been uploaded yet.
+            {"\n"}Total prayer times available: {prayerTimes.length}
+          </ThemedText>
+        </ThemedView>
+      );
+    }
+
+    return (
+      <ThemedView
+        style={[styles.monthlyContainer, { backgroundColor: colors.surface }]}
+      >
+        <View style={styles.monthlyHeader}>
+          <ThemedText style={[styles.monthlyTitle, { color: colors.text }]}>
+            {getMonthName(currentMonth)} {currentYear}
+          </ThemedText>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={true}
+          style={styles.monthlyScrollView}
+          contentContainerStyle={{ minWidth: "100%" }}
+        >
+          <View style={styles.monthlyTable}>
+            {/* Header Row */}
+            <View
+              style={[
+                styles.monthlyHeaderRow,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <View style={[styles.monthlyCell, styles.dateCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>Date</ThemedText>
+              </View>
+              <View style={[styles.monthlyCell, styles.dayCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>Day</ThemedText>
+              </View>
+              <View style={[styles.monthlyCell, styles.timeCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>Fajr</ThemedText>
+              </View>
+              <View style={[styles.monthlyCell, styles.timeCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>
+                  Sunrise
+                </ThemedText>
+              </View>
+              <View style={[styles.monthlyCell, styles.timeCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>Zuhr</ThemedText>
+              </View>
+              <View style={[styles.monthlyCell, styles.timeCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>Asr</ThemedText>
+              </View>
+              <View style={[styles.monthlyCell, styles.timeCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>
+                  Maghrib
+                </ThemedText>
+              </View>
+              <View style={[styles.monthlyCell, styles.timeCell]}>
+                <ThemedText style={styles.monthlyHeaderText}>Isha</ThemedText>
+              </View>
+            </View>
+
+            {/* Data Rows */}
+            {monthData.map((prayerTime: PrayerTime, index: number) => {
+              const date = new Date(prayerTime.d_date);
+              const isToday = prayerTime.d_date === today;
+              const isMonday = date.getDay() === 1;
+              const isRamadan = prayerTime.is_ramadan === 1;
+
+              const dayNames = [
+                "Sun",
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat",
+              ];
+              const dayAbbr = dayNames[date.getDay()];
+
+              const baseRowStyle: ViewStyle = {
+                flexDirection: "row",
+                borderBottomWidth: 1,
+                borderBottomColor: "rgba(0,0,0,0.1)",
+                paddingVertical: 8,
+                minHeight: 40,
+              };
+
+              let combinedRowStyle: ViewStyle = { ...baseRowStyle };
+              let textColor = colors.text;
+
+              if (isToday) {
+                combinedRowStyle = {
+                  ...baseRowStyle,
+                  backgroundColor: colors.primary,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 4,
+                  elevation: 4,
+                };
+                textColor = "#fff";
+              } else if (isMonday) {
+                combinedRowStyle = {
+                  ...baseRowStyle,
+                  backgroundColor: "#FFF3E0",
+                  borderLeftWidth: 3,
+                  borderLeftColor: "#FF9800",
+                };
+                textColor = "#E65100";
+              } else if (isRamadan) {
+                combinedRowStyle = {
+                  ...baseRowStyle,
+                  backgroundColor: "#FFF8E1",
+                  borderRightWidth: 3,
+                  borderRightColor: "#F9A825",
+                };
+              }
+
+              return (
+                <View
+                  key={`${prayerTime.d_date}-${index}`}
+                  style={combinedRowStyle}
+                >
+                  <View style={[styles.monthlyCell, styles.dateCell]}>
+                    <ThemedText
+                      style={[
+                        styles.monthlyCellText,
+                        {
+                          color: textColor,
+                          fontWeight: isToday || isMonday ? "800" : "600",
+                        },
+                      ]}
+                    >
+                      {date.getDate()}
+                      {isRamadan && (
+                        <ThemedText style={styles.ramadanIcon}> 🌙</ThemedText>
+                      )}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.monthlyCell, styles.dayCell]}>
+                    <ThemedText
+                      style={[
+                        styles.monthlyCellText,
+                        {
+                          color: textColor,
+                          fontWeight: isToday || isMonday ? "800" : "600",
+                        },
+                      ]}
+                    >
+                      {dayAbbr}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.monthlyCell, styles.timeCell]}>
+                    <ThemedText
+                      style={[styles.monthlyTimeText, { color: textColor }]}
+                    >
+                      {formatTimeForDisplay(prayerTime.fajr_begins)}
+                    </ThemedText>
+                    {prayerTime.fajr_jamah && (
+                      <ThemedText
+                        style={[styles.monthlyJamahText, { color: textColor }]}
+                      >
+                        J: {formatTimeForDisplay(prayerTime.fajr_jamah)}
+                      </ThemedText>
+                    )}
+                  </View>
+                  <View style={[styles.monthlyCell, styles.timeCell]}>
+                    <ThemedText
+                      style={[styles.monthlyTimeText, { color: textColor }]}
+                    >
+                      {formatTimeForDisplay(prayerTime.sunrise)}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.monthlyCell, styles.timeCell]}>
+                    <ThemedText
+                      style={[styles.monthlyTimeText, { color: textColor }]}
+                    >
+                      {formatTimeForDisplay(prayerTime.zuhr_begins)}
+                    </ThemedText>
+                    {prayerTime.zuhr_jamah && (
+                      <ThemedText
+                        style={[styles.monthlyJamahText, { color: textColor }]}
+                      >
+                        J: {formatTimeForDisplay(prayerTime.zuhr_jamah)}
+                      </ThemedText>
+                    )}
+                  </View>
+                  <View style={[styles.monthlyCell, styles.timeCell]}>
+                    <ThemedText
+                      style={[styles.monthlyTimeText, { color: textColor }]}
+                    >
+                      {formatTimeForDisplay(prayerTime.asr_mithl_1)}
+                    </ThemedText>
+                    {prayerTime.asr_jamah && (
+                      <ThemedText
+                        style={[styles.monthlyJamahText, { color: textColor }]}
+                      >
+                        J: {formatTimeForDisplay(prayerTime.asr_jamah)}
+                      </ThemedText>
+                    )}
+                  </View>
+                  <View style={[styles.monthlyCell, styles.timeCell]}>
+                    <ThemedText
+                      style={[styles.monthlyTimeText, { color: textColor }]}
+                    >
+                      {formatTimeForDisplay(prayerTime.maghrib_begins)}
+                    </ThemedText>
+                    {prayerTime.maghrib_jamah && (
+                      <ThemedText
+                        style={[styles.monthlyJamahText, { color: textColor }]}
+                      >
+                        J: {formatTimeForDisplay(prayerTime.maghrib_jamah)}
+                      </ThemedText>
+                    )}
+                  </View>
+                  <View style={[styles.monthlyCell, styles.timeCell]}>
+                    <ThemedText
+                      style={[styles.monthlyTimeText, { color: textColor }]}
+                    >
+                      {formatTimeForDisplay(prayerTime.isha_begins)}
+                    </ThemedText>
+                    {prayerTime.isha_jamah && (
+                      <ThemedText
+                        style={[styles.monthlyJamahText, { color: textColor }]}
+                      >
+                        J: {formatTimeForDisplay(prayerTime.isha_jamah)}
+                      </ThemedText>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        <View style={styles.monthlyLegend}>
+          <View style={styles.legendItem}>
+            <View
+              style={[styles.legendColor, { backgroundColor: colors.primary }]}
+            />
+            <ThemedText style={[styles.legendText, { color: colors.text }]}>
+              Today
+            </ThemedText>
+          </View>
+          <View style={styles.legendItem}>
+            <View
+              style={[styles.legendColor, { backgroundColor: "#FFF3E0" }]}
+            />
+            <ThemedText style={[styles.legendText, { color: colors.text }]}>
+              Monday
+            </ThemedText>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: "#FFF8E1" }]}>
+              <ThemedText style={styles.legendRamadanIcon}>🌙</ThemedText>
+            </View>
+            <ThemedText style={[styles.legendText, { color: colors.text }]}>
+              Ramadan
+            </ThemedText>
+          </View>
+          <View style={styles.legendItem}>
+            <ThemedText
+              style={[styles.legendNote, { color: `${colors.text}80` }]}
+            >
+              J: Jamah times
+            </ThemedText>
+          </View>
+        </View>
+      </ThemedView>
+    );
+  };
+
+  const renderDailyView = () => {
+    console.log(
+      "📅 Rendering daily view, todaysPrayers:",
+      todaysPrayers ? "EXISTS" : "NULL"
+    );
+
+    if (!todaysPrayers) {
+      return (
+        <ThemedView
+          style={[styles.noDataCard, { backgroundColor: colors.surface }]}
+        >
+          <View style={styles.noDataIconContainer}>
+            <IconSymbol name="calendar" size={48} color={colors.primary} />
+          </View>
+          <ThemedText type="subtitle" style={styles.noDataTitle}>
+            No Prayer Times for Today
+          </ThemedText>
+          <ThemedText style={styles.noDataText}>
+            Prayer times for today ({today}) are not available.
+            {"\n"}Total prayer times available: {prayerTimes.length}
+          </ThemedText>
+        </ThemedView>
+      );
+    }
+
+    const prayers = extractPrayersFromTime(todaysPrayers);
+
+    return (
+      <View>
+        {nextPrayer && (
+          <LinearGradient
+            colors={["#1B5E20", "#2E7D32"]}
+            style={styles.nextPrayerCard}
+          >
+            <View style={styles.nextPrayerContent}>
+              <Animated.View
+                style={[
+                  styles.nextPrayerIcon,
+                  {
+                    transform: [
+                      { scale: currentPrayer === nextPrayer ? pulseAnim : 1 },
+                    ],
+                  },
+                ]}
+              >
+                <IconSymbol name="bell.fill" size={32} color="#fff" />
+              </Animated.View>
+              <View style={styles.nextPrayerTextContainer}>
+                <ThemedText style={styles.nextPrayerLabel}>
+                  Next Prayer
+                </ThemedText>
+                <ThemedText type="title" style={styles.nextPrayerName}>
+                  {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
+                </ThemedText>
+                <ThemedText style={styles.timeUntilText}>
+                  in {timeUntilNext}
+                </ThemedText>
+              </View>
+            </View>
+          </LinearGradient>
+        )}
+
+        <ThemedView
+          style={[styles.prayersList, { backgroundColor: colors.surface }]}
+        >
+          <View style={styles.sectionHeader}>
+            <IconSymbol name="clock" size={20} color={colors.primary} />
+            <ThemedText
+              type="subtitle"
+              style={[styles.sectionTitle, { color: colors.primary }]}
+            >
+              Today's Prayer Times
+            </ThemedText>
+          </View>
+
+          {prayers.map((prayer, prayerIndex) => (
+            <PrayerTimeCard
+              key={prayerIndex}
+              prayer={prayer}
+              isActive={
+                currentPrayer === prayer.name.toLowerCase() ||
+                (currentPrayer === "sunrise" && prayer.name === "Sunrise")
+              }
+              isNext={
+                nextPrayer === prayer.name.toLowerCase() ||
+                (nextPrayer === "sunrise" && prayer.name === "Sunrise")
+              }
+            />
+          ))}
+        </ThemedView>
+
+        {todaysPrayers.is_ramadan === 1 && (
+          <LinearGradient
+            colors={["#F9A825", "#FFA726"]}
+            style={styles.ramadanBadge}
+          >
+            <View style={styles.ramadanContent}>
+              <ThemedText style={styles.ramadanIcon}>🌙</ThemedText>
+              <ThemedText style={styles.ramadanText}>Ramadan Kareem</ThemedText>
+            </View>
+          </LinearGradient>
+        )}
+      </View>
+    );
+  };
+
   if (!Array.isArray(prayerTimes) || prayerTimes.length === 0) {
     return (
       <View style={styles.container}>
@@ -219,7 +700,6 @@ export default function TodayScreen() {
               contentFit="contain"
             />
           </View>
-
           <View style={styles.headerContent}>
             <ThemedText style={styles.greetingText}>{getGreeting()}</ThemedText>
             <ThemedText style={styles.mosqueNameEnhanced}>
@@ -248,18 +728,14 @@ export default function TodayScreen() {
           <Animated.View style={{ opacity: fadeAnim }}>
             <ThemedView style={styles.noDataCardEnhanced}>
               <View style={styles.noDataIconContainer}>
-                <IconSymbol
-                  name="calendar"
-                  size={48}
-                  color={Colors[colorScheme ?? "light"].primary}
-                />
+                <IconSymbol name="calendar" size={48} color={colors.primary} />
               </View>
               <ThemedText type="subtitle" style={styles.noDataTitle}>
                 Prayer Times Not Available
               </ThemedText>
               <ThemedText style={styles.noDataText}>
                 Prayer times haven't been uploaded yet. Please contact the
-                mosque administration to upload the prayer timetable.
+                mosque administration.
               </ThemedText>
               <TouchableOpacity
                 style={styles.refreshButtonEnhanced}
@@ -278,85 +754,12 @@ export default function TodayScreen() {
     );
   }
 
-  if (!todaysPrayers) {
-    return (
-      <View style={styles.container}>
-        <StatusBar
-          barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-        />
-        <LinearGradient
-          colors={
-            colorScheme === "dark"
-              ? ["#1B5E20", "#2E7D32", "#388E3C"]
-              : ["#E8F5E9", "#C8E6C9", "#A5D6A7"]
-          }
-          style={styles.gradientHeader}
-        >
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/logos/mosqueLogo.png")}
-              style={styles.mosqueLogo}
-              contentFit="contain"
-            />
-          </View>
-
-          <View style={styles.headerContent}>
-            <ThemedText style={styles.greetingText}>{getGreeting()}</ThemedText>
-            <ThemedText style={styles.mosqueNameEnhanced}>
-              Masjid Abubakr Siddique
-            </ThemedText>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-            >
-              <ThemedText style={styles.currentTimeText}>
-                {formatCurrentTime()}
-              </ThemedText>
-              <ThemedText style={styles.dateTextEnhanced}>
-                {formatCurrentDate()}
-              </ThemedText>
-            </View>
-          </View>
-        </LinearGradient>
-
-        <ScrollView
-          style={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refreshData} />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <ThemedView style={styles.noDataCardEnhanced}>
-              <View style={styles.noDataIconContainer}>
-                <IconSymbol
-                  name="calendar"
-                  size={48}
-                  color={Colors[colorScheme ?? "light"].primary}
-                />
-              </View>
-              <ThemedText type="subtitle" style={styles.noDataTitle}>
-                No Prayer Times for Today
-              </ThemedText>
-              <ThemedText style={styles.noDataText}>
-                Prayer times for today are not available. The timetable may need
-                to be updated.
-              </ThemedText>
-            </ThemedView>
-          </Animated.View>
-        </ScrollView>
-      </View>
-    );
-  }
-
-  const prayers = extractPrayersFromTime(todaysPrayers);
-
   return (
     <View style={styles.container}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
 
-      {/* Enhanced Header with Better Animations */}
       <LinearGradient
         colors={
           colorScheme === "dark"
@@ -388,13 +791,82 @@ export default function TodayScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          onPress={handleShare}
-          style={styles.shareButtonEnhanced}
-        >
-          <IconSymbol name="square.and.arrow.up" size={20} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={handlePrint}
+            style={styles.printButton}
+            disabled={isPrinting}
+          >
+            {isPrinting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <IconSymbol name="printer" size={20} color="#fff" />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+            <IconSymbol name="square.and.arrow.up" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
+
+      <ThemedView
+        style={[styles.toggleContainer, { backgroundColor: colors.surface }]}
+      >
+        <View style={styles.toggleButtons}>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              viewMode === "daily" && [
+                styles.toggleButtonActive,
+                { backgroundColor: colors.primary },
+              ],
+              { borderColor: colors.primary },
+            ]}
+            onPress={() => setViewMode("daily")}
+          >
+            <IconSymbol
+              name="clock"
+              size={18}
+              color={viewMode === "daily" ? "#fff" : colors.primary}
+            />
+            <ThemedText
+              style={[
+                styles.toggleButtonText,
+                { color: viewMode === "daily" ? "#fff" : colors.primary },
+              ]}
+            >
+              Daily
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              viewMode === "monthly" && [
+                styles.toggleButtonActive,
+                { backgroundColor: colors.primary },
+              ],
+              { borderColor: colors.primary },
+            ]}
+            onPress={() => setViewMode("monthly")}
+          >
+            <IconSymbol
+              name="calendar"
+              size={18}
+              color={viewMode === "monthly" ? "#fff" : colors.primary}
+            />
+            <ThemedText
+              style={[
+                styles.toggleButtonText,
+                { color: viewMode === "monthly" ? "#fff" : colors.primary },
+              ]}
+            >
+              Monthly
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </ThemedView>
 
       <ScrollView
         style={styles.scrollContent}
@@ -403,145 +875,26 @@ export default function TodayScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Enhanced Next Prayer Card */}
-          {nextPrayer && (
-            <LinearGradient
-              colors={["#1B5E20", "#2E7D32"]}
-              style={styles.nextPrayerCardEnhanced}
-            >
-              <View style={styles.nextPrayerContent}>
-                <Animated.View
-                  style={[
-                    styles.nextPrayerIcon,
-                    {
-                      transform: [
-                        { scale: currentPrayer === nextPrayer ? pulseAnim : 1 },
-                      ],
-                    },
-                  ]}
-                >
-                  <IconSymbol name="bell.fill" size={32} color="#fff" />
-                </Animated.View>
-                <View style={styles.nextPrayerTextContainer}>
-                  <ThemedText style={styles.nextPrayerLabel}>
-                    Next Prayer
-                  </ThemedText>
-                  <ThemedText type="title" style={styles.nextPrayerName}>
-                    {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
-                  </ThemedText>
-                  <ThemedText style={styles.timeUntilEnhanced}>
-                    in {timeUntilNext}
-                  </ThemedText>
-                </View>
-              </View>
-            </LinearGradient>
-          )}
-
-          {/* Enhanced Prayer Times List */}
-          <ThemedView style={styles.prayersListEnhanced}>
-            <View style={styles.sectionHeader}>
-              <IconSymbol
-                name="clock"
-                size={20}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Today's Prayer Times
-              </ThemedText>
-            </View>
-
-            {prayers.map((prayer, index) => (
-              <PrayerTimeCard
-                key={index}
-                prayer={prayer}
-                isActive={
-                  currentPrayer === prayer.name.toLowerCase() ||
-                  (currentPrayer === "sunrise" && prayer.name === "Sunrise")
-                }
-                isNext={
-                  nextPrayer === prayer.name.toLowerCase() ||
-                  (nextPrayer === "sunrise" && prayer.name === "Sunrise")
-                }
-              />
-            ))}
-          </ThemedView>
-
-          {/* Enhanced Ramadan Badge */}
-          {todaysPrayers.is_ramadan === 1 && (
-            <LinearGradient
-              colors={["#F9A825", "#FFA726"]}
-              style={styles.ramadanBadgeEnhanced}
-            >
-              <View style={styles.ramadanContent}>
-                <ThemedText style={styles.ramadanIcon}>🌙</ThemedText>
-                <ThemedText style={styles.ramadanTextEnhanced}>
-                  Ramadan Kareem
-                </ThemedText>
-              </View>
-            </LinearGradient>
-          )}
-
-          {/* Enhanced Quick Actions */}
-          <ThemedView style={styles.quickActionsContainer}>
-            <View style={styles.sectionHeader}>
-              <IconSymbol
-                name="star"
-                size={20}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Quick Actions
-              </ThemedText>
-            </View>
-
-            <View style={styles.quickActionsGrid}>
-              <TouchableOpacity style={styles.quickActionButton}>
-                <IconSymbol
-                  name="calendar"
-                  size={24}
-                  color={Colors[colorScheme ?? "light"].primary}
-                />
-                <ThemedText style={styles.quickActionText}>Calendar</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickActionButton}
-                onPress={handleShare}
-              >
-                <IconSymbol
-                  name="square.and.arrow.up"
-                  size={24}
-                  color={Colors[colorScheme ?? "light"].primary}
-                />
-                <ThemedText style={styles.quickActionText}>Share</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.quickActionButton}>
-                <IconSymbol
-                  name="location"
-                  size={24}
-                  color={Colors[colorScheme ?? "light"].primary}
-                />
-                <ThemedText style={styles.quickActionText}>Location</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.quickActionButton}>
-                <IconSymbol
-                  name="bell"
-                  size={24}
-                  color={Colors[colorScheme ?? "light"].primary}
-                />
-                <ThemedText style={styles.quickActionText}>
-                  Reminders
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
-        </Animated.View>
+        {isLoading ? (
+          <View
+            style={[
+              styles.loadingContainer,
+              { backgroundColor: colors.surface },
+            ]}
+          >
+            <ActivityIndicator size="large" color={colors.primary} />
+            <ThemedText style={[styles.loadingText, { color: colors.text }]}>
+              Loading prayer times...
+            </ThemedText>
+          </View>
+        ) : (
+          <Animated.View style={{ opacity: fadeAnim }}>
+            {viewMode === "daily"
+              ? renderDailyView()
+              : renderMonthlyTimetable()}
+            <View style={styles.bottomSpacing} />
+          </Animated.View>
+        )}
       </ScrollView>
     </View>
   );
@@ -561,10 +914,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 8,
@@ -607,23 +957,74 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontWeight: "500",
   },
-  shareButtonEnhanced: {
+  headerActions: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
+    marginLeft: 8,
+  },
+  printButton: {
     padding: 8,
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 12,
-    marginLeft: 8,
+    minWidth: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shareButton: {
+    padding: 8,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 12,
+    minWidth: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toggleContainer: {
+    margin: 16,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  toggleButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  toggleButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  toggleButtonActive: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  toggleButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
   scrollContent: {
     flex: 1,
   },
-  nextPrayerCardEnhanced: {
+  nextPrayerCard: {
     margin: 16,
+    marginTop: 0,
     borderRadius: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 12,
@@ -655,21 +1056,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     letterSpacing: 0.5,
   },
-  timeUntilEnhanced: {
+  timeUntilText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "700",
   },
-  prayersListEnhanced: {
+  prayersList: {
     margin: 16,
     marginTop: 0,
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 4,
@@ -683,18 +1081,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: Colors.light.primary,
     letterSpacing: 0.3,
   },
-  ramadanBadgeEnhanced: {
+  ramadanBadge: {
     margin: 20,
     marginTop: 0,
     borderRadius: 20,
     shadowColor: "#F9A825",
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 10,
@@ -709,57 +1103,132 @@ const styles = StyleSheet.create({
   ramadanIcon: {
     fontSize: 28,
   },
-  ramadanTextEnhanced: {
+  ramadanText: {
     fontSize: 20,
     fontWeight: "800",
     color: "#fff",
     letterSpacing: 0.5,
   },
-  quickActionsContainer: {
-    margin: 20,
+  monthlyContainer: {
+    margin: 16,
     marginTop: 0,
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 8,
+    overflow: "hidden",
   },
-  quickActionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 16,
-  },
-  quickActionButton: {
-    width: (width - 80) / 2 - 8,
+  monthlyHeader: {
+    padding: 16,
     alignItems: "center",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(27, 94, 32, 0.08)",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(27, 94, 32, 0.15)",
-    shadowColor: "#1B5E20",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.1)",
   },
-  quickActionText: {
-    fontSize: 14,
+  monthlyTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  monthlyScrollView: {
+    flex: 1,
+  },
+  monthlyTable: {
+    flex: 1,
+    minWidth: width - 32,
+  },
+  monthlyHeaderRow: {
+    flexDirection: "row",
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "rgba(255,255,255,0.3)",
+  },
+  monthlyHeaderText: {
+    color: "#fff",
+    fontSize: 11,
     fontWeight: "700",
-    color: Colors.light.primary,
-    marginTop: 12,
     textAlign: "center",
     letterSpacing: 0.3,
+  },
+  monthlyCell: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 30,
+  },
+  dateCell: {
+    width: 40,
+    minWidth: 40,
+  },
+  dayCell: {
+    width: 40,
+    minWidth: 40,
+  },
+  timeCell: {
+    width: 70,
+    minWidth: 70,
+  },
+  monthlyCellText: {
+    fontSize: 13,
+    textAlign: "center",
+  },
+  monthlyTimeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  monthlyJamahText: {
+    fontSize: 9,
+    fontWeight: "500",
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  monthlyLegend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.1)",
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendColor: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  legendRamadanIcon: {
+    fontSize: 7,
+  },
+  legendText: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  legendNote: {
+    fontSize: 10,
+    fontStyle: "italic",
+  },
+  noDataCard: {
+    margin: 16,
+    padding: 40,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
   },
   noDataCardEnhanced: {
     margin: 20,
@@ -767,10 +1236,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
     elevation: 12,
@@ -807,10 +1273,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 20,
     shadowColor: Colors.light.primary,
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 12,
@@ -820,6 +1283,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.3,
+  },
+  loadingContainer: {
+    margin: 20,
+    padding: 40,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 200,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: "500",
   },
   bottomSpacing: {
     height: Platform.OS === "ios" ? 100 : 80,
