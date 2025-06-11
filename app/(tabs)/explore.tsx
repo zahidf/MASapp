@@ -16,7 +16,6 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
-import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 interface MenuSection {
@@ -34,7 +33,6 @@ interface MenuItem {
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
-  const { user } = useAuth();
   const [fadeAnim] = React.useState(new Animated.Value(0));
 
   React.useEffect(() => {
@@ -46,14 +44,27 @@ export default function ExploreScreen() {
   }, []);
 
   const handleOpenMaps = () => {
-    const address = "Masjid Abubakr Siddique, Birmingham, UK";
+    const shareLink = "https://maps.app.goo.gl/SGEfXk43yyqWY6Cu7";
+    const address = "Grove St, Smethwick, Birmingham B66 2QS";
     const encodedAddress = encodeURIComponent(address);
 
-    if (Platform.OS === "ios") {
-      Linking.openURL(`maps:0,0?q=${encodedAddress}`);
-    } else {
-      Linking.openURL(`geo:0,0?q=${encodedAddress}`);
-    }
+    Alert.alert("Get Directions", "Choose how to open directions:", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Google Maps",
+        onPress: () => Linking.openURL(shareLink),
+      },
+      {
+        text: "Default Maps",
+        onPress: () => {
+          if (Platform.OS === "ios") {
+            Linking.openURL(`maps:0,0?q=${encodedAddress}`);
+          } else {
+            Linking.openURL(`geo:0,0?q=${encodedAddress}`);
+          }
+        },
+      },
+    ]);
   };
 
   const handleCall = () => {
@@ -61,13 +72,13 @@ export default function ExploreScreen() {
       { text: "Cancel", style: "cancel" },
       {
         text: "Call",
-        onPress: () => Linking.openURL("tel:+441234567890"),
+        onPress: () => Linking.openURL("tel:+447973573059"),
       },
     ]);
   };
 
   const handleWebsite = () => {
-    Linking.openURL("https://masjidabubakr.org.uk");
+    Linking.openURL("https://www.masjidabubakr.org.uk");
   };
 
   const handleFeedback = () => {
@@ -90,14 +101,8 @@ export default function ExploreScreen() {
   const handleDonate = () => {
     Alert.alert(
       "Support the Mosque",
-      "Thank you for considering a donation to support the mosque's activities.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Learn More",
-          onPress: () => Linking.openURL("https://masjidabubakr.org.uk/donate"),
-        },
-      ]
+      "Donation feature is coming soon! Thank you for your interest in supporting the mosque.",
+      [{ text: "OK" }]
     );
   };
 
@@ -115,7 +120,7 @@ export default function ExploreScreen() {
       items: [
         {
           title: "Location & Directions",
-          subtitle: "Get directions to the mosque",
+          subtitle: "Grove St, Smethwick, Birmingham",
           icon: "location.fill",
           action: handleOpenMaps,
           color: "#1976D2",
@@ -141,7 +146,7 @@ export default function ExploreScreen() {
       items: [
         {
           title: "Support the Mosque",
-          subtitle: "Make a donation",
+          subtitle: "Donation feature coming soon",
           icon: "heart.fill",
           action: handleDonate,
           color: "#D32F2F",
@@ -222,20 +227,6 @@ export default function ExploreScreen() {
             Mosque information and app settings
           </ThemedText>
         </View>
-
-        {user && (
-          <View style={styles.userInfo}>
-            <View style={styles.userAvatar}>
-              <IconSymbol name="person.fill" size={24} color="#fff" />
-            </View>
-            <View style={styles.userDetails}>
-              <ThemedText style={styles.userName}>{user.name}</ThemedText>
-              <ThemedText style={styles.userRole}>
-                {user.isAdmin ? "Administrator" : "Community Member"}
-              </ThemedText>
-            </View>
-          </View>
-        )}
       </LinearGradient>
 
       <ScrollView
@@ -256,7 +247,7 @@ export default function ExploreScreen() {
                   Masjid Abubakr Siddique
                 </ThemedText>
                 <ThemedText style={styles.mosqueAddress}>
-                  Birmingham, United Kingdom
+                  Grove St, Smethwick, Birmingham B66 2QS
                 </ThemedText>
               </View>
             </View>
@@ -335,7 +326,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   headerContent: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   headerTitle: {
     fontSize: 32,
@@ -346,36 +337,6 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     color: "rgba(255,255,255,0.9)",
-    fontWeight: "500",
-  },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    padding: 16,
-    borderRadius: 16,
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 2,
-  },
-  userRole: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.8)",
     fontWeight: "500",
   },
   scrollContent: {
@@ -498,12 +459,12 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     fontWeight: "600",
-    opacity: 0.7,
+    color: "#666",
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 12,
-    opacity: 0.5,
+    color: "#888",
     fontWeight: "500",
     textAlign: "center",
   },
