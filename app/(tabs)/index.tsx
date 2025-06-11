@@ -1,43 +1,25 @@
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Dimensions,
   Platform,
   RefreshControl,
   ScrollView,
-  Share,
   StatusBar,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
-  ViewStyle,
 } from "react-native";
 
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
-import { PrayerTimeCard } from "@/components/prayer/PrayerTimeCard";
-import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { PrayerName, PrayerTime } from "@/types/prayer";
-import {
-  extractPrayersFromTime,
-  formatTimeForDisplay,
-  getCurrentPrayerAndNext,
-  getMonthName,
-  getTimeUntilNext,
-  getTodayString,
-} from "@/utils/dateHelpers";
-import { generatePDFHTML } from "@/utils/pdfGenerator";
+import { getCurrentPrayerAndNext, getTodayString } from "@/utils/dateHelpers";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 type ViewMode = "daily" | "monthly";
 
@@ -48,9 +30,7 @@ export default function TodayScreen() {
   const [todaysPrayers, setTodaysPrayers] = useState<PrayerTime | null>(null);
   const [currentPrayer, setCurrentPrayer] = useState<PrayerName | null>(null);
   const [nextPrayer, setNextPrayer] = useState<PrayerName | null>(null);
-  const [timeUntilNext, setTimeUntilNext] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isPrinting, setIsPrinting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [pulseAnim] = useState(new Animated.Value(1));
   const [monthData, setMonthData] = useState<PrayerTime[]>([]);
@@ -61,12 +41,31 @@ export default function TodayScreen() {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
+  // Helper function to format time to hh:mm
+  const formatTime = (timeString: string | undefined) => {
+    if (!timeString) return "N/A";
+    // If time is already in hh:mm format, return as is
+    if (timeString.length === 5 && timeString.includes(":")) {
+      return timeString;
+    }
+    // If time includes seconds, remove them
+    if (timeString.includes(":")) {
+      const parts = timeString.split(":");
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}`;
+      }
+    }
+    return timeString;
+  };
+
   useEffect(() => {
     if (!prayerTimes || prayerTimes.length === 0) {
       setMonthData([]);
       return;
     }
 
+    // Get all days for the current month
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(
       2,
       "0"
@@ -74,32 +73,31 @@ export default function TodayScreen() {
     const monthEnd = `${currentYear}-${String(currentMonth + 1).padStart(
       2,
       "0"
-    )}-31`;
+    )}-${String(daysInMonth).padStart(2, "0")}`;
 
-    console.log("🗓️ Filtering monthly data:", { monthStart, monthEnd });
+    console.log("Month range:", monthStart, "to", monthEnd);
+    console.log("Total prayer times available:", prayerTimes.length);
 
     const filtered = prayerTimes
       .filter((pt) => {
         if (!pt || !pt.d_date) return false;
-        return pt.d_date >= monthStart && pt.d_date <= monthEnd;
+        const isInRange = pt.d_date >= monthStart && pt.d_date <= monthEnd;
+        return isInRange;
       })
       .sort((a, b) => a.d_date.localeCompare(b.d_date));
 
-    console.log("📊 Filtered monthly data:", filtered.length, "items");
-    console.log("Sample filtered data:", filtered.slice(0, 3));
-
+    console.log("Filtered month data:", filtered.length, "days");
     setMonthData(filtered);
   }, [prayerTimes, currentMonth, currentYear]);
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
 
+    // Pulse animation for active prayer
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -125,16 +123,12 @@ export default function TodayScreen() {
 
   useEffect(() => {
     const updateTodaysPrayers = () => {
-      console.log("🔍 Finding today's prayers for:", today);
-
       if (!Array.isArray(prayerTimes) || prayerTimes.length === 0) {
-        console.log("❌ No prayer times available");
         setTodaysPrayers(null);
         return;
       }
 
       const todayData = prayerTimes.find((pt) => pt && pt.d_date === today);
-      console.log("📅 Today's data found:", todayData ? "YES" : "NO");
 
       if (todayData && typeof todayData === "object") {
         setTodaysPrayers(todayData);
@@ -143,19 +137,10 @@ export default function TodayScreen() {
           const { current, next } = getCurrentPrayerAndNext(todayData);
           setCurrentPrayer(current);
           setNextPrayer(next);
-
-          const nextPrayerTimeProperty = getNextPrayerTimeProperty(next);
-          if (nextPrayerTimeProperty && todayData[nextPrayerTimeProperty]) {
-            const nextPrayerTime = todayData[nextPrayerTimeProperty] as string;
-            const timeUntil = getTimeUntilNext(nextPrayerTime);
-            setTimeUntilNext(timeUntil);
-          } else {
-            setTimeUntilNext("Unknown");
-          }
         } catch (error) {
+          console.log("Error:", error);
           setCurrentPrayer(null);
           setNextPrayer("fajr");
-          setTimeUntilNext("Unknown");
         }
       } else {
         setTodaysPrayers(null);
@@ -166,96 +151,6 @@ export default function TodayScreen() {
     const interval = setInterval(updateTodaysPrayers, 60000);
     return () => clearInterval(interval);
   }, [prayerTimes, today]);
-
-  const getNextPrayerTimeProperty = (
-    prayerName: PrayerName
-  ): keyof PrayerTime | null => {
-    switch (prayerName) {
-      case "fajr":
-        return "fajr_begins";
-      case "sunrise":
-        return "sunrise";
-      case "zuhr":
-        return "zuhr_begins";
-      case "asr":
-        return "asr_mithl_1";
-      case "maghrib":
-        return "maghrib_begins";
-      case "isha":
-        return "isha_begins";
-      default:
-        return null;
-    }
-  };
-
-  const handleShare = async () => {
-    if (!todaysPrayers) return;
-
-    try {
-      const prayers = extractPrayersFromTime(todaysPrayers);
-      const date = new Date(todaysPrayers.d_date);
-      const dateStr = date.toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-
-      let message = `🕌 Masjid Abubakr Siddique Prayer Times\n${dateStr}\n\n`;
-      prayers.forEach((prayer) => {
-        if (prayer.jamah && prayer.jamah.trim() !== "") {
-          message += `${prayer.name}: ${prayer.begins} (Jamah: ${prayer.jamah})\n`;
-        } else {
-          message += `${prayer.name}: ${prayer.begins}\n`;
-        }
-      });
-
-      await Share.share({ message, title: "Prayer Times" });
-    } catch (error) {
-      console.error("Error sharing:", error);
-    }
-  };
-
-  const handlePrint = async () => {
-    setIsPrinting(true);
-
-    try {
-      let html = "";
-
-      if (viewMode === "daily" && todaysPrayers) {
-        html = await generatePDFHTML([todaysPrayers], "day");
-      } else if (viewMode === "monthly") {
-        if (monthData.length === 0) {
-          Alert.alert("Error", "No data available for current month");
-          setIsPrinting(false);
-          return;
-        }
-        html = await generatePDFHTML(monthData, "month");
-      } else {
-        Alert.alert("Error", "No data available to print");
-        setIsPrinting(false);
-        return;
-      }
-
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-
-      if (Platform.OS === "ios") {
-        await Sharing.shareAsync(uri, {
-          UTI: ".pdf",
-          mimeType: "application/pdf",
-        });
-      } else {
-        await Sharing.shareAsync(uri, {
-          mimeType: "application/pdf",
-          dialogTitle: "Share Prayer Times PDF",
-        });
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to generate PDF. Please try again.");
-    } finally {
-      setIsPrinting(false);
-    }
-  };
 
   const formatCurrentTime = () => {
     return currentTime.toLocaleTimeString([], {
@@ -281,474 +176,179 @@ export default function TodayScreen() {
     return "Good Evening";
   };
 
-  const renderMonthlyTimetable = () => {
-    console.log(
-      "🗓️ Rendering monthly timetable with:",
-      monthData.length,
-      "items"
-    );
-
-    if (monthData.length === 0) {
-      return (
-        <ThemedView
-          style={[styles.noDataCard, { backgroundColor: colors.surface }]}
-        >
-          <View style={styles.noDataIconContainer}>
-            <IconSymbol name="calendar" size={48} color={colors.primary} />
-          </View>
-          <ThemedText type="subtitle" style={styles.noDataTitle}>
-            No Monthly Data Available
-          </ThemedText>
-          <ThemedText style={styles.noDataText}>
-            Prayer times for {getMonthName(currentMonth)} {currentYear} haven't
-            been uploaded yet.
-            {"\n"}Total prayer times available: {prayerTimes.length}
-          </ThemedText>
-        </ThemedView>
-      );
+  const getPrayerIcon = (prayerName: string) => {
+    switch (prayerName.toLowerCase()) {
+      case "fajr":
+        return "🌅";
+      case "sunrise":
+        return "☀️";
+      case "zuhr":
+        return "🌞";
+      case "asr":
+        return "🌤️";
+      case "maghrib":
+        return "🌅";
+      case "isha":
+        return "🌙";
+      default:
+        return "🕐";
     }
-
-    return (
-      <ThemedView
-        style={[styles.monthlyContainer, { backgroundColor: colors.surface }]}
-      >
-        <View style={styles.monthlyHeader}>
-          <ThemedText style={[styles.monthlyTitle, { color: colors.text }]}>
-            {getMonthName(currentMonth)} {currentYear}
-          </ThemedText>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={true}
-          style={styles.monthlyScrollView}
-          contentContainerStyle={{ minWidth: "100%" }}
-        >
-          <View style={styles.monthlyTable}>
-            {/* Header Row */}
-            <View
-              style={[
-                styles.monthlyHeaderRow,
-                { backgroundColor: colors.primary },
-              ]}
-            >
-              <View style={[styles.monthlyCell, styles.dateCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>Date</ThemedText>
-              </View>
-              <View style={[styles.monthlyCell, styles.dayCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>Day</ThemedText>
-              </View>
-              <View style={[styles.monthlyCell, styles.timeCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>Fajr</ThemedText>
-              </View>
-              <View style={[styles.monthlyCell, styles.timeCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>
-                  Sunrise
-                </ThemedText>
-              </View>
-              <View style={[styles.monthlyCell, styles.timeCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>Zuhr</ThemedText>
-              </View>
-              <View style={[styles.monthlyCell, styles.timeCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>Asr</ThemedText>
-              </View>
-              <View style={[styles.monthlyCell, styles.timeCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>
-                  Maghrib
-                </ThemedText>
-              </View>
-              <View style={[styles.monthlyCell, styles.timeCell]}>
-                <ThemedText style={styles.monthlyHeaderText}>Isha</ThemedText>
-              </View>
-            </View>
-
-            {/* Data Rows */}
-            {monthData.map((prayerTime: PrayerTime, index: number) => {
-              const date = new Date(prayerTime.d_date);
-              const isToday = prayerTime.d_date === today;
-              const isMonday = date.getDay() === 1;
-              const isRamadan = prayerTime.is_ramadan === 1;
-
-              const dayNames = [
-                "Sun",
-                "Mon",
-                "Tue",
-                "Wed",
-                "Thu",
-                "Fri",
-                "Sat",
-              ];
-              const dayAbbr = dayNames[date.getDay()];
-
-              const baseRowStyle: ViewStyle = {
-                flexDirection: "row",
-                borderBottomWidth: 1,
-                borderBottomColor: "rgba(0,0,0,0.1)",
-                paddingVertical: 8,
-                minHeight: 40,
-              };
-
-              let combinedRowStyle: ViewStyle = { ...baseRowStyle };
-              let textColor = colors.text;
-
-              if (isToday) {
-                combinedRowStyle = {
-                  ...baseRowStyle,
-                  backgroundColor: colors.primary,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 4,
-                  elevation: 4,
-                };
-                textColor = "#fff";
-              } else if (isMonday) {
-                combinedRowStyle = {
-                  ...baseRowStyle,
-                  backgroundColor: "#FFF3E0",
-                  borderLeftWidth: 3,
-                  borderLeftColor: "#FF9800",
-                };
-                textColor = "#E65100";
-              } else if (isRamadan) {
-                combinedRowStyle = {
-                  ...baseRowStyle,
-                  backgroundColor: "#FFF8E1",
-                  borderRightWidth: 3,
-                  borderRightColor: "#F9A825",
-                };
-              }
-
-              return (
-                <View
-                  key={`${prayerTime.d_date}-${index}`}
-                  style={combinedRowStyle}
-                >
-                  <View style={[styles.monthlyCell, styles.dateCell]}>
-                    <ThemedText
-                      style={[
-                        styles.monthlyCellText,
-                        {
-                          color: textColor,
-                          fontWeight: isToday || isMonday ? "800" : "600",
-                        },
-                      ]}
-                    >
-                      {date.getDate()}
-                      {isRamadan && (
-                        <ThemedText style={styles.ramadanIcon}> 🌙</ThemedText>
-                      )}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.monthlyCell, styles.dayCell]}>
-                    <ThemedText
-                      style={[
-                        styles.monthlyCellText,
-                        {
-                          color: textColor,
-                          fontWeight: isToday || isMonday ? "800" : "600",
-                        },
-                      ]}
-                    >
-                      {dayAbbr}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.monthlyCell, styles.timeCell]}>
-                    <ThemedText
-                      style={[styles.monthlyTimeText, { color: textColor }]}
-                    >
-                      {formatTimeForDisplay(prayerTime.fajr_begins)}
-                    </ThemedText>
-                    {prayerTime.fajr_jamah && (
-                      <ThemedText
-                        style={[styles.monthlyJamahText, { color: textColor }]}
-                      >
-                        J: {formatTimeForDisplay(prayerTime.fajr_jamah)}
-                      </ThemedText>
-                    )}
-                  </View>
-                  <View style={[styles.monthlyCell, styles.timeCell]}>
-                    <ThemedText
-                      style={[styles.monthlyTimeText, { color: textColor }]}
-                    >
-                      {formatTimeForDisplay(prayerTime.sunrise)}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.monthlyCell, styles.timeCell]}>
-                    <ThemedText
-                      style={[styles.monthlyTimeText, { color: textColor }]}
-                    >
-                      {formatTimeForDisplay(prayerTime.zuhr_begins)}
-                    </ThemedText>
-                    {prayerTime.zuhr_jamah && (
-                      <ThemedText
-                        style={[styles.monthlyJamahText, { color: textColor }]}
-                      >
-                        J: {formatTimeForDisplay(prayerTime.zuhr_jamah)}
-                      </ThemedText>
-                    )}
-                  </View>
-                  <View style={[styles.monthlyCell, styles.timeCell]}>
-                    <ThemedText
-                      style={[styles.monthlyTimeText, { color: textColor }]}
-                    >
-                      {formatTimeForDisplay(prayerTime.asr_mithl_1)}
-                    </ThemedText>
-                    {prayerTime.asr_jamah && (
-                      <ThemedText
-                        style={[styles.monthlyJamahText, { color: textColor }]}
-                      >
-                        J: {formatTimeForDisplay(prayerTime.asr_jamah)}
-                      </ThemedText>
-                    )}
-                  </View>
-                  <View style={[styles.monthlyCell, styles.timeCell]}>
-                    <ThemedText
-                      style={[styles.monthlyTimeText, { color: textColor }]}
-                    >
-                      {formatTimeForDisplay(prayerTime.maghrib_begins)}
-                    </ThemedText>
-                    {prayerTime.maghrib_jamah && (
-                      <ThemedText
-                        style={[styles.monthlyJamahText, { color: textColor }]}
-                      >
-                        J: {formatTimeForDisplay(prayerTime.maghrib_jamah)}
-                      </ThemedText>
-                    )}
-                  </View>
-                  <View style={[styles.monthlyCell, styles.timeCell]}>
-                    <ThemedText
-                      style={[styles.monthlyTimeText, { color: textColor }]}
-                    >
-                      {formatTimeForDisplay(prayerTime.isha_begins)}
-                    </ThemedText>
-                    {prayerTime.isha_jamah && (
-                      <ThemedText
-                        style={[styles.monthlyJamahText, { color: textColor }]}
-                      >
-                        J: {formatTimeForDisplay(prayerTime.isha_jamah)}
-                      </ThemedText>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </ScrollView>
-
-        <View style={styles.monthlyLegend}>
-          <View style={styles.legendItem}>
-            <View
-              style={[styles.legendColor, { backgroundColor: colors.primary }]}
-            />
-            <ThemedText style={[styles.legendText, { color: colors.text }]}>
-              Today
-            </ThemedText>
-          </View>
-          <View style={styles.legendItem}>
-            <View
-              style={[styles.legendColor, { backgroundColor: "#FFF3E0" }]}
-            />
-            <ThemedText style={[styles.legendText, { color: colors.text }]}>
-              Monday
-            </ThemedText>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: "#FFF8E1" }]}>
-              <ThemedText style={styles.legendRamadanIcon}>🌙</ThemedText>
-            </View>
-            <ThemedText style={[styles.legendText, { color: colors.text }]}>
-              Ramadan
-            </ThemedText>
-          </View>
-          <View style={styles.legendItem}>
-            <ThemedText
-              style={[styles.legendNote, { color: `${colors.text}80` }]}
-            >
-              J: Jamah times
-            </ThemedText>
-          </View>
-        </View>
-      </ThemedView>
-    );
   };
 
-  const renderDailyView = () => {
-    console.log(
-      "📅 Rendering daily view, todaysPrayers:",
-      todaysPrayers ? "EXISTS" : "NULL"
-    );
+  const getMonthName = (monthIndex: number) => {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return months[monthIndex];
+  };
 
-    if (!todaysPrayers) {
-      return (
-        <ThemedView
-          style={[styles.noDataCard, { backgroundColor: colors.surface }]}
-        >
-          <View style={styles.noDataIconContainer}>
-            <IconSymbol name="calendar" size={48} color={colors.primary} />
-          </View>
-          <ThemedText type="subtitle" style={styles.noDataTitle}>
-            No Prayer Times for Today
-          </ThemedText>
-          <ThemedText style={styles.noDataText}>
-            Prayer times for today ({today}) are not available.
-            {"\n"}Total prayer times available: {prayerTimes.length}
-          </ThemedText>
-        </ThemedView>
-      );
-    }
+  const renderPrayerCard = (
+    name: string,
+    time: string,
+    jamah?: string,
+    isActive = false,
+    isNext = false
+  ) => {
+    const cardStyle = [
+      styles.prayerCard,
+      isActive && styles.activePrayerCard,
+      isNext && styles.nextPrayerCard,
+    ];
 
-    const prayers = extractPrayersFromTime(todaysPrayers);
+    const textColor = isActive ? "#fff" : isNext ? colors.primary : "#333";
+    const subtextColor = isActive
+      ? "rgba(255,255,255,0.8)"
+      : isNext
+      ? `${colors.primary}80`
+      : "#666";
 
     return (
-      <View>
-        {nextPrayer && (
-          <LinearGradient
-            colors={["#1B5E20", "#2E7D32"]}
-            style={styles.nextPrayerCard}
+      <Animated.View
+        key={name}
+        style={[cardStyle, isActive && { transform: [{ scale: pulseAnim }] }]}
+      >
+        <View style={styles.prayerCardContent}>
+          <View
+            style={[
+              styles.prayerIconContainer,
+              {
+                backgroundColor: isActive
+                  ? "rgba(255,255,255,0.2)"
+                  : isNext
+                  ? `${colors.primary}20`
+                  : "#f0f0f0",
+              },
+            ]}
           >
-            <View style={styles.nextPrayerContent}>
-              <Animated.View
-                style={[
-                  styles.nextPrayerIcon,
-                  {
-                    transform: [
-                      { scale: currentPrayer === nextPrayer ? pulseAnim : 1 },
-                    ],
-                  },
-                ]}
-              >
-                <IconSymbol name="bell.fill" size={32} color="#fff" />
-              </Animated.View>
-              <View style={styles.nextPrayerTextContainer}>
-                <ThemedText style={styles.nextPrayerLabel}>
-                  Next Prayer
-                </ThemedText>
-                <ThemedText type="title" style={styles.nextPrayerName}>
-                  {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
-                </ThemedText>
-                <ThemedText style={styles.timeUntilText}>
-                  in {timeUntilNext}
-                </ThemedText>
-              </View>
-            </View>
-          </LinearGradient>
-        )}
-
-        <ThemedView
-          style={[styles.prayersList, { backgroundColor: colors.surface }]}
-        >
-          <View style={styles.sectionHeader}>
-            <IconSymbol name="clock" size={20} color={colors.primary} />
-            <ThemedText
-              type="subtitle"
-              style={[styles.sectionTitle, { color: colors.primary }]}
-            >
-              Today's Prayer Times
-            </ThemedText>
+            <Text style={styles.prayerIcon}>{getPrayerIcon(name)}</Text>
           </View>
 
-          {prayers.map((prayer, prayerIndex) => (
-            <PrayerTimeCard
-              key={prayerIndex}
-              prayer={prayer}
-              isActive={
-                currentPrayer === prayer.name.toLowerCase() ||
-                (currentPrayer === "sunrise" && prayer.name === "Sunrise")
-              }
-              isNext={
-                nextPrayer === prayer.name.toLowerCase() ||
-                (nextPrayer === "sunrise" && prayer.name === "Sunrise")
-              }
-            />
-          ))}
-        </ThemedView>
+          <View style={styles.prayerInfo}>
+            <Text style={[styles.prayerName, { color: textColor }]}>
+              {name}
+            </Text>
 
-        {todaysPrayers.is_ramadan === 1 && (
-          <LinearGradient
-            colors={["#F9A825", "#FFA726"]}
-            style={styles.ramadanBadge}
-          >
-            <View style={styles.ramadanContent}>
-              <ThemedText style={styles.ramadanIcon}>🌙</ThemedText>
-              <ThemedText style={styles.ramadanText}>Ramadan Kareem</ThemedText>
+            {/* Compact Time Section */}
+            <View style={styles.compactTimeSection}>
+              <View style={styles.compactTimeRow}>
+                <Text
+                  style={[styles.compactTimeLabel, { color: subtextColor }]}
+                >
+                  Begin
+                </Text>
+                <Text style={[styles.compactPrayerTime, { color: textColor }]}>
+                  {formatTime(time)}
+                </Text>
+              </View>
+
+              {jamah && (
+                <View style={styles.compactTimeRow}>
+                  <Text
+                    style={[styles.compactTimeLabel, { color: subtextColor }]}
+                  >
+                    Jamah
+                  </Text>
+                  <Text style={[styles.compactJamahTime, { color: textColor }]}>
+                    {formatTime(jamah)}
+                  </Text>
+                </View>
+              )}
             </View>
-          </LinearGradient>
-        )}
-      </View>
+          </View>
+
+          {/* Compact status badges */}
+          {(isActive || isNext) && (
+            <View style={styles.compactStatusContainer}>
+              {isActive && (
+                <View style={styles.compactStatusBadge}>
+                  <Text style={styles.compactStatusText}>NOW</Text>
+                </View>
+              )}
+              {isNext && !isActive && (
+                <View
+                  style={[styles.compactStatusBadge, styles.compactNextBadge]}
+                >
+                  <Text
+                    style={[
+                      styles.compactStatusText,
+                      { color: colors.primary },
+                    ]}
+                  >
+                    NEXT
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+      </Animated.View>
     );
   };
 
   if (!Array.isArray(prayerTimes) || prayerTimes.length === 0) {
     return (
       <View style={styles.container}>
-        <StatusBar
-          barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-        />
-        <LinearGradient
-          colors={
-            colorScheme === "dark"
-              ? ["#1B5E20", "#2E7D32", "#388E3C"]
-              : ["#E8F5E9", "#C8E6C9", "#A5D6A7"]
-          }
-          style={styles.gradientHeader}
-        >
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/logos/mosqueLogo.png")}
-              style={styles.mosqueLogo}
-              contentFit="contain"
-            />
-          </View>
-          <View style={styles.headerContent}>
-            <ThemedText style={styles.greetingText}>{getGreeting()}</ThemedText>
-            <ThemedText style={styles.mosqueNameEnhanced}>
-              Masjid Abubakr Siddique
-            </ThemedText>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-            >
-              <ThemedText style={styles.currentTimeText}>
-                {formatCurrentTime()}
-              </ThemedText>
-              <ThemedText style={styles.dateTextEnhanced}>
-                {formatCurrentDate()}
-              </ThemedText>
-            </View>
-          </View>
-        </LinearGradient>
-
+        <StatusBar barStyle="light-content" />
+        <View style={styles.gradientHeader}>
+          <Text style={styles.greetingText}>{getGreeting()}</Text>
+          <Text style={styles.mosqueTitle}>🕌 Masjid Abubakr Siddique</Text>
+          <Text style={styles.headerTime}>{formatCurrentTime()}</Text>
+          <Text style={styles.headerDate}>{formatCurrentDate()}</Text>
+        </View>
         <ScrollView
           style={styles.scrollContent}
           refreshControl={
             <RefreshControl refreshing={isLoading} onRefresh={refreshData} />
           }
-          showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <ThemedView style={styles.noDataCardEnhanced}>
-              <View style={styles.noDataIconContainer}>
-                <IconSymbol name="calendar" size={48} color={colors.primary} />
-              </View>
-              <ThemedText type="subtitle" style={styles.noDataTitle}>
-                Prayer Times Not Available
-              </ThemedText>
-              <ThemedText style={styles.noDataText}>
-                Prayer times haven't been uploaded yet. Please contact the
-                mosque administration.
-              </ThemedText>
-              <TouchableOpacity
-                style={styles.refreshButtonEnhanced}
-                onPress={refreshData}
-                disabled={isLoading}
-              >
-                <IconSymbol name="arrow.clockwise" size={20} color="#fff" />
-                <ThemedText style={styles.refreshButtonText}>
-                  {isLoading ? "Checking..." : "Refresh"}
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </Animated.View>
+          <View style={styles.noDataCard}>
+            <Text style={styles.noDataIcon}>📅</Text>
+            <Text style={styles.noDataTitle}>Prayer Times Not Available</Text>
+            <Text style={styles.noDataText}>
+              Prayer times haven't been uploaded yet. Please contact the mosque
+              administration.
+            </Text>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={refreshData}
+              disabled={isLoading}
+            >
+              <Text style={styles.refreshButtonText}>
+                {isLoading ? "🔄 Checking..." : "🔄 Refresh"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </View>
     );
@@ -756,118 +356,56 @@ export default function TodayScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-      />
+      <StatusBar barStyle="light-content" />
 
-      <LinearGradient
-        colors={
-          colorScheme === "dark"
-            ? ["#1B5E20", "#2E7D32", "#388E3C"]
-            : ["#E8F5E9", "#C8E6C9", "#A5D6A7"]
-        }
-        style={styles.gradientHeader}
-      >
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("@/assets/logos/mosqueLogo.png")}
-            style={styles.mosqueLogo}
-            contentFit="contain"
-          />
-        </View>
+      {/* Enhanced Header */}
+      <View style={styles.gradientHeader}>
+        <Text style={styles.greetingText}>{getGreeting()}</Text>
+        <Text style={styles.mosqueTitle}>🕌 Masjid Abubakr Siddique</Text>
+        <Text style={styles.headerTime}>{formatCurrentTime()}</Text>
+        <Text style={styles.headerDate}>{formatCurrentDate()}</Text>
+      </View>
 
-        <View style={styles.headerContent}>
-          <ThemedText style={styles.greetingText}>{getGreeting()}</ThemedText>
-          <ThemedText style={styles.mosqueNameEnhanced}>
-            Masjid Abubakr Siddique
-          </ThemedText>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <ThemedText style={styles.currentTimeText}>
-              {formatCurrentTime()}
-            </ThemedText>
-            <ThemedText style={styles.dateTextEnhanced}>
-              {formatCurrentDate()}
-            </ThemedText>
-          </View>
-        </View>
-
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={handlePrint}
-            style={styles.printButton}
-            disabled={isPrinting}
-          >
-            {isPrinting ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <IconSymbol name="printer" size={20} color="#fff" />
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-            <IconSymbol name="square.and.arrow.up" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      <ThemedView
-        style={[styles.toggleContainer, { backgroundColor: colors.surface }]}
-      >
-        <View style={styles.toggleButtons}>
+      {/* Subtle Toggle */}
+      <View style={styles.subtleToggleContainer}>
+        <View style={styles.subtleToggleWrapper}>
           <TouchableOpacity
             style={[
-              styles.toggleButton,
-              viewMode === "daily" && [
-                styles.toggleButtonActive,
-                { backgroundColor: colors.primary },
-              ],
-              { borderColor: colors.primary },
+              styles.subtleToggleButton,
+              viewMode === "daily" && styles.subtleToggleButtonActive,
             ]}
             onPress={() => setViewMode("daily")}
           >
-            <IconSymbol
-              name="clock"
-              size={18}
-              color={viewMode === "daily" ? "#fff" : colors.primary}
-            />
-            <ThemedText
+            <Text
               style={[
-                styles.toggleButtonText,
-                { color: viewMode === "daily" ? "#fff" : colors.primary },
+                styles.subtleToggleText,
+                viewMode === "daily" && styles.subtleToggleTextActive,
               ]}
             >
               Daily
-            </ThemedText>
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
-              styles.toggleButton,
-              viewMode === "monthly" && [
-                styles.toggleButtonActive,
-                { backgroundColor: colors.primary },
-              ],
-              { borderColor: colors.primary },
+              styles.subtleToggleButton,
+              viewMode === "monthly" && styles.subtleToggleButtonActive,
             ]}
             onPress={() => setViewMode("monthly")}
           >
-            <IconSymbol
-              name="calendar"
-              size={18}
-              color={viewMode === "monthly" ? "#fff" : colors.primary}
-            />
-            <ThemedText
+            <Text
               style={[
-                styles.toggleButtonText,
-                { color: viewMode === "monthly" ? "#fff" : colors.primary },
+                styles.subtleToggleText,
+                viewMode === "monthly" && styles.subtleToggleTextActive,
               ]}
             >
               Monthly
-            </ThemedText>
+            </Text>
           </TouchableOpacity>
         </View>
-      </ThemedView>
+      </View>
 
+      {/* Enhanced Content */}
       <ScrollView
         style={styles.scrollContent}
         refreshControl={
@@ -876,25 +414,484 @@ export default function TodayScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <View
-            style={[
-              styles.loadingContainer,
-              { backgroundColor: colors.surface },
-            ]}
-          >
+          <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText style={[styles.loadingText, { color: colors.text }]}>
-              Loading prayer times...
-            </ThemedText>
+            <Text style={styles.loadingText}>Loading prayer times...</Text>
           </View>
         ) : (
           <Animated.View style={{ opacity: fadeAnim }}>
-            {viewMode === "daily"
-              ? renderDailyView()
-              : renderMonthlyTimetable()}
-            <View style={styles.bottomSpacing} />
+            {viewMode === "daily" ? (
+              <View>
+                {/* Next Prayer Alert */}
+                {nextPrayer && (
+                  <View style={styles.nextPrayerAlert}>
+                    <Text style={styles.alertIcon}>🔔</Text>
+                    <View style={styles.alertContent}>
+                      <Text style={styles.alertTitle}>Next Prayer</Text>
+                      <Text style={styles.alertPrayer}>
+                        {nextPrayer.charAt(0).toUpperCase() +
+                          nextPrayer.slice(1)}
+                      </Text>
+                      <Text style={styles.alertTime}>Coming up soon</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Daily Prayer Times */}
+                <View style={styles.dailyCard}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardTitle}>
+                      🕐 Today's Prayer Times
+                    </Text>
+                    <Text style={styles.cardSubtitle}>
+                      {formatCurrentDate()}
+                    </Text>
+                  </View>
+
+                  {todaysPrayers ? (
+                    <View style={styles.prayerList}>
+                      {renderPrayerCard(
+                        "Fajr",
+                        todaysPrayers.fajr_begins,
+                        todaysPrayers.fajr_jamah,
+                        currentPrayer === "fajr",
+                        nextPrayer === "fajr"
+                      )}
+                      {renderPrayerCard(
+                        "Sunrise",
+                        todaysPrayers.sunrise,
+                        undefined,
+                        currentPrayer === "sunrise",
+                        nextPrayer === "sunrise"
+                      )}
+                      {renderPrayerCard(
+                        "Zuhr",
+                        todaysPrayers.zuhr_begins,
+                        todaysPrayers.zuhr_jamah,
+                        currentPrayer === "zuhr",
+                        nextPrayer === "zuhr"
+                      )}
+                      {renderPrayerCard(
+                        "Asr",
+                        todaysPrayers.asr_mithl_1,
+                        todaysPrayers.asr_jamah,
+                        currentPrayer === "asr",
+                        nextPrayer === "asr"
+                      )}
+                      {renderPrayerCard(
+                        "Maghrib",
+                        todaysPrayers.maghrib_begins,
+                        todaysPrayers.maghrib_jamah,
+                        currentPrayer === "maghrib",
+                        nextPrayer === "maghrib"
+                      )}
+                      {renderPrayerCard(
+                        "Isha",
+                        todaysPrayers.isha_begins,
+                        todaysPrayers.isha_jamah,
+                        currentPrayer === "isha",
+                        nextPrayer === "isha"
+                      )}
+                    </View>
+                  ) : (
+                    <View style={styles.noDataSection}>
+                      <Text style={styles.noDataIcon}>📅</Text>
+                      <Text style={styles.noDataMessage}>
+                        No prayer times available for today
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.monthlyCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>📊 Monthly Timetable</Text>
+                  <Text style={styles.cardSubtitle}>
+                    {getMonthName(currentMonth)} {currentYear} •{" "}
+                    {monthData.length} days available
+                  </Text>
+                </View>
+
+                {monthData.length > 0 ? (
+                  <View style={styles.monthlyTableContainer}>
+                    {/* Enhanced Table Header */}
+                    <View style={styles.monthlyTableHeader}>
+                      {/* Date Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 50 }]}>
+                        <Text style={styles.monthlyHeaderText}>Date</Text>
+                      </View>
+
+                      {/* Day Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 50 }]}>
+                        <Text style={styles.monthlyHeaderText}>Day</Text>
+                      </View>
+
+                      {/* Fajr Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
+                        <Text style={styles.monthlyHeaderText}>Fajr</Text>
+                        <View style={styles.timeTypeRow}>
+                          <View style={styles.beginTimeHeaderContainer}>
+                            <Text style={styles.beginTimeHeader}>Begin</Text>
+                          </View>
+                          <View style={styles.jamahTimeHeaderContainer}>
+                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Sunrise Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 70 }]}>
+                        <Text style={styles.monthlyHeaderText}>Sunrise</Text>
+                        <View style={styles.timeTypeRow}>
+                          <View style={styles.beginTimeHeaderContainer}>
+                            <Text style={styles.beginTimeHeader}>Begin</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Zuhr Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
+                        <Text style={styles.monthlyHeaderText}>Zuhr</Text>
+                        <View style={styles.timeTypeRow}>
+                          <View style={styles.beginTimeHeaderContainer}>
+                            <Text style={styles.beginTimeHeader}>Begin</Text>
+                          </View>
+                          <View style={styles.jamahTimeHeaderContainer}>
+                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Asr Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
+                        <Text style={styles.monthlyHeaderText}>Asr</Text>
+                        <View style={styles.timeTypeRow}>
+                          <View style={styles.beginTimeHeaderContainer}>
+                            <Text style={styles.beginTimeHeader}>Begin</Text>
+                          </View>
+                          <View style={styles.jamahTimeHeaderContainer}>
+                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Maghrib Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
+                        <Text style={styles.monthlyHeaderText}>Maghrib</Text>
+                        <View style={styles.timeTypeRow}>
+                          <View style={styles.beginTimeHeaderContainer}>
+                            <Text style={styles.beginTimeHeader}>Begin</Text>
+                          </View>
+                          <View style={styles.jamahTimeHeaderContainer}>
+                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Isha Column */}
+                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
+                        <Text style={styles.monthlyHeaderText}>Isha</Text>
+                        <View style={styles.timeTypeRow}>
+                          <View style={styles.beginTimeHeaderContainer}>
+                            <Text style={styles.beginTimeHeader}>Begin</Text>
+                          </View>
+                          <View style={styles.jamahTimeHeaderContainer}>
+                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Scrollable Content */}
+                    <ScrollView
+                      style={styles.monthlyScrollView}
+                      showsVerticalScrollIndicator={true}
+                    >
+                      {monthData.map((item, index) => {
+                        const date = new Date(item.d_date);
+                        const isToday = item.d_date === today;
+                        const isWeekend =
+                          date.getDay() === 0 || date.getDay() === 6;
+                        const dayNames = [
+                          "Sun",
+                          "Mon",
+                          "Tue",
+                          "Wed",
+                          "Thu",
+                          "Fri",
+                          "Sat",
+                        ];
+
+                        return (
+                          <View
+                            key={`${item.d_date}-${index}`}
+                            style={[
+                              styles.monthlyRow,
+                              isToday && styles.todayRow,
+                              isWeekend && !isToday && styles.weekendRow,
+                            ]}
+                          >
+                            {/* Date Cell */}
+                            <View
+                              style={[styles.monthlyDataCell, { width: 50 }]}
+                            >
+                              <Text
+                                style={[
+                                  styles.monthlyCellText,
+                                  isToday && styles.todayText,
+                                ]}
+                              >
+                                {date.getDate()}
+                                {isToday && " 📍"}
+                              </Text>
+                            </View>
+
+                            {/* Day Cell */}
+                            <View
+                              style={[styles.monthlyDataCell, { width: 50 }]}
+                            >
+                              <Text
+                                style={[
+                                  styles.monthlyCellText,
+                                  isToday && styles.todayText,
+                                ]}
+                              >
+                                {dayNames[date.getDay()]}
+                              </Text>
+                            </View>
+
+                            {/* Prayer Times - keeping existing structure */}
+                            <View
+                              style={[styles.monthlyDataCell, { width: 100 }]}
+                            >
+                              <View style={styles.monthlyTimeContainer}>
+                                <View style={styles.beginTimeContainer}>
+                                  <Text
+                                    style={[
+                                      styles.monthlyBeginTime,
+                                      isToday && styles.todayBeginTime,
+                                    ]}
+                                  >
+                                    {formatTime(item.fajr_begins)}
+                                  </Text>
+                                </View>
+                                {item.fajr_jamah && (
+                                  <View style={styles.jamahTimeContainer}>
+                                    <Text
+                                      style={[
+                                        styles.monthlyJamahTime,
+                                        isToday && styles.todayJamahTime,
+                                      ]}
+                                    >
+                                      {formatTime(item.fajr_jamah)}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+
+                            <View
+                              style={[styles.monthlyDataCell, { width: 70 }]}
+                            >
+                              <View style={styles.monthlyTimeContainer}>
+                                <View style={styles.beginTimeContainer}>
+                                  <Text
+                                    style={[
+                                      styles.monthlyBeginTime,
+                                      isToday && styles.todayBeginTime,
+                                    ]}
+                                  >
+                                    {formatTime(item.sunrise)}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            <View
+                              style={[styles.monthlyDataCell, { width: 100 }]}
+                            >
+                              <View style={styles.monthlyTimeContainer}>
+                                <View style={styles.beginTimeContainer}>
+                                  <Text
+                                    style={[
+                                      styles.monthlyBeginTime,
+                                      isToday && styles.todayBeginTime,
+                                    ]}
+                                  >
+                                    {formatTime(item.zuhr_begins)}
+                                  </Text>
+                                </View>
+                                {item.zuhr_jamah && (
+                                  <View style={styles.jamahTimeContainer}>
+                                    <Text
+                                      style={[
+                                        styles.monthlyJamahTime,
+                                        isToday && styles.todayJamahTime,
+                                      ]}
+                                    >
+                                      {formatTime(item.zuhr_jamah)}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+
+                            <View
+                              style={[styles.monthlyDataCell, { width: 100 }]}
+                            >
+                              <View style={styles.monthlyTimeContainer}>
+                                <View style={styles.beginTimeContainer}>
+                                  <Text
+                                    style={[
+                                      styles.monthlyBeginTime,
+                                      isToday && styles.todayBeginTime,
+                                    ]}
+                                  >
+                                    {formatTime(item.asr_mithl_1)}
+                                  </Text>
+                                </View>
+                                {item.asr_jamah && (
+                                  <View style={styles.jamahTimeContainer}>
+                                    <Text
+                                      style={[
+                                        styles.monthlyJamahTime,
+                                        isToday && styles.todayJamahTime,
+                                      ]}
+                                    >
+                                      {formatTime(item.asr_jamah)}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+
+                            <View
+                              style={[styles.monthlyDataCell, { width: 100 }]}
+                            >
+                              <View style={styles.monthlyTimeContainer}>
+                                <View style={styles.beginTimeContainer}>
+                                  <Text
+                                    style={[
+                                      styles.monthlyBeginTime,
+                                      isToday && styles.todayBeginTime,
+                                    ]}
+                                  >
+                                    {formatTime(item.maghrib_begins)}
+                                  </Text>
+                                </View>
+                                {item.maghrib_jamah && (
+                                  <View style={styles.jamahTimeContainer}>
+                                    <Text
+                                      style={[
+                                        styles.monthlyJamahTime,
+                                        isToday && styles.todayJamahTime,
+                                      ]}
+                                    >
+                                      {formatTime(item.maghrib_jamah)}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+
+                            <View
+                              style={[styles.monthlyDataCell, { width: 100 }]}
+                            >
+                              <View style={styles.monthlyTimeContainer}>
+                                <View style={styles.beginTimeContainer}>
+                                  <Text
+                                    style={[
+                                      styles.monthlyBeginTime,
+                                      isToday && styles.todayBeginTime,
+                                    ]}
+                                  >
+                                    {formatTime(item.isha_begins)}
+                                  </Text>
+                                </View>
+                                {item.isha_jamah && (
+                                  <View style={styles.jamahTimeContainer}>
+                                    <Text
+                                      style={[
+                                        styles.monthlyJamahTime,
+                                        isToday && styles.todayJamahTime,
+                                      ]}
+                                    >
+                                      {formatTime(item.isha_jamah)}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <View style={styles.noDataSection}>
+                    <Text style={styles.noDataIcon}>📊</Text>
+                    <Text style={styles.noDataMessage}>
+                      No monthly data available for {getMonthName(currentMonth)}{" "}
+                      {currentYear}
+                    </Text>
+                    <Text style={styles.noDataSubMessage}>
+                      Total prayer times in database: {prayerTimes.length}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Enhanced Legend with clearer colors */}
+                <View style={styles.legend}>
+                  <Text style={styles.legendTitle}>Legend</Text>
+                  <View style={styles.legendGrid}>
+                    <View style={styles.legendItem}>
+                      <View
+                        style={[
+                          styles.legendColor,
+                          { backgroundColor: "#4caf50" },
+                        ]}
+                      />
+                      <Text style={styles.legendText}>Begin Times</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                      <View
+                        style={[
+                          styles.legendColor,
+                          { backgroundColor: "#ff9800" },
+                        ]}
+                      />
+                      <Text style={styles.legendText}>Jamah Times</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                      <View
+                        style={[
+                          styles.legendColor,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      />
+                      <Text style={styles.legendText}>Today</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                      <View
+                        style={[
+                          styles.legendColor,
+                          { backgroundColor: "#fff3e0" },
+                        ]}
+                      />
+                      <Text style={styles.legendText}>Weekend</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.legendNote}>
+                    📍 Scroll vertically to see all days • Swipe horizontally
+                    for all prayer times
+                  </Text>
+                </View>
+              </View>
+            )}
           </Animated.View>
         )}
+        <View style={styles.bottomSpacing} />
       </ScrollView>
     </View>
   );
@@ -906,395 +903,681 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   gradientHeader: {
+    backgroundColor: "#1B5E20",
     paddingTop: Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 24,
-    paddingBottom: 16,
+    paddingBottom: 24,
     paddingHorizontal: 20,
-    flexDirection: "row",
     alignItems: "center",
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8,
-    minHeight: Platform.OS === "ios" ? 100 : 80,
-  },
-  logoContainer: {
-    marginRight: 12,
-  },
-  mosqueLogo: {
-    width: 48,
-    height: 48,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 8,
-  },
-  headerContent: {
-    flex: 1,
-    justifyContent: "center",
+    elevation: 10,
   },
   greetingText: {
-    fontSize: 12,
     color: "rgba(255,255,255,0.8)",
+    fontSize: 14,
     fontWeight: "500",
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  mosqueNameEnhanced: {
-    fontSize: 16,
-    fontWeight: "700",
+  mosqueTitle: {
     color: "#fff",
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  currentTimeText: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#fff",
-    letterSpacing: -0.5,
+    marginBottom: 12,
+    letterSpacing: 0.5,
   },
-  dateTextEnhanced: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.8)",
+  headerTime: {
+    color: "#fff",
+    fontSize: 32,
+    fontWeight: "900",
+    marginBottom: 4,
+    letterSpacing: -1,
+  },
+  headerDate: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 14,
     fontWeight: "500",
   },
-  headerActions: {
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 8,
-    marginLeft: 8,
+  prayerCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12, // Reduced from 16
+    borderWidth: 1.5, // Reduced from 2
+    borderColor: "#f0f0f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 }, // Reduced shadow
+    shadowOpacity: 0.03, // Reduced shadow
+    shadowRadius: 3, // Reduced shadow
+    elevation: 2, // Reduced elevation
+    position: "relative",
   },
-  printButton: {
-    padding: 8,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-    minWidth: 40,
+
+  activePrayerCard: {
+    backgroundColor: "#1B5E20",
+    borderColor: "#1B5E20",
+    shadowColor: "#1B5E20",
+    shadowOffset: { width: 0, height: 3 }, // Reduced shadow
+    shadowOpacity: 0.2, // Reduced shadow
+    shadowRadius: 6, // Reduced shadow
+    elevation: 5, // Reduced elevation
+  },
+
+  nextPrayerCard: {
+    borderColor: "#2196f3",
+    borderWidth: 2,
+    backgroundColor: "#fafffe",
+  },
+
+  prayerCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12, // Reduced from 16
+    gap: 12, // Reduced from 16
+  },
+
+  prayerIconContainer: {
+    width: 44, // Reduced from 56
+    height: 44, // Reduced from 56
+    borderRadius: 22, // Adjusted
     alignItems: "center",
     justifyContent: "center",
   },
-  shareButton: {
-    padding: 8,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-    minWidth: 40,
+
+  prayerIcon: {
+    fontSize: 20, // Reduced from 24
+  },
+
+  compactTimeSection: {
+    marginTop: 2, // Reduced from 4
+  },
+
+  compactTimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 1, // Reduced from 2
+  },
+
+  compactTimeLabel: {
+    fontSize: 10, // Reduced from 12
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+
+  prayerName: {
+    fontSize: 16, // Reduced from 18
+    fontWeight: "700",
+    marginBottom: 3, // Reduced from 4
+    letterSpacing: 0.2,
+  },
+
+  compactPrayerTime: {
+    fontSize: 14, // Reduced from 15
+    fontWeight: "800",
+  },
+
+  compactJamahTime: {
+    fontSize: 14, // Reduced from 15
+    fontWeight: "800",
+  },
+
+  // Compact status badges
+  compactStatusContainer: {
+    position: "absolute",
+    top: 6, // Reduced from 8
+    right: 6, // Reduced from 8
+  },
+
+  compactStatusBadge: {
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 5, // Reduced from 6
+    paddingVertical: 1, // Reduced from 2
+    borderRadius: 4, // Reduced from 6
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+
+  compactNextBadge: {
+    backgroundColor: "#e3f2fd",
+  },
+
+  compactStatusText: {
+    fontSize: 7, // Reduced from 8
+    fontWeight: "800",
+    color: "#1B5E20",
+    letterSpacing: 0.3,
+  },
+
+  // Compact Prayer List
+  prayerList: {
+    padding: 16, // Reduced from 20
+    gap: 8, // Reduced from 12
+  },
+
+  // Subtle Toggle Styles
+  subtleToggleContainer: {
+    alignItems: "center",
+    marginVertical: 12, // Reduced margin
+  },
+
+  subtleToggleWrapper: {
+    flexDirection: "row",
+    backgroundColor: "#f8f9fa",
+    borderRadius: 8,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+  },
+
+  subtleToggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    minWidth: 80,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  subtleToggleButtonActive: {
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  subtleToggleText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6c757d",
+    letterSpacing: 0.2,
+  },
+
+  subtleToggleTextActive: {
+    color: "#1B5E20",
+    fontWeight: "700",
+  },
+
+  // Compact Daily Card
+  dailyCard: {
+    margin: 16, // Reduced from 20
+    marginTop: 0,
+    backgroundColor: "#fff",
+    borderRadius: 16, // Reduced from 20
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 }, // Reduced shadow
+    shadowOpacity: 0.08, // Reduced shadow
+    shadowRadius: 8, // Reduced shadow
+    elevation: 6, // Reduced elevation
+    overflow: "hidden",
+  },
+
+  // Compact Card Header
+  cardHeader: {
+    padding: 18, // Reduced from 24
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+
+  cardTitle: {
+    fontSize: 20, // Reduced from 22
+    fontWeight: "800",
+    color: "#1a1a1a",
+    marginBottom: 3, // Reduced from 4
+    letterSpacing: 0.2,
+  },
+
+  cardSubtitle: {
+    fontSize: 13, // Reduced from 14
+    color: "#666",
+    fontWeight: "500",
   },
   toggleContainer: {
-    margin: 16,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  toggleButtons: {
     flexDirection: "row",
-    gap: 12,
+    margin: 20,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
   },
   toggleButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    borderWidth: 2,
+    gap: 8,
   },
   toggleButtonActive: {
-    shadowColor: "#000",
+    backgroundColor: "#1B5E20",
+    shadowColor: "#1B5E20",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
   },
+  toggleIcon: {
+    fontSize: 18,
+  },
   toggleButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#666",
     letterSpacing: 0.3,
+  },
+  toggleButtonTextActive: {
+    color: "#fff",
   },
   scrollContent: {
     flex: 1,
   },
-  nextPrayerCard: {
-    margin: 16,
-    marginTop: 0,
+  nextPrayerAlert: {
+    margin: 20,
+    marginBottom: 16,
+    backgroundColor: "#e3f2fd",
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  nextPrayerContent: {
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
+    borderLeftWidth: 5,
+    borderLeftColor: "#2196f3",
+    shadowColor: "#2196f3",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  nextPrayerIcon: {
+  alertIcon: {
+    fontSize: 32,
     marginRight: 16,
-    padding: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 16,
   },
-  nextPrayerTextContainer: {
+  alertContent: {
     flex: 1,
   },
-  nextPrayerLabel: {
-    color: "rgba(255,255,255,0.8)",
+  alertTitle: {
     fontSize: 14,
     fontWeight: "600",
+    color: "#1565c0",
     marginBottom: 4,
   },
-  nextPrayerName: {
-    color: "#fff",
-    fontSize: 26,
-    fontWeight: "800",
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  timeUntilText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  prayersList: {
-    margin: 16,
-    marginTop: 0,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  ramadanBadge: {
-    margin: 20,
-    marginTop: 0,
-    borderRadius: 20,
-    shadowColor: "#F9A825",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  ramadanContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-    gap: 12,
-  },
-  ramadanIcon: {
-    fontSize: 28,
-  },
-  ramadanText: {
+  alertPrayer: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#fff",
-    letterSpacing: 0.5,
+    color: "#0d47a1",
+    marginBottom: 2,
   },
-  monthlyContainer: {
-    margin: 16,
-    marginTop: 0,
-    borderRadius: 16,
+  alertTime: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1976d2",
+  },
+
+  monthlyCard: {
+    margin: 20,
+    backgroundColor: "#fff",
+    borderRadius: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
     overflow: "hidden",
-  },
-  monthlyHeader: {
-    padding: 16,
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.1)",
-  },
-  monthlyTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  monthlyScrollView: {
     flex: 1,
   },
-  monthlyTable: {
+
+  prayerInfo: {
     flex: 1,
-    minWidth: width - 32,
   },
-  monthlyHeaderRow: {
+  timeSection: {
+    marginTop: 4,
+  },
+  timeRow: {
     flexDirection: "row",
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "rgba(255,255,255,0.3)",
-  },
-  monthlyHeaderText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-    textAlign: "center",
-    letterSpacing: 0.3,
-  },
-  monthlyCell: {
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    minHeight: 30,
-  },
-  dateCell: {
-    width: 40,
-    minWidth: 40,
-  },
-  dayCell: {
-    width: 40,
-    minWidth: 40,
-  },
-  timeCell: {
-    width: 70,
-    minWidth: 70,
-  },
-  monthlyCellText: {
-    fontSize: 13,
-    textAlign: "center",
-  },
-  monthlyTimeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    textAlign: "center",
     marginBottom: 2,
   },
-  monthlyJamahText: {
-    fontSize: 9,
-    fontWeight: "500",
-    textAlign: "center",
-    opacity: 0.8,
+  timeLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  monthlyLegend: {
+
+  prayerTime: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  jamahTime: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  // Smaller, corner-positioned status badges
+  statusContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+  },
+  statusBadge: {
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  nextBadge: {
+    backgroundColor: "#e3f2fd",
+  },
+  statusText: {
+    fontSize: 8,
+    fontWeight: "800",
+    color: "#1B5E20",
+    letterSpacing: 0.5,
+  },
+  monthlyTableContainer: {
+    flex: 1,
+  },
+
+  monthlyTableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#1B5E20",
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: "#fff",
+    minHeight: 80,
+  },
+
+  monthlyHeaderCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+
+  monthlyHeaderText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#fff",
+    textAlign: "center",
+    letterSpacing: 0.3,
+    marginBottom: 8,
+  },
+
+  timeTypeRow: {
+    flexDirection: "row",
+    gap: 2,
+    justifyContent: "center",
+  },
+
+  beginTimeHeaderContainer: {
+    backgroundColor: "#4caf50",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 35,
+  },
+
+  jamahTimeHeaderContainer: {
+    backgroundColor: "#ff9800",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 35,
+  },
+
+  beginTimeHeader: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+  },
+
+  jamahTimeHeader: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+  },
+  monthlyTableWrapper: {
+    flex: 1,
+    maxHeight: height * 0.6,
+  },
+
+  monthlyScrollView: {
+    flex: 1,
+    backgroundColor: "#fff",
+    maxHeight: height * 0.45,
+  },
+  monthlyRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    minHeight: 50,
+    paddingHorizontal: 8,
+    alignItems: "center",
+  },
+  monthlyDataCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  monthlyBeginTime: {
+    fontSize: 11,
+    color: "#2e7d32",
+    textAlign: "center",
+    fontWeight: "700",
+  },
+  monthlyJamahTime: {
+    fontSize: 10,
+    color: "#f57c00",
+    textAlign: "center",
+    fontWeight: "600",
+    marginTop: 2,
+  },
+
+  monthlyHorizontalScroll: {
+    flex: 1,
+  },
+
+  monthlyTable: {
+    flex: 1,
+  },
+  todayRow: {
+    backgroundColor: "#e8f5e9",
+    borderLeftWidth: 4,
+    borderLeftColor: "#1B5E20",
+  },
+  weekendRow: {
+    backgroundColor: "#fff3e0",
+  },
+  monthlyCellText: {
+    fontSize: 12,
+    color: "#333",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  // Enhanced color-coded time displays
+  monthlyTimeContainer: {
+    alignItems: "center",
+    gap: 4,
+  },
+  beginTimeContainer: {
+    backgroundColor: "#e8f5e9",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#4caf50",
+    minWidth: 50,
+  },
+  jamahTimeContainer: {
+    backgroundColor: "#fff3e0",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#ff9800",
+    minWidth: 50,
+  },
+  todayBeginTime: {
+    color: "#1B5E20",
+    fontWeight: "900",
+  },
+  todayJamahTime: {
+    color: "#e65100",
+    fontWeight: "900",
+  },
+  weekendBeginTime: {
+    color: "#388e3c",
+    fontWeight: "800",
+  },
+  weekendJamahTime: {
+    color: "#f57c00",
+    fontWeight: "800",
+  },
+  todayText: {
+    color: "#1B5E20",
+    fontWeight: "800",
+  },
+  weekendText: {
+    color: "#f57c00",
+    fontWeight: "700",
+  },
+  legend: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    alignItems: "center",
+  },
+  legendTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 12,
+  },
+  legendGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: 16,
+    marginBottom: 12,
     justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.1)",
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    marginBottom: 8,
   },
   legendColor: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  legendRamadanIcon: {
-    fontSize: 7,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
   legendText: {
-    fontSize: 11,
-    fontWeight: "500",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#333",
   },
   legendNote: {
-    fontSize: 10,
+    fontSize: 11,
+    color: "#666",
+    textAlign: "center",
     fontStyle: "italic",
+    lineHeight: 16,
   },
   noDataCard: {
-    margin: 16,
-    padding: 40,
-    borderRadius: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  noDataCardEnhanced: {
     margin: 20,
+    backgroundColor: "#fff",
+    borderRadius: 20,
     padding: 40,
-    borderRadius: 24,
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: "rgba(27, 94, 32, 0.1)",
+    shadowRadius: 12,
+    elevation: 8,
   },
-  noDataIconContainer: {
-    padding: 24,
-    backgroundColor: "rgba(27, 94, 32, 0.1)",
-    borderRadius: 32,
-    marginBottom: 24,
+  noDataSection: {
+    padding: 40,
+    alignItems: "center",
+  },
+  noDataIcon: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   noDataTitle: {
-    fontSize: 22,
-    textAlign: "center",
-    marginBottom: 16,
+    fontSize: 20,
     fontWeight: "800",
-    letterSpacing: 0.3,
+    color: "#333",
+    marginBottom: 12,
+    textAlign: "center",
   },
   noDataText: {
     fontSize: 16,
-    opacity: 0.7,
+    color: "#666",
     textAlign: "center",
-    lineHeight: 26,
-    marginBottom: 32,
-    paddingHorizontal: 8,
+    lineHeight: 24,
+    marginBottom: 24,
   },
-  refreshButtonEnhanced: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.light.primary,
+  noDataMessage: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    fontStyle: "italic",
+    marginBottom: 8,
+  },
+  noDataSubMessage: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  refreshButton: {
+    backgroundColor: "#1B5E20",
+    paddingVertical: 14,
     paddingHorizontal: 28,
-    paddingVertical: 16,
-    borderRadius: 20,
-    shadowColor: Colors.light.primary,
-    shadowOffset: { width: 0, height: 6 },
+    borderRadius: 12,
+    shadowColor: "#1B5E20",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 12,
+    shadowRadius: 8,
+    elevation: 6,
   },
   refreshButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   loadingContainer: {
-    margin: 20,
     padding: 40,
-    borderRadius: 16,
     alignItems: "center",
-    justifyContent: "center",
-    minHeight: 200,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
+    color: "#666",
     fontWeight: "500",
   },
   bottomSpacing: {
