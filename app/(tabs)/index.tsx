@@ -471,7 +471,7 @@ export default function TodayScreen() {
 
         <ScrollView
           style={styles.scrollContent}
-          contentContainerStyle={{ paddingTop: 20 }}
+          contentContainerStyle={{ paddingTop: 8 }}
           refreshControl={
             <RefreshControl refreshing={isLoading} onRefresh={refreshData} />
           }
@@ -715,297 +715,376 @@ export default function TodayScreen() {
 
                 {monthData.length > 0 ? (
                   <View style={styles.monthlyTableContainer}>
-                    <View style={styles.monthlyTableHeader}>
-                      <View style={[styles.monthlyHeaderCell, { width: 50 }]}>
-                        <Text style={styles.monthlyHeaderText}>Date</Text>
-                      </View>
-                      <View style={[styles.monthlyHeaderCell, { width: 50 }]}>
-                        <Text style={styles.monthlyHeaderText}>Day</Text>
-                      </View>
-                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
-                        <Text style={styles.monthlyHeaderText}>Fajr</Text>
-                        <View style={styles.timeTypeRow}>
-                          <View style={styles.beginTimeHeaderContainer}>
-                            <Text style={styles.beginTimeHeader}>Begin</Text>
-                          </View>
-                          <View style={styles.jamahTimeHeaderContainer}>
-                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={[styles.monthlyHeaderCell, { width: 70 }]}>
-                        <Text style={styles.monthlyHeaderText}>Sunrise</Text>
-                        <View style={styles.timeTypeRow}>
-                          <View style={styles.beginTimeHeaderContainer}>
-                            <Text style={styles.beginTimeHeader}>Begin</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
-                        <Text style={styles.monthlyHeaderText}>Zuhr</Text>
-                        <View style={styles.timeTypeRow}>
-                          <View style={styles.beginTimeHeaderContainer}>
-                            <Text style={styles.beginTimeHeader}>Begin</Text>
-                          </View>
-                          <View style={styles.jamahTimeHeaderContainer}>
-                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
-                        <Text style={styles.monthlyHeaderText}>Asr</Text>
-                        <View style={styles.timeTypeRow}>
-                          <View style={styles.beginTimeHeaderContainer}>
-                            <Text style={styles.beginTimeHeader}>Begin</Text>
-                          </View>
-                          <View style={styles.jamahTimeHeaderContainer}>
-                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
-                        <Text style={styles.monthlyHeaderText}>Maghrib</Text>
-                        <View style={styles.timeTypeRow}>
-                          <View style={styles.beginTimeHeaderContainer}>
-                            <Text style={styles.beginTimeHeader}>Begin</Text>
-                          </View>
-                          <View style={styles.jamahTimeHeaderContainer}>
-                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
-                        <Text style={styles.monthlyHeaderText}>Isha</Text>
-                        <View style={styles.timeTypeRow}>
-                          <View style={styles.beginTimeHeaderContainer}>
-                            <Text style={styles.beginTimeHeader}>Begin</Text>
-                          </View>
-                          <View style={styles.jamahTimeHeaderContainer}>
-                            <Text style={styles.jamahTimeHeader}>Jamah</Text>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-
                     <ScrollView
-                      style={styles.monthlyScrollView}
-                      showsVerticalScrollIndicator={true}
+                      horizontal
+                      showsHorizontalScrollIndicator={true}
+                      persistentScrollbar={Platform.OS === "android"}
+                      style={styles.monthlyHorizontalScroll}
+                      contentContainerStyle={{ paddingRight: 8 }}
                     >
-                      {monthData.map((item, index) => {
-                        const date = new Date(item.d_date);
-                        const isToday = item.d_date === today;
-                        const isWeekend =
-                          date.getDay() === 0 || date.getDay() === 6;
-                        const dayNames = [
-                          "Sun",
-                          "Mon",
-                          "Tue",
-                          "Wed",
-                          "Thu",
-                          "Fri",
-                          "Sat",
-                        ];
-
-                        return (
+                      <View style={styles.monthlyTableContent}>
+                        <View style={styles.monthlyTableHeader}>
                           <View
-                            key={`${item.d_date}-${index}`}
-                            style={[
-                              styles.monthlyRow,
-                              isToday && styles.todayRow,
-                              isWeekend && !isToday && styles.weekendRow,
-                            ]}
+                            style={[styles.monthlyHeaderCell, { width: 50 }]}
                           >
-                            <View
-                              style={[styles.monthlyDataCell, { width: 50 }]}
-                            >
-                              <Text
-                                style={[
-                                  styles.monthlyCellText,
-                                  isToday && styles.todayText,
-                                ]}
-                              >
-                                {date.getDate()}
-                                {isToday && " 📍"}
-                              </Text>
-                            </View>
-
-                            <View
-                              style={[styles.monthlyDataCell, { width: 50 }]}
-                            >
-                              <Text
-                                style={[
-                                  styles.monthlyCellText,
-                                  isToday && styles.todayText,
-                                ]}
-                              >
-                                {dayNames[date.getDay()]}
-                              </Text>
-                            </View>
-
-                            <View
-                              style={[styles.monthlyDataCell, { width: 100 }]}
-                            >
-                              <View style={styles.monthlyTimeContainer}>
-                                <View style={styles.beginTimeContainer}>
-                                  <Text
-                                    style={[
-                                      styles.monthlyBeginTime,
-                                      isToday && styles.todayBeginTime,
-                                    ]}
-                                  >
-                                    {formatTime(item.fajr_begins)}
-                                  </Text>
-                                </View>
-                                {item.fajr_jamah && (
-                                  <View style={styles.jamahTimeContainer}>
-                                    <Text
-                                      style={[
-                                        styles.monthlyJamahTime,
-                                        isToday && styles.todayJamahTime,
-                                      ]}
-                                    >
-                                      {formatTime(item.fajr_jamah)}
-                                    </Text>
-                                  </View>
-                                )}
+                            <Text style={styles.monthlyHeaderText}>Date</Text>
+                          </View>
+                          <View
+                            style={[styles.monthlyHeaderCell, { width: 50 }]}
+                          >
+                            <Text style={styles.monthlyHeaderText}>Day</Text>
+                          </View>
+                          <View
+                            style={[styles.monthlyHeaderCell, { width: 100 }]}
+                          >
+                            <Text style={styles.monthlyHeaderText}>Fajr</Text>
+                            <View style={styles.timeTypeRow}>
+                              <View style={styles.beginTimeHeaderContainer}>
+                                <Text style={styles.beginTimeHeader}>
+                                  Begin
+                                </Text>
                               </View>
-                            </View>
-
-                            <View
-                              style={[styles.monthlyDataCell, { width: 70 }]}
-                            >
-                              <View style={styles.monthlyTimeContainer}>
-                                <View style={styles.beginTimeContainer}>
-                                  <Text
-                                    style={[
-                                      styles.monthlyBeginTime,
-                                      isToday && styles.todayBeginTime,
-                                    ]}
-                                  >
-                                    {formatTime(item.sunrise)}
-                                  </Text>
-                                </View>
-                              </View>
-                            </View>
-
-                            <View
-                              style={[styles.monthlyDataCell, { width: 100 }]}
-                            >
-                              <View style={styles.monthlyTimeContainer}>
-                                <View style={styles.beginTimeContainer}>
-                                  <Text
-                                    style={[
-                                      styles.monthlyBeginTime,
-                                      isToday && styles.todayBeginTime,
-                                    ]}
-                                  >
-                                    {formatTime(item.zuhr_begins)}
-                                  </Text>
-                                </View>
-                                {item.zuhr_jamah && (
-                                  <View style={styles.jamahTimeContainer}>
-                                    <Text
-                                      style={[
-                                        styles.monthlyJamahTime,
-                                        isToday && styles.todayJamahTime,
-                                      ]}
-                                    >
-                                      {formatTime(item.zuhr_jamah)}
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-
-                            <View
-                              style={[styles.monthlyDataCell, { width: 100 }]}
-                            >
-                              <View style={styles.monthlyTimeContainer}>
-                                <View style={styles.beginTimeContainer}>
-                                  <Text
-                                    style={[
-                                      styles.monthlyBeginTime,
-                                      isToday && styles.todayBeginTime,
-                                    ]}
-                                  >
-                                    {formatTime(item.asr_mithl_1)}
-                                  </Text>
-                                </View>
-                                {item.asr_jamah && (
-                                  <View style={styles.jamahTimeContainer}>
-                                    <Text
-                                      style={[
-                                        styles.monthlyJamahTime,
-                                        isToday && styles.todayJamahTime,
-                                      ]}
-                                    >
-                                      {formatTime(item.asr_jamah)}
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-
-                            <View
-                              style={[styles.monthlyDataCell, { width: 100 }]}
-                            >
-                              <View style={styles.monthlyTimeContainer}>
-                                <View style={styles.beginTimeContainer}>
-                                  <Text
-                                    style={[
-                                      styles.monthlyBeginTime,
-                                      isToday && styles.todayBeginTime,
-                                    ]}
-                                  >
-                                    {formatTime(item.maghrib_begins)}
-                                  </Text>
-                                </View>
-                                {item.maghrib_jamah && (
-                                  <View style={styles.jamahTimeContainer}>
-                                    <Text
-                                      style={[
-                                        styles.monthlyJamahTime,
-                                        isToday && styles.todayJamahTime,
-                                      ]}
-                                    >
-                                      {formatTime(item.maghrib_jamah)}
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-
-                            <View
-                              style={[styles.monthlyDataCell, { width: 100 }]}
-                            >
-                              <View style={styles.monthlyTimeContainer}>
-                                <View style={styles.beginTimeContainer}>
-                                  <Text
-                                    style={[
-                                      styles.monthlyBeginTime,
-                                      isToday && styles.todayBeginTime,
-                                    ]}
-                                  >
-                                    {formatTime(item.isha_begins)}
-                                  </Text>
-                                </View>
-                                {item.isha_jamah && (
-                                  <View style={styles.jamahTimeContainer}>
-                                    <Text
-                                      style={[
-                                        styles.monthlyJamahTime,
-                                        isToday && styles.todayJamahTime,
-                                      ]}
-                                    >
-                                      {formatTime(item.isha_jamah)}
-                                    </Text>
-                                  </View>
-                                )}
+                              <View style={styles.jamahTimeHeaderContainer}>
+                                <Text style={styles.jamahTimeHeader}>
+                                  Jamah
+                                </Text>
                               </View>
                             </View>
                           </View>
-                        );
-                      })}
+                          <View
+                            style={[styles.monthlyHeaderCell, { width: 70 }]}
+                          >
+                            <Text style={styles.monthlyHeaderText}>
+                              Sunrise
+                            </Text>
+                            <View style={styles.timeTypeRow}>
+                              <View style={styles.beginTimeHeaderContainer}>
+                                <Text style={styles.beginTimeHeader}>
+                                  Begin
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          <View
+                            style={[styles.monthlyHeaderCell, { width: 100 }]}
+                          >
+                            <Text style={styles.monthlyHeaderText}>Zuhr</Text>
+                            <View style={styles.timeTypeRow}>
+                              <View style={styles.beginTimeHeaderContainer}>
+                                <Text style={styles.beginTimeHeader}>
+                                  Begin
+                                </Text>
+                              </View>
+                              <View style={styles.jamahTimeHeaderContainer}>
+                                <Text style={styles.jamahTimeHeader}>
+                                  Jamah
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          <View
+                            style={[styles.monthlyHeaderCell, { width: 100 }]}
+                          >
+                            <Text style={styles.monthlyHeaderText}>Asr</Text>
+                            <View style={styles.timeTypeRow}>
+                              <View style={styles.beginTimeHeaderContainer}>
+                                <Text style={styles.beginTimeHeader}>
+                                  Begin
+                                </Text>
+                              </View>
+                              <View style={styles.jamahTimeHeaderContainer}>
+                                <Text style={styles.jamahTimeHeader}>
+                                  Jamah
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          <View
+                            style={[styles.monthlyHeaderCell, { width: 100 }]}
+                          >
+                            <Text style={styles.monthlyHeaderText}>
+                              Maghrib
+                            </Text>
+                            <View style={styles.timeTypeRow}>
+                              <View style={styles.beginTimeHeaderContainer}>
+                                <Text style={styles.beginTimeHeader}>
+                                  Begin
+                                </Text>
+                              </View>
+                              <View style={styles.jamahTimeHeaderContainer}>
+                                <Text style={styles.jamahTimeHeader}>
+                                  Jamah
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          <View
+                            style={[styles.monthlyHeaderCell, { width: 100 }]}
+                          >
+                            <Text style={styles.monthlyHeaderText}>Isha</Text>
+                            <View style={styles.timeTypeRow}>
+                              <View style={styles.beginTimeHeaderContainer}>
+                                <Text style={styles.beginTimeHeader}>
+                                  Begin
+                                </Text>
+                              </View>
+                              <View style={styles.jamahTimeHeaderContainer}>
+                                <Text style={styles.jamahTimeHeader}>
+                                  Jamah
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+
+                        <ScrollView
+                          style={styles.monthlyScrollView}
+                          showsVerticalScrollIndicator={true}
+                          persistentScrollbar={Platform.OS === "android"}
+                          contentContainerStyle={{ paddingBottom: 20 }}
+                        >
+                          {monthData.map((item, index) => {
+                            const date = new Date(item.d_date);
+                            const isToday = item.d_date === today;
+                            const isWeekend =
+                              date.getDay() === 0 || date.getDay() === 6;
+                            const dayNames = [
+                              "Sun",
+                              "Mon",
+                              "Tue",
+                              "Wed",
+                              "Thu",
+                              "Fri",
+                              "Sat",
+                            ];
+
+                            return (
+                              <View
+                                key={`${item.d_date}-${index}`}
+                                style={[
+                                  styles.monthlyRow,
+                                  isToday && styles.todayRow,
+                                  isWeekend && !isToday && styles.weekendRow,
+                                ]}
+                              >
+                                {/* Your existing row content remains the same */}
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 50 },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.monthlyCellText,
+                                      isToday && styles.todayText,
+                                    ]}
+                                  >
+                                    {date.getDate()}
+                                    {isToday && " 📍"}
+                                  </Text>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 50 },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.monthlyCellText,
+                                      isToday && styles.todayText,
+                                    ]}
+                                  >
+                                    {dayNames[date.getDay()]}
+                                  </Text>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 100 },
+                                  ]}
+                                >
+                                  <View style={styles.monthlyTimeContainer}>
+                                    <View style={styles.beginTimeContainer}>
+                                      <Text
+                                        style={[
+                                          styles.monthlyBeginTime,
+                                          isToday && styles.todayBeginTime,
+                                        ]}
+                                      >
+                                        {formatTime(item.fajr_begins)}
+                                      </Text>
+                                    </View>
+                                    {item.fajr_jamah && (
+                                      <View style={styles.jamahTimeContainer}>
+                                        <Text
+                                          style={[
+                                            styles.monthlyJamahTime,
+                                            isToday && styles.todayJamahTime,
+                                          ]}
+                                        >
+                                          {formatTime(item.fajr_jamah)}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 70 },
+                                  ]}
+                                >
+                                  <View style={styles.monthlyTimeContainer}>
+                                    <View style={styles.beginTimeContainer}>
+                                      <Text
+                                        style={[
+                                          styles.monthlyBeginTime,
+                                          isToday && styles.todayBeginTime,
+                                        ]}
+                                      >
+                                        {formatTime(item.sunrise)}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 100 },
+                                  ]}
+                                >
+                                  <View style={styles.monthlyTimeContainer}>
+                                    <View style={styles.beginTimeContainer}>
+                                      <Text
+                                        style={[
+                                          styles.monthlyBeginTime,
+                                          isToday && styles.todayBeginTime,
+                                        ]}
+                                      >
+                                        {formatTime(item.zuhr_begins)}
+                                      </Text>
+                                    </View>
+                                    {item.zuhr_jamah && (
+                                      <View style={styles.jamahTimeContainer}>
+                                        <Text
+                                          style={[
+                                            styles.monthlyJamahTime,
+                                            isToday && styles.todayJamahTime,
+                                          ]}
+                                        >
+                                          {formatTime(item.zuhr_jamah)}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 100 },
+                                  ]}
+                                >
+                                  <View style={styles.monthlyTimeContainer}>
+                                    <View style={styles.beginTimeContainer}>
+                                      <Text
+                                        style={[
+                                          styles.monthlyBeginTime,
+                                          isToday && styles.todayBeginTime,
+                                        ]}
+                                      >
+                                        {formatTime(item.asr_mithl_1)}
+                                      </Text>
+                                    </View>
+                                    {item.asr_jamah && (
+                                      <View style={styles.jamahTimeContainer}>
+                                        <Text
+                                          style={[
+                                            styles.monthlyJamahTime,
+                                            isToday && styles.todayJamahTime,
+                                          ]}
+                                        >
+                                          {formatTime(item.asr_jamah)}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 100 },
+                                  ]}
+                                >
+                                  <View style={styles.monthlyTimeContainer}>
+                                    <View style={styles.beginTimeContainer}>
+                                      <Text
+                                        style={[
+                                          styles.monthlyBeginTime,
+                                          isToday && styles.todayBeginTime,
+                                        ]}
+                                      >
+                                        {formatTime(item.maghrib_begins)}
+                                      </Text>
+                                    </View>
+                                    {item.maghrib_jamah && (
+                                      <View style={styles.jamahTimeContainer}>
+                                        <Text
+                                          style={[
+                                            styles.monthlyJamahTime,
+                                            isToday && styles.todayJamahTime,
+                                          ]}
+                                        >
+                                          {formatTime(item.maghrib_jamah)}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.monthlyDataCell,
+                                    { width: 100 },
+                                  ]}
+                                >
+                                  <View style={styles.monthlyTimeContainer}>
+                                    <View style={styles.beginTimeContainer}>
+                                      <Text
+                                        style={[
+                                          styles.monthlyBeginTime,
+                                          isToday && styles.todayBeginTime,
+                                        ]}
+                                      >
+                                        {formatTime(item.isha_begins)}
+                                      </Text>
+                                    </View>
+                                    {item.isha_jamah && (
+                                      <View style={styles.jamahTimeContainer}>
+                                        <Text
+                                          style={[
+                                            styles.monthlyJamahTime,
+                                            isToday && styles.todayJamahTime,
+                                          ]}
+                                        >
+                                          {formatTime(item.isha_jamah)}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
                     </ScrollView>
                   </View>
                 ) : (
@@ -1151,7 +1230,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginHorizontal: 20,
-    marginVertical: 16,
+    marginVertical: 8,
   },
 
   scrollContent: {
@@ -1163,7 +1242,132 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
 
-  // Keep all your existing styles below this point exactly the same
+  dailyCard: {
+    margin: 16,
+    marginTop: 4,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 6,
+    overflow: "hidden",
+  },
+
+  nextPrayerAlert: {
+    margin: 20,
+    marginBottom: 8,
+    backgroundColor: "#e3f2fd",
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    borderLeftWidth: 5,
+    borderLeftColor: "#2196f3",
+    shadowColor: "#2196f3",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  monthlyCard: {
+    margin: 12,
+    marginTop: 4,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: "hidden",
+    flex: 1,
+  },
+
+  monthlyTableContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    margin: 8,
+    marginTop: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  monthlyScrollView: {
+    flex: 1,
+    backgroundColor: "#fff",
+    maxHeight: height * 0.55,
+  },
+
+  cardHeader: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+
+  legend: {
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    alignItems: "center",
+  },
+
+  legendTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 8,
+  },
+
+  legendGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 8,
+    justifyContent: "center",
+  },
+
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+
+  legendText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#333",
+  },
+
+  legendNote: {
+    fontSize: 10,
+    color: "#666",
+    textAlign: "center",
+    fontStyle: "italic",
+    lineHeight: 14,
+  },
+
+  bottomSpacing: {
+    height: Platform.OS === "ios" ? 60 : 40,
+  },
+
   toggleWrapper: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -1218,6 +1422,38 @@ const styles = StyleSheet.create({
   },
   printButtonText: {
     fontSize: 16,
+  },
+
+  monthlyHorizontalScroll: {
+    flex: 1,
+  },
+
+  scrollHintContainer: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 1,
+  },
+
+  scrollHintText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+
+  tableOverlay: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 30,
+    backgroundColor: "transparent",
+    pointerEvents: "none",
+    zIndex: 1,
   },
   prayerCard: {
     backgroundColor: "#fff",
@@ -1319,23 +1555,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
-  dailyCard: {
-    margin: 16,
-    marginTop: 0,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 6,
-    overflow: "hidden",
-  },
-  cardHeader: {
-    padding: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
+
   cardTitle: {
     fontSize: 20,
     fontWeight: "800",
@@ -1348,22 +1568,7 @@ const styles = StyleSheet.create({
     color: "#666",
     fontWeight: "500",
   },
-  nextPrayerAlert: {
-    margin: 20,
-    marginBottom: 16,
-    backgroundColor: "#e3f2fd",
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    borderLeftWidth: 5,
-    borderLeftColor: "#2196f3",
-    shadowColor: "#2196f3",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
+
   alertIcon: {
     fontSize: 32,
     marginRight: 16,
@@ -1388,24 +1593,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#1976d2",
   },
-  monthlyCard: {
-    margin: 20,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    overflow: "hidden",
-    flex: 1,
-  },
+
   prayerInfo: {
     flex: 1,
   },
-  monthlyTableContainer: {
-    flex: 1,
-  },
+
   monthlyTableHeader: {
     flexDirection: "row",
     backgroundColor: "#1B5E20",
@@ -1460,11 +1652,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
   },
-  monthlyScrollView: {
-    flex: 1,
-    backgroundColor: "#fff",
-    maxHeight: height * 0.45,
-  },
+
   monthlyRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -1540,50 +1728,7 @@ const styles = StyleSheet.create({
     color: "#1B5E20",
     fontWeight: "800",
   },
-  legend: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    alignItems: "center",
-  },
-  legendTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 12,
-  },
-  legendGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 12,
-    justifyContent: "center",
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 6,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  legendText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#333",
-  },
-  legendNote: {
-    fontSize: 11,
-    color: "#666",
-    textAlign: "center",
-    fontStyle: "italic",
-    lineHeight: 16,
-  },
+
   noDataCard: {
     margin: 20,
     backgroundColor: "#fff",
@@ -1658,7 +1803,8 @@ const styles = StyleSheet.create({
     color: "#666",
     fontWeight: "500",
   },
-  bottomSpacing: {
-    height: Platform.OS === "ios" ? 100 : 80,
+
+  monthlyTableContent: {
+    minWidth: 670,
   },
 });
