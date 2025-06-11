@@ -1,43 +1,174 @@
 {
   "expo": {
-    "name": "MASapp",
-    "slug": "MASapp",
+    "name": "Masjid Abubakr Siddique",
+    "slug": "masjid-abubakr-siddique",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/ios-light.png",
     "scheme": "masapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon-dark.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zahidf.masjidabubakr",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app does not use the camera.",
+        "NSMicrophoneUsageDescription": "This app does not use the microphone.",
+        "NSLocationWhenInUseUsageDescription": "This app uses location to show directions to the mosque.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Google Auth",
+            "CFBundleURLSchemes": ["$(EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS)"]
+          },
+          {
+            "CFBundleURLName": "Google Auth",
+            "CFBundleURLSchemes": ["$(EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS)"]
+          }
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "associatedDomains": [
+        "applinks:masjidabubakr.org.uk",
+        "applinks:masjidabubakr.org.uk"
+      ],
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "org.masjidabubakr.prayertimes",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "masjidabubakr.org.uk"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Masjid Abubakr Siddique",
+      "shortName": "MAS",
+      "description": "App developed for Masjid Abubakr Siddique",
+      "themeColor": "#1B5E20",
+      "backgroundColor": "#ffffff"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-icon-light.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/splash-icon-light.png",
+          "color": "#1B5E20",
+          "sounds": ["./assets/sounds/adhan.wav"]
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "newArchEnabled": true
+          },
+          "android": {
+            "newArchEnabled": true,
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0"
+          }
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/SpaceMono-Regular.ttf"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "32079d89-7ef5-464b-9763-9fce660f7717"
+      }
+    },
+    "owner": "zahidf",
+    "privacy": "public",
+    "description": "Official app for Masjid Abubakr Siddique, Birmingham. Get accurate prayer times, jamah schedules, and mosque information.",
+    "keywords": [
+      "prayer times",
+      "mosque",
+      "islam",
+      "birmingham",
+      "masjid",
+      "salah",
+      "jamah"
+    ],
+    "primaryColor": "#1B5E20",
+    "notification": {
+      "icon": "./assets/images/notification-icon.png",
+      "color": "#1B5E20",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Prayer Time Reminder"
     }
   }
 }

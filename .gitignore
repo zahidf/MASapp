@@ -32,8 +32,63 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env.local
+.env.development.local
+.env.staging.local
+.env.production.local
+
+# Environment secrets
+.env.secret
+.env.keys
 
 # typescript
 *.tsbuildinfo
 
+# App examples
 app-example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+
+# Build artifacts
+*.ipa
+*.apk
+*.aab
+
+# EAS
+.easignore
+
+# Temporary files
+.tmp/
+temp/
+
+# Google Services (add these to git when ready)
+google-services.json
+GoogleService-Info.plist
+
+# Service account keys
+service-account-*.json
+api-key-*.json
+
+# Apple certificates and profiles
+*.cer
+*.p12
+*.mobileprovision
+*.certSigningRequest
+
+# Firebase config (if using Firebase)
+firebase-config.js
+firebase-config.json
+
+# Analytics and tracking configs
+analytics-config.json
+mixpanel-config.json
+
+# Sentry config
+.sentryclirc

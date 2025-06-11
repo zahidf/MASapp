@@ -109,7 +109,7 @@ export default function ExploreScreen() {
   const handleAbout = () => {
     Alert.alert(
       "About This App",
-      "Prayer Times App v1.0.0\n\nDeveloped for Masjid Abubakr Siddique to provide accurate prayer times and mosque information to the community.\n\n© 2025 Masjid Abubakr Siddique",
+      "Masjid Abubakr Siddique App v1.0.0\n\nDeveloped for Masjid Abubakr Siddique to provide accurate prayer times and mosque information to the community.\n\n© 2025 Masjid Abubakr Siddique",
       [{ text: "OK" }]
     );
   };
@@ -283,7 +283,7 @@ export default function ExploreScreen() {
           {/* App Version Footer */}
           <View style={styles.footer}>
             <ThemedText style={styles.footerText}>
-              Prayer Times App v1.0.0
+              Masjid Abubakr Siddique App v1.0.0
             </ThemedText>
             <ThemedText style={styles.footerSubtext}>
               Made with ❤️ for the Muslim community
