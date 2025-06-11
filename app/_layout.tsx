@@ -1,3 +1,4 @@
+// app/_layout.tsx
 import {
   DarkTheme,
   DefaultTheme,
@@ -10,6 +11,7 @@ import { useEffect, useState } from "react";
 import "react-native-reanimated";
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { PrayerTimesProvider } from "@/contexts/PrayerTimesContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { loadPrayerTimes } from "@/utils/storage";
@@ -41,22 +43,24 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <PrayerTimesProvider>
-        <ThemeProvider
-          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-        >
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="auth"
-              options={{
-                presentation: "modal",
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen name="+not-found" options={{ headerShown: true }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
+        <NotificationProvider>
+          <ThemeProvider
+            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+          >
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="auth"
+                options={{
+                  presentation: "modal",
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </NotificationProvider>
       </PrayerTimesProvider>
     </AuthProvider>
   );
