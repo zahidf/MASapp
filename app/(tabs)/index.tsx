@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SvgXml } from "react-native-svg";
 
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -26,6 +27,7 @@ import {
   parseTimeString,
 } from "@/utils/dateHelpers";
 import { generatePDFHTML } from "@/utils/pdfGenerator";
+import { Asset } from "expo-asset";
 
 const { width, height } = Dimensions.get("window");
 
@@ -43,21 +45,45 @@ export default function TodayScreen() {
   const [pulseAnim] = useState(new Animated.Value(1));
   const [monthData, setMonthData] = useState<PrayerTime[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   const colors = Colors[colorScheme ?? "light"];
   const today = getTodayString();
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
+  const [logoSvg, setLogoSvg] = useState<string>("");
+
+  // Load SVG logo
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const asset = Asset.fromModule(
+          require("@/assets/logos/mosqueLogo.svg")
+        );
+        await asset.downloadAsync();
+        const response = await fetch(asset.localUri || asset.uri);
+        const svgContent = await response.text();
+        setLogoSvg(svgContent);
+      } catch (error) {
+        console.error("Error loading logo:", error);
+      }
+    };
+    loadLogo();
+  }, []);
+
+  // Simple scroll handler
+  const handleScroll = (event: any) => {
+    const scrollY = event.nativeEvent.contentOffset.y;
+    setIsHeaderCollapsed(scrollY > 50);
+  };
 
   // Helper function to format time to hh:mm
   const formatTime = (timeString: string | undefined) => {
     if (!timeString) return "N/A";
-    // If time is already in hh:mm format, return as is
     if (timeString.length === 5 && timeString.includes(":")) {
       return timeString;
     }
-    // If time includes seconds, remove them
     if (timeString.includes(":")) {
       const parts = timeString.split(":");
       if (parts.length >= 2) {
@@ -86,7 +112,6 @@ export default function TodayScreen() {
     const now = new Date();
     const nextTime = parseTimeString(nextPrayerTime);
 
-    // If next prayer is tomorrow (e.g., Fajr)
     if (nextTime < now) {
       nextTime.setDate(nextTime.getDate() + 1);
     }
@@ -105,13 +130,13 @@ export default function TodayScreen() {
     }
   };
 
+  // Keep all your existing useEffect hooks exactly the same
   useEffect(() => {
     if (!prayerTimes || prayerTimes.length === 0) {
       setMonthData([]);
       return;
     }
 
-    // Get all days for the current month
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(
       2,
@@ -122,9 +147,6 @@ export default function TodayScreen() {
       "0"
     )}-${String(daysInMonth).padStart(2, "0")}`;
 
-    console.log("Month range:", monthStart, "to", monthEnd);
-    console.log("Total prayer times available:", prayerTimes.length);
-
     const filtered = prayerTimes
       .filter((pt) => {
         if (!pt || !pt.d_date) return false;
@@ -133,7 +155,6 @@ export default function TodayScreen() {
       })
       .sort((a, b) => a.d_date.localeCompare(b.d_date));
 
-    console.log("Filtered month data:", filtered.length, "days");
     setMonthData(filtered);
   }, [prayerTimes, currentMonth, currentYear]);
 
@@ -144,7 +165,6 @@ export default function TodayScreen() {
       useNativeDriver: true,
     }).start();
 
-    // Pulse animation for active prayer
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -214,13 +234,6 @@ export default function TodayScreen() {
       month: "long",
       day: "numeric",
     });
-  };
-
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
   };
 
   const getPrayerIcon = (prayerName: string) => {
@@ -306,6 +319,7 @@ export default function TodayScreen() {
     }
   };
 
+  // Keep all your existing render functions exactly the same
   const renderPrayerCard = (
     name: string,
     time: string,
@@ -352,7 +366,6 @@ export default function TodayScreen() {
               {name}
             </Text>
 
-            {/* Compact Time Section */}
             <View style={styles.compactTimeSection}>
               <View style={styles.compactTimeRow}>
                 <Text
@@ -380,7 +393,6 @@ export default function TodayScreen() {
             </View>
           </View>
 
-          {/* Compact status badges */}
           {(isActive || isNext) && (
             <View style={styles.compactStatusContainer}>
               {isActive && (
@@ -413,17 +425,58 @@ export default function TodayScreen() {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <View style={styles.gradientHeader}>
-          <Text style={styles.greetingText}>{getGreeting()}</Text>
-          <Text style={styles.mosqueTitle}>🕌 Masjid Abubakr Siddique</Text>
-          <Text style={styles.headerTime}>{formatCurrentTime()}</Text>
-          <Text style={styles.headerDate}>{formatCurrentDate()}</Text>
+
+        {/* Header */}
+        <View
+          style={[
+            styles.header,
+            isHeaderCollapsed ? styles.headerCollapsed : styles.headerExpanded,
+          ]}
+        >
+          {!isHeaderCollapsed && (
+            <>
+              <View style={styles.logoContainer}>
+                {logoSvg ? (
+                  <SvgXml xml={logoSvg} width={60} height={60} />
+                ) : (
+                  <Text style={styles.logoPlaceholder}>🕌</Text>
+                )}
+              </View>
+              <Text style={styles.mosqueTitle}>Masjid Abubakr Siddique</Text>
+            </>
+          )}
+          <Text
+            style={[
+              styles.headerTime,
+              isHeaderCollapsed && styles.headerTimeCollapsed,
+            ]}
+          >
+            {formatCurrentTime()}
+          </Text>
+          <Text
+            style={[
+              styles.headerDate,
+              isHeaderCollapsed && styles.headerDateCollapsed,
+            ]}
+          >
+            {isHeaderCollapsed
+              ? currentTime.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })
+              : formatCurrentDate()}
+          </Text>
         </View>
+
         <ScrollView
           style={styles.scrollContent}
+          contentContainerStyle={{ paddingTop: 20 }}
           refreshControl={
             <RefreshControl refreshing={isLoading} onRefresh={refreshData} />
           }
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
         >
           <View style={styles.noDataCard}>
             <Text style={styles.noDataIcon}>📅</Text>
@@ -451,15 +504,50 @@ export default function TodayScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Enhanced Header */}
-      <View style={styles.gradientHeader}>
-        <Text style={styles.greetingText}>{getGreeting()}</Text>
-        <Text style={styles.mosqueTitle}>🕌 Masjid Abubakr Siddique</Text>
-        <Text style={styles.headerTime}>{formatCurrentTime()}</Text>
-        <Text style={styles.headerDate}>{formatCurrentDate()}</Text>
+      {/* Simple Collapsible Header */}
+      <View
+        style={[
+          styles.header,
+          isHeaderCollapsed ? styles.headerCollapsed : styles.headerExpanded,
+        ]}
+      >
+        {!isHeaderCollapsed && (
+          <>
+            <View style={styles.logoContainer}>
+              {logoSvg ? (
+                <SvgXml xml={logoSvg} width={60} height={60} />
+              ) : (
+                <Text style={styles.logoPlaceholder}>🕌</Text>
+              )}
+            </View>
+            <Text style={styles.mosqueTitle}>Masjid Abubakr Siddique</Text>
+          </>
+        )}
+        <Text
+          style={[
+            styles.headerTime,
+            isHeaderCollapsed && styles.headerTimeCollapsed,
+          ]}
+        >
+          {formatCurrentTime()}
+        </Text>
+        <Text
+          style={[
+            styles.headerDate,
+            isHeaderCollapsed && styles.headerDateCollapsed,
+          ]}
+        >
+          {isHeaderCollapsed
+            ? currentTime.toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })
+            : formatCurrentDate()}
+        </Text>
       </View>
 
-      {/* Improved Toggle */}
+      {/* Toggle and Print Button */}
       <View style={styles.toggleContainer}>
         <View style={styles.toggleWrapper}>
           <TouchableOpacity
@@ -499,7 +587,6 @@ export default function TodayScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Print Button */}
         <TouchableOpacity
           style={[
             styles.printButton,
@@ -514,13 +601,16 @@ export default function TodayScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Enhanced Content */}
+      {/* Scrollable Content */}
       <ScrollView
         style={styles.scrollContent}
+        contentContainerStyle={{ paddingTop: 20 }}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refreshData} />
         }
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -531,7 +621,6 @@ export default function TodayScreen() {
           <Animated.View style={{ opacity: fadeAnim }}>
             {viewMode === "daily" ? (
               <View>
-                {/* Next Prayer Alert with Countdown */}
                 {nextPrayer && (
                   <View style={styles.nextPrayerAlert}>
                     <Text style={styles.alertIcon}>🔔</Text>
@@ -548,7 +637,6 @@ export default function TodayScreen() {
                   </View>
                 )}
 
-                {/* Daily Prayer Times */}
                 <View style={styles.dailyCard}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.cardTitle}>
@@ -615,6 +703,7 @@ export default function TodayScreen() {
                 </View>
               </View>
             ) : (
+              // Keep your existing monthly view exactly the same
               <View style={styles.monthlyCard}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>📊 Monthly Timetable</Text>
@@ -626,19 +715,13 @@ export default function TodayScreen() {
 
                 {monthData.length > 0 ? (
                   <View style={styles.monthlyTableContainer}>
-                    {/* Enhanced Table Header */}
                     <View style={styles.monthlyTableHeader}>
-                      {/* Date Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 50 }]}>
                         <Text style={styles.monthlyHeaderText}>Date</Text>
                       </View>
-
-                      {/* Day Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 50 }]}>
                         <Text style={styles.monthlyHeaderText}>Day</Text>
                       </View>
-
-                      {/* Fajr Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
                         <Text style={styles.monthlyHeaderText}>Fajr</Text>
                         <View style={styles.timeTypeRow}>
@@ -650,8 +733,6 @@ export default function TodayScreen() {
                           </View>
                         </View>
                       </View>
-
-                      {/* Sunrise Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 70 }]}>
                         <Text style={styles.monthlyHeaderText}>Sunrise</Text>
                         <View style={styles.timeTypeRow}>
@@ -660,8 +741,6 @@ export default function TodayScreen() {
                           </View>
                         </View>
                       </View>
-
-                      {/* Zuhr Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
                         <Text style={styles.monthlyHeaderText}>Zuhr</Text>
                         <View style={styles.timeTypeRow}>
@@ -673,8 +752,6 @@ export default function TodayScreen() {
                           </View>
                         </View>
                       </View>
-
-                      {/* Asr Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
                         <Text style={styles.monthlyHeaderText}>Asr</Text>
                         <View style={styles.timeTypeRow}>
@@ -686,8 +763,6 @@ export default function TodayScreen() {
                           </View>
                         </View>
                       </View>
-
-                      {/* Maghrib Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
                         <Text style={styles.monthlyHeaderText}>Maghrib</Text>
                         <View style={styles.timeTypeRow}>
@@ -699,8 +774,6 @@ export default function TodayScreen() {
                           </View>
                         </View>
                       </View>
-
-                      {/* Isha Column */}
                       <View style={[styles.monthlyHeaderCell, { width: 100 }]}>
                         <Text style={styles.monthlyHeaderText}>Isha</Text>
                         <View style={styles.timeTypeRow}>
@@ -714,7 +787,6 @@ export default function TodayScreen() {
                       </View>
                     </View>
 
-                    {/* Scrollable Content */}
                     <ScrollView
                       style={styles.monthlyScrollView}
                       showsVerticalScrollIndicator={true}
@@ -743,7 +815,6 @@ export default function TodayScreen() {
                               isWeekend && !isToday && styles.weekendRow,
                             ]}
                           >
-                            {/* Date Cell */}
                             <View
                               style={[styles.monthlyDataCell, { width: 50 }]}
                             >
@@ -758,7 +829,6 @@ export default function TodayScreen() {
                               </Text>
                             </View>
 
-                            {/* Day Cell */}
                             <View
                               style={[styles.monthlyDataCell, { width: 50 }]}
                             >
@@ -772,7 +842,6 @@ export default function TodayScreen() {
                               </Text>
                             </View>
 
-                            {/* Prayer Times */}
                             <View
                               style={[styles.monthlyDataCell, { width: 100 }]}
                             >
@@ -952,7 +1021,6 @@ export default function TodayScreen() {
                   </View>
                 )}
 
-                {/* Enhanced Legend with clearer colors */}
                 <View style={styles.legend}>
                   <Text style={styles.legendTitle}>Legend</Text>
                   <View style={styles.legendGrid}>
@@ -1008,15 +1076,17 @@ export default function TodayScreen() {
   );
 }
 
+// Simplified styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  gradientHeader: {
+
+  // Simple header styles
+  header: {
     backgroundColor: "#1B5E20",
     paddingTop: Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 24,
-    paddingBottom: 24,
     paddingHorizontal: 20,
     alignItems: "center",
     borderBottomLeftRadius: 20,
@@ -1027,12 +1097,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
-  greetingText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 4,
+
+  headerExpanded: {
+    paddingBottom: 24,
   },
+
+  headerCollapsed: {
+    paddingBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  logoContainer: {
+    marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   mosqueTitle: {
     color: "#fff",
     fontSize: 20,
@@ -1040,6 +1122,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: 0.5,
   },
+
   headerTime: {
     color: "#fff",
     fontSize: 32,
@@ -1047,21 +1130,40 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     letterSpacing: -1,
   },
+
+  headerTimeCollapsed: {
+    fontSize: 18,
+    marginBottom: 0,
+  },
+
   headerDate: {
     color: "rgba(255,255,255,0.9)",
     fontSize: 14,
     fontWeight: "500",
   },
 
-  // Improved Toggle Container
+  headerDateCollapsed: {
+    fontSize: 12,
+  },
+
   toggleContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginHorizontal: 20,
-    marginVertical: 12,
+    marginVertical: 16,
   },
 
+  scrollContent: {
+    flex: 1,
+  },
+
+  logoPlaceholder: {
+    fontSize: 40,
+    color: "#fff",
+  },
+
+  // Keep all your existing styles below this point exactly the same
   toggleWrapper: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -1073,7 +1175,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-
   toggleButton: {
     paddingVertical: 8,
     paddingHorizontal: 20,
@@ -1082,7 +1183,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   toggleButtonActive: {
     backgroundColor: "#1B5E20",
     shadowColor: "#1B5E20",
@@ -1091,19 +1191,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-
   toggleText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#666",
   },
-
   toggleTextActive: {
     color: "#fff",
     fontWeight: "700",
   },
-
-  // Print Button
   printButton: {
     backgroundColor: "#fff",
     paddingHorizontal: 12,
@@ -1117,15 +1213,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
-
   printButtonDisabled: {
     opacity: 0.6,
   },
-
   printButtonText: {
     fontSize: 16,
   },
-
   prayerCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -1138,7 +1231,6 @@ const styles = StyleSheet.create({
     elevation: 2,
     position: "relative",
   },
-
   activePrayerCard: {
     backgroundColor: "#1B5E20",
     borderColor: "#1B5E20",
@@ -1148,20 +1240,17 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
-
   nextPrayerCard: {
     borderColor: "#2196f3",
     borderWidth: 2,
     backgroundColor: "#fafffe",
   },
-
   prayerCardContent: {
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
     gap: 12,
   },
-
   prayerIconContainer: {
     width: 44,
     height: 44,
@@ -1169,52 +1258,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   prayerIcon: {
     fontSize: 20,
   },
-
   compactTimeSection: {
     marginTop: 2,
   },
-
   compactTimeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 1,
   },
-
   compactTimeLabel: {
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
-
   prayerName: {
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 3,
     letterSpacing: 0.2,
   },
-
   compactPrayerTime: {
     fontSize: 14,
     fontWeight: "800",
   },
-
   compactJamahTime: {
     fontSize: 14,
     fontWeight: "800",
   },
-
   compactStatusContainer: {
     position: "absolute",
     top: 6,
     right: 6,
   },
-
   compactStatusBadge: {
     backgroundColor: "rgba(255,255,255,0.9)",
     paddingHorizontal: 5,
@@ -1226,23 +1306,19 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     elevation: 1,
   },
-
   compactNextBadge: {
     backgroundColor: "#e3f2fd",
   },
-
   compactStatusText: {
     fontSize: 7,
     fontWeight: "800",
     color: "#1B5E20",
     letterSpacing: 0.3,
   },
-
   prayerList: {
     padding: 16,
     gap: 8,
   },
-
   dailyCard: {
     margin: 16,
     marginTop: 0,
@@ -1255,13 +1331,11 @@ const styles = StyleSheet.create({
     elevation: 6,
     overflow: "hidden",
   },
-
   cardHeader: {
     padding: 18,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-
   cardTitle: {
     fontSize: 20,
     fontWeight: "800",
@@ -1269,17 +1343,11 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     letterSpacing: 0.2,
   },
-
   cardSubtitle: {
     fontSize: 13,
     color: "#666",
     fontWeight: "500",
   },
-
-  scrollContent: {
-    flex: 1,
-  },
-
   nextPrayerAlert: {
     margin: 20,
     marginBottom: 16,
@@ -1296,36 +1364,30 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-
   alertIcon: {
     fontSize: 32,
     marginRight: 16,
   },
-
   alertContent: {
     flex: 1,
   },
-
   alertTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1565c0",
     marginBottom: 4,
   },
-
   alertPrayer: {
     fontSize: 20,
     fontWeight: "800",
     color: "#0d47a1",
     marginBottom: 2,
   },
-
   alertTime: {
     fontSize: 14,
     fontWeight: "500",
     color: "#1976d2",
   },
-
   monthlyCard: {
     margin: 20,
     backgroundColor: "#fff",
@@ -1338,15 +1400,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     flex: 1,
   },
-
   prayerInfo: {
     flex: 1,
   },
-
   monthlyTableContainer: {
     flex: 1,
   },
-
   monthlyTableHeader: {
     flexDirection: "row",
     backgroundColor: "#1B5E20",
@@ -1356,14 +1415,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#fff",
     minHeight: 80,
   },
-
   monthlyHeaderCell: {
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
     paddingVertical: 4,
   },
-
   monthlyHeaderText: {
     fontSize: 12,
     fontWeight: "800",
@@ -1372,13 +1429,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     marginBottom: 8,
   },
-
   timeTypeRow: {
     flexDirection: "row",
     gap: 2,
     justifyContent: "center",
   },
-
   beginTimeHeaderContainer: {
     backgroundColor: "#4caf50",
     borderRadius: 4,
@@ -1386,7 +1441,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     minWidth: 35,
   },
-
   jamahTimeHeaderContainer: {
     backgroundColor: "#ff9800",
     borderRadius: 4,
@@ -1394,27 +1448,23 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     minWidth: 35,
   },
-
   beginTimeHeader: {
     fontSize: 9,
     fontWeight: "700",
     color: "#fff",
     textAlign: "center",
   },
-
   jamahTimeHeader: {
     fontSize: 9,
     fontWeight: "700",
     color: "#fff",
     textAlign: "center",
   },
-
   monthlyScrollView: {
     flex: 1,
     backgroundColor: "#fff",
     maxHeight: height * 0.45,
   },
-
   monthlyRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -1423,21 +1473,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: "center",
   },
-
   monthlyDataCell: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
-
   monthlyBeginTime: {
     fontSize: 11,
     color: "#2e7d32",
     textAlign: "center",
     fontWeight: "700",
   },
-
   monthlyJamahTime: {
     fontSize: 10,
     color: "#f57c00",
@@ -1445,29 +1492,24 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 2,
   },
-
   todayRow: {
     backgroundColor: "#e8f5e9",
     borderLeftWidth: 4,
     borderLeftColor: "#1B5E20",
   },
-
   weekendRow: {
     backgroundColor: "#fff3e0",
   },
-
   monthlyCellText: {
     fontSize: 12,
     color: "#333",
     textAlign: "center",
     fontWeight: "600",
   },
-
   monthlyTimeContainer: {
     alignItems: "center",
     gap: 4,
   },
-
   beginTimeContainer: {
     backgroundColor: "#e8f5e9",
     borderRadius: 6,
@@ -1477,7 +1519,6 @@ const styles = StyleSheet.create({
     borderColor: "#4caf50",
     minWidth: 50,
   },
-
   jamahTimeContainer: {
     backgroundColor: "#fff3e0",
     borderRadius: 6,
@@ -1487,36 +1528,30 @@ const styles = StyleSheet.create({
     borderColor: "#ff9800",
     minWidth: 50,
   },
-
   todayBeginTime: {
     color: "#1B5E20",
     fontWeight: "900",
   },
-
   todayJamahTime: {
     color: "#e65100",
     fontWeight: "900",
   },
-
   todayText: {
     color: "#1B5E20",
     fontWeight: "800",
   },
-
   legend: {
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
     alignItems: "center",
   },
-
   legendTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#333",
     marginBottom: 12,
   },
-
   legendGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1524,13 +1559,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     justifyContent: "center",
   },
-
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
   },
-
   legendColor: {
     width: 16,
     height: 16,
@@ -1539,13 +1572,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
-
   legendText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#333",
   },
-
   legendNote: {
     fontSize: 11,
     color: "#666",
@@ -1553,7 +1584,6 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     lineHeight: 16,
   },
-
   noDataCard: {
     margin: 20,
     backgroundColor: "#fff",
@@ -1566,17 +1596,14 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-
   noDataSection: {
     padding: 40,
     alignItems: "center",
   },
-
   noDataIcon: {
     fontSize: 48,
     marginBottom: 16,
   },
-
   noDataTitle: {
     fontSize: 20,
     fontWeight: "800",
@@ -1584,7 +1611,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: "center",
   },
-
   noDataText: {
     fontSize: 16,
     color: "#666",
@@ -1592,7 +1618,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 24,
   },
-
   noDataMessage: {
     fontSize: 16,
     color: "#666",
@@ -1600,14 +1625,12 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginBottom: 8,
   },
-
   noDataSubMessage: {
     fontSize: 14,
     color: "#999",
     textAlign: "center",
     fontStyle: "italic",
   },
-
   refreshButton: {
     backgroundColor: "#1B5E20",
     paddingVertical: 14,
@@ -1619,26 +1642,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-
   refreshButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-
   loadingContainer: {
     padding: 40,
     alignItems: "center",
   },
-
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: "#666",
     fontWeight: "500",
   },
-
   bottomSpacing: {
     height: Platform.OS === "ios" ? 100 : 80,
   },
