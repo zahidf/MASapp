@@ -35,8 +35,9 @@ export const parseTimeString = (timeStr: string | null | undefined): Date => {
       return today;
     }
 
-    today.setHours(hourNum, minuteNum, secondNum, 0);
-    return today;
+    const newDate = new Date();
+    newDate.setHours(hourNum, minuteNum, secondNum, 0);
+    return newDate;
   } catch (error) {
     console.error("Error parsing time string:", timeStr, error);
     return today;
@@ -171,6 +172,72 @@ export const getTimeUntilNext = (
       error
     );
     return "0m";
+  }
+};
+
+// New improved countdown function for real-time updates
+export const getDetailedCountdown = (
+  prayerTime: PrayerTime,
+  nextPrayer: PrayerName
+): string => {
+  if (!prayerTime || !nextPrayer) {
+    return "";
+  }
+
+  const prayerTimes = {
+    fajr: prayerTime.fajr_begins,
+    sunrise: prayerTime.sunrise,
+    zuhr: prayerTime.zuhr_begins,
+    asr: prayerTime.asr_mithl_1,
+    maghrib: prayerTime.maghrib_begins,
+    isha: prayerTime.isha_begins,
+  };
+
+  const nextPrayerTimeStr = prayerTimes[nextPrayer];
+  if (!nextPrayerTimeStr) {
+    return "";
+  }
+
+  try {
+    const now = new Date();
+    const [hours, minutes, seconds = "0"] = nextPrayerTimeStr.split(":");
+
+    const nextTime = new Date();
+    nextTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
+
+    // If the prayer time has passed today, it's tomorrow
+    if (nextTime <= now) {
+      nextTime.setDate(nextTime.getDate() + 1);
+    }
+
+    const diff = nextTime.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      return "Now";
+    }
+
+    const totalMinutes = Math.floor(diff / (1000 * 60));
+    const displayHours = Math.floor(totalMinutes / 60);
+    const displayMinutes = totalMinutes % 60;
+
+    // Format based on time remaining
+    if (totalMinutes < 1) {
+      return "Now";
+    } else if (totalMinutes < 60) {
+      return `${totalMinutes}m`;
+    } else if (totalMinutes < 1440) {
+      // Less than 24 hours
+      return displayMinutes > 0
+        ? `${displayHours}h ${displayMinutes}m`
+        : `${displayHours}h`;
+    } else {
+      const days = Math.floor(totalMinutes / 1440);
+      const remainingHours = Math.floor((totalMinutes % 1440) / 60);
+      return `${days}d ${remainingHours}h`;
+    }
+  } catch (error) {
+    console.error("Error calculating detailed countdown:", error);
+    return "";
   }
 };
 

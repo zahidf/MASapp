@@ -1,6 +1,9 @@
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   Platform,
@@ -17,7 +20,12 @@ import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { PrayerName, PrayerTime } from "@/types/prayer";
-import { getCurrentPrayerAndNext, getTodayString } from "@/utils/dateHelpers";
+import {
+  getCurrentPrayerAndNext,
+  getTodayString,
+  parseTimeString,
+} from "@/utils/dateHelpers";
+import { generatePDFHTML } from "@/utils/pdfGenerator";
 
 const { width, height } = Dimensions.get("window");
 
@@ -34,6 +42,7 @@ export default function TodayScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [pulseAnim] = useState(new Animated.Value(1));
   const [monthData, setMonthData] = useState<PrayerTime[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const colors = Colors[colorScheme ?? "light"];
   const today = getTodayString();
@@ -56,6 +65,44 @@ export default function TodayScreen() {
       }
     }
     return timeString;
+  };
+
+  // Countdown calculation function
+  const getCountdownToNext = (): string => {
+    if (!todaysPrayers || !nextPrayer) return "";
+
+    const prayerTimes = {
+      fajr: todaysPrayers.fajr_begins,
+      sunrise: todaysPrayers.sunrise,
+      zuhr: todaysPrayers.zuhr_begins,
+      asr: todaysPrayers.asr_mithl_1,
+      maghrib: todaysPrayers.maghrib_begins,
+      isha: todaysPrayers.isha_begins,
+    };
+
+    const nextPrayerTime = prayerTimes[nextPrayer];
+    if (!nextPrayerTime) return "";
+
+    const now = new Date();
+    const nextTime = parseTimeString(nextPrayerTime);
+
+    // If next prayer is tomorrow (e.g., Fajr)
+    if (nextTime < now) {
+      nextTime.setDate(nextTime.getDate() + 1);
+    }
+
+    const diff = nextTime.getTime() - now.getTime();
+
+    if (diff <= 0) return "Now";
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
   };
 
   useEffect(() => {
@@ -213,6 +260,52 @@ export default function TodayScreen() {
     return months[monthIndex];
   };
 
+  const handlePrint = async () => {
+    setIsExporting(true);
+
+    try {
+      let html = "";
+      let filename = "";
+
+      if (viewMode === "daily" && todaysPrayers) {
+        html = await generatePDFHTML([todaysPrayers], "day");
+        const dayDate = new Date(todaysPrayers.d_date);
+        filename = `prayer-times-${dayDate.toISOString().split("T")[0]}.pdf`;
+      } else if (viewMode === "monthly" && monthData.length > 0) {
+        html = await generatePDFHTML(monthData, "month");
+        filename = `prayer-times-${getMonthName(
+          currentMonth
+        )}-${currentYear}.pdf`;
+      } else {
+        Alert.alert("Error", "No data available to print");
+        setIsExporting(false);
+        return;
+      }
+
+      const { uri } = await Print.printToFileAsync({
+        html,
+        base64: false,
+      });
+
+      if (Platform.OS === "ios") {
+        await Sharing.shareAsync(uri, {
+          UTI: ".pdf",
+          mimeType: "application/pdf",
+        });
+      } else {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          dialogTitle: "Share Prayer Times PDF",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      Alert.alert("Error", "Failed to generate PDF. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const renderPrayerCard = (
     name: string,
     time: string,
@@ -305,7 +398,7 @@ export default function TodayScreen() {
                       { color: colors.primary },
                     ]}
                   >
-                    NEXT
+                    {getCountdownToNext() || "NEXT"}
                   </Text>
                 </View>
               )}
@@ -366,20 +459,21 @@ export default function TodayScreen() {
         <Text style={styles.headerDate}>{formatCurrentDate()}</Text>
       </View>
 
-      {/* Subtle Toggle */}
-      <View style={styles.subtleToggleContainer}>
-        <View style={styles.subtleToggleWrapper}>
+      {/* Improved Toggle */}
+      <View style={styles.toggleContainer}>
+        <View style={styles.toggleWrapper}>
           <TouchableOpacity
             style={[
-              styles.subtleToggleButton,
-              viewMode === "daily" && styles.subtleToggleButtonActive,
+              styles.toggleButton,
+              viewMode === "daily" && styles.toggleButtonActive,
             ]}
             onPress={() => setViewMode("daily")}
+            activeOpacity={0.7}
           >
             <Text
               style={[
-                styles.subtleToggleText,
-                viewMode === "daily" && styles.subtleToggleTextActive,
+                styles.toggleText,
+                viewMode === "daily" && styles.toggleTextActive,
               ]}
             >
               Daily
@@ -388,21 +482,36 @@ export default function TodayScreen() {
 
           <TouchableOpacity
             style={[
-              styles.subtleToggleButton,
-              viewMode === "monthly" && styles.subtleToggleButtonActive,
+              styles.toggleButton,
+              viewMode === "monthly" && styles.toggleButtonActive,
             ]}
             onPress={() => setViewMode("monthly")}
+            activeOpacity={0.7}
           >
             <Text
               style={[
-                styles.subtleToggleText,
-                viewMode === "monthly" && styles.subtleToggleTextActive,
+                styles.toggleText,
+                viewMode === "monthly" && styles.toggleTextActive,
               ]}
             >
               Monthly
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Print Button */}
+        <TouchableOpacity
+          style={[
+            styles.printButton,
+            isExporting && styles.printButtonDisabled,
+          ]}
+          onPress={handlePrint}
+          disabled={isExporting}
+        >
+          <Text style={styles.printButtonText}>
+            {isExporting ? "📄..." : "🖨️"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Enhanced Content */}
@@ -422,7 +531,7 @@ export default function TodayScreen() {
           <Animated.View style={{ opacity: fadeAnim }}>
             {viewMode === "daily" ? (
               <View>
-                {/* Next Prayer Alert */}
+                {/* Next Prayer Alert with Countdown */}
                 {nextPrayer && (
                   <View style={styles.nextPrayerAlert}>
                     <Text style={styles.alertIcon}>🔔</Text>
@@ -432,7 +541,9 @@ export default function TodayScreen() {
                         {nextPrayer.charAt(0).toUpperCase() +
                           nextPrayer.slice(1)}
                       </Text>
-                      <Text style={styles.alertTime}>Coming up soon</Text>
+                      <Text style={styles.alertTime}>
+                        {getCountdownToNext() || "Coming up soon"}
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -661,7 +772,7 @@ export default function TodayScreen() {
                               </Text>
                             </View>
 
-                            {/* Prayer Times - keeping existing structure */}
+                            {/* Prayer Times */}
                             <View
                               style={[styles.monthlyDataCell, { width: 100 }]}
                             >
@@ -941,16 +1052,90 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
+
+  // Improved Toggle Container
+  toggleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 20,
+    marginVertical: 12,
+  },
+
+  toggleWrapper: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  toggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    minWidth: 80,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  toggleButtonActive: {
+    backgroundColor: "#1B5E20",
+    shadowColor: "#1B5E20",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  toggleText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+  },
+
+  toggleTextActive: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
+  // Print Button
+  printButton: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+
+  printButtonDisabled: {
+    opacity: 0.6,
+  },
+
+  printButtonText: {
+    fontSize: 16,
+  },
+
   prayerCard: {
     backgroundColor: "#fff",
-    borderRadius: 12, // Reduced from 16
-    borderWidth: 1.5, // Reduced from 2
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#f0f0f0",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 }, // Reduced shadow
-    shadowOpacity: 0.03, // Reduced shadow
-    shadowRadius: 3, // Reduced shadow
-    elevation: 2, // Reduced elevation
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 2,
     position: "relative",
   },
 
@@ -958,10 +1143,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#1B5E20",
     borderColor: "#1B5E20",
     shadowColor: "#1B5E20",
-    shadowOffset: { width: 0, height: 3 }, // Reduced shadow
-    shadowOpacity: 0.2, // Reduced shadow
-    shadowRadius: 6, // Reduced shadow
-    elevation: 5, // Reduced elevation
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
   },
 
   nextPrayerCard: {
@@ -973,69 +1158,68 @@ const styles = StyleSheet.create({
   prayerCardContent: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12, // Reduced from 16
-    gap: 12, // Reduced from 16
+    padding: 12,
+    gap: 12,
   },
 
   prayerIconContainer: {
-    width: 44, // Reduced from 56
-    height: 44, // Reduced from 56
-    borderRadius: 22, // Adjusted
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
 
   prayerIcon: {
-    fontSize: 20, // Reduced from 24
+    fontSize: 20,
   },
 
   compactTimeSection: {
-    marginTop: 2, // Reduced from 4
+    marginTop: 2,
   },
 
   compactTimeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 1, // Reduced from 2
+    marginBottom: 1,
   },
 
   compactTimeLabel: {
-    fontSize: 10, // Reduced from 12
+    fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
 
   prayerName: {
-    fontSize: 16, // Reduced from 18
+    fontSize: 16,
     fontWeight: "700",
-    marginBottom: 3, // Reduced from 4
+    marginBottom: 3,
     letterSpacing: 0.2,
   },
 
   compactPrayerTime: {
-    fontSize: 14, // Reduced from 15
+    fontSize: 14,
     fontWeight: "800",
   },
 
   compactJamahTime: {
-    fontSize: 14, // Reduced from 15
+    fontSize: 14,
     fontWeight: "800",
   },
 
-  // Compact status badges
   compactStatusContainer: {
     position: "absolute",
-    top: 6, // Reduced from 8
-    right: 6, // Reduced from 8
+    top: 6,
+    right: 6,
   },
 
   compactStatusBadge: {
     backgroundColor: "rgba(255,255,255,0.9)",
-    paddingHorizontal: 5, // Reduced from 6
-    paddingVertical: 1, // Reduced from 2
-    borderRadius: 4, // Reduced from 6
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -1048,142 +1232,54 @@ const styles = StyleSheet.create({
   },
 
   compactStatusText: {
-    fontSize: 7, // Reduced from 8
+    fontSize: 7,
     fontWeight: "800",
     color: "#1B5E20",
     letterSpacing: 0.3,
   },
 
-  // Compact Prayer List
   prayerList: {
-    padding: 16, // Reduced from 20
-    gap: 8, // Reduced from 12
+    padding: 16,
+    gap: 8,
   },
 
-  // Subtle Toggle Styles
-  subtleToggleContainer: {
-    alignItems: "center",
-    marginVertical: 12, // Reduced margin
-  },
-
-  subtleToggleWrapper: {
-    flexDirection: "row",
-    backgroundColor: "#f8f9fa",
-    borderRadius: 8,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: "#e9ecef",
-  },
-
-  subtleToggleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 6,
-    minWidth: 80,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  subtleToggleButtonActive: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-
-  subtleToggleText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6c757d",
-    letterSpacing: 0.2,
-  },
-
-  subtleToggleTextActive: {
-    color: "#1B5E20",
-    fontWeight: "700",
-  },
-
-  // Compact Daily Card
   dailyCard: {
-    margin: 16, // Reduced from 20
+    margin: 16,
     marginTop: 0,
     backgroundColor: "#fff",
-    borderRadius: 16, // Reduced from 20
+    borderRadius: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 }, // Reduced shadow
-    shadowOpacity: 0.08, // Reduced shadow
-    shadowRadius: 8, // Reduced shadow
-    elevation: 6, // Reduced elevation
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 6,
     overflow: "hidden",
   },
 
-  // Compact Card Header
   cardHeader: {
-    padding: 18, // Reduced from 24
+    padding: 18,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
 
   cardTitle: {
-    fontSize: 20, // Reduced from 22
+    fontSize: 20,
     fontWeight: "800",
     color: "#1a1a1a",
-    marginBottom: 3, // Reduced from 4
+    marginBottom: 3,
     letterSpacing: 0.2,
   },
 
   cardSubtitle: {
-    fontSize: 13, // Reduced from 14
+    fontSize: 13,
     color: "#666",
     fontWeight: "500",
   },
-  toggleContainer: {
-    flexDirection: "row",
-    margin: 20,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  toggleButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    gap: 8,
-  },
-  toggleButtonActive: {
-    backgroundColor: "#1B5E20",
-    shadowColor: "#1B5E20",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  toggleIcon: {
-    fontSize: 18,
-  },
-  toggleButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#666",
-    letterSpacing: 0.3,
-  },
-  toggleButtonTextActive: {
-    color: "#fff",
-  },
+
   scrollContent: {
     flex: 1,
   },
+
   nextPrayerAlert: {
     margin: 20,
     marginBottom: 16,
@@ -1200,25 +1296,30 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+
   alertIcon: {
     fontSize: 32,
     marginRight: 16,
   },
+
   alertContent: {
     flex: 1,
   },
+
   alertTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1565c0",
     marginBottom: 4,
   },
+
   alertPrayer: {
     fontSize: 20,
     fontWeight: "800",
     color: "#0d47a1",
     marginBottom: 2,
   },
+
   alertTime: {
     fontSize: 14,
     fontWeight: "500",
@@ -1241,56 +1342,7 @@ const styles = StyleSheet.create({
   prayerInfo: {
     flex: 1,
   },
-  timeSection: {
-    marginTop: 4,
-  },
-  timeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  timeLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
 
-  prayerTime: {
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  jamahTime: {
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  // Smaller, corner-positioned status badges
-  statusContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-  },
-  statusBadge: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  nextBadge: {
-    backgroundColor: "#e3f2fd",
-  },
-  statusText: {
-    fontSize: 8,
-    fontWeight: "800",
-    color: "#1B5E20",
-    letterSpacing: 0.5,
-  },
   monthlyTableContainer: {
     flex: 1,
   },
@@ -1356,16 +1408,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
   },
-  monthlyTableWrapper: {
-    flex: 1,
-    maxHeight: height * 0.6,
-  },
 
   monthlyScrollView: {
     flex: 1,
     backgroundColor: "#fff",
     maxHeight: height * 0.45,
   },
+
   monthlyRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -1374,18 +1423,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: "center",
   },
+
   monthlyDataCell: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
+
   monthlyBeginTime: {
     fontSize: 11,
     color: "#2e7d32",
     textAlign: "center",
     fontWeight: "700",
   },
+
   monthlyJamahTime: {
     fontSize: 10,
     color: "#f57c00",
@@ -1394,32 +1446,28 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  monthlyHorizontalScroll: {
-    flex: 1,
-  },
-
-  monthlyTable: {
-    flex: 1,
-  },
   todayRow: {
     backgroundColor: "#e8f5e9",
     borderLeftWidth: 4,
     borderLeftColor: "#1B5E20",
   },
+
   weekendRow: {
     backgroundColor: "#fff3e0",
   },
+
   monthlyCellText: {
     fontSize: 12,
     color: "#333",
     textAlign: "center",
     fontWeight: "600",
   },
-  // Enhanced color-coded time displays
+
   monthlyTimeContainer: {
     alignItems: "center",
     gap: 4,
   },
+
   beginTimeContainer: {
     backgroundColor: "#e8f5e9",
     borderRadius: 6,
@@ -1429,6 +1477,7 @@ const styles = StyleSheet.create({
     borderColor: "#4caf50",
     minWidth: 50,
   },
+
   jamahTimeContainer: {
     backgroundColor: "#fff3e0",
     borderRadius: 6,
@@ -1438,42 +1487,36 @@ const styles = StyleSheet.create({
     borderColor: "#ff9800",
     minWidth: 50,
   },
+
   todayBeginTime: {
     color: "#1B5E20",
     fontWeight: "900",
   },
+
   todayJamahTime: {
     color: "#e65100",
     fontWeight: "900",
   },
-  weekendBeginTime: {
-    color: "#388e3c",
-    fontWeight: "800",
-  },
-  weekendJamahTime: {
-    color: "#f57c00",
-    fontWeight: "800",
-  },
+
   todayText: {
     color: "#1B5E20",
     fontWeight: "800",
   },
-  weekendText: {
-    color: "#f57c00",
-    fontWeight: "700",
-  },
+
   legend: {
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
     alignItems: "center",
   },
+
   legendTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#333",
     marginBottom: 12,
   },
+
   legendGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1481,11 +1524,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     justifyContent: "center",
   },
+
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
   },
+
   legendColor: {
     width: 16,
     height: 16,
@@ -1494,11 +1539,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
+
   legendText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#333",
   },
+
   legendNote: {
     fontSize: 11,
     color: "#666",
@@ -1506,6 +1553,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     lineHeight: 16,
   },
+
   noDataCard: {
     margin: 20,
     backgroundColor: "#fff",
@@ -1518,14 +1566,17 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+
   noDataSection: {
     padding: 40,
     alignItems: "center",
   },
+
   noDataIcon: {
     fontSize: 48,
     marginBottom: 16,
   },
+
   noDataTitle: {
     fontSize: 20,
     fontWeight: "800",
@@ -1533,6 +1584,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: "center",
   },
+
   noDataText: {
     fontSize: 16,
     color: "#666",
@@ -1540,6 +1592,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 24,
   },
+
   noDataMessage: {
     fontSize: 16,
     color: "#666",
@@ -1547,12 +1600,14 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginBottom: 8,
   },
+
   noDataSubMessage: {
     fontSize: 14,
     color: "#999",
     textAlign: "center",
     fontStyle: "italic",
   },
+
   refreshButton: {
     backgroundColor: "#1B5E20",
     paddingVertical: 14,
@@ -1564,22 +1619,26 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+
   refreshButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
+
   loadingContainer: {
     padding: 40,
     alignItems: "center",
   },
+
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: "#666",
     fontWeight: "500",
   },
+
   bottomSpacing: {
     height: Platform.OS === "ios" ? 100 : 80,
   },
