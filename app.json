@@ -15,7 +15,9 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "requireFullScreen": true,
+      "deviceFamilies": [1],
       "bundleIdentifier": "com.zahidf.masjidabubakr",
       "buildNumber": "1",
       "infoPlist": {
