@@ -1,16 +1,14 @@
 import React, { useState } from "react";
 import {
-  Animated,
   Modal,
   ScrollView,
   StyleSheet,
   Switch,
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
-import { ThemedText } from "@/components/ThemedText";
-import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { NotificationPreferences } from "@/types/notification";
@@ -36,25 +34,23 @@ export function NotificationSetupModal({
   const [jamahReminderMinutes, setJamahReminderMinutes] = useState(10);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(50)).current;
+  // Use dynamic colors based on color scheme
+  const isDark = colorScheme === "dark";
+  const textColor = isDark ? "#ECEDEE" : "#333333";
+  const subtextColor = isDark ? "#BBBBBB" : "#666666";
+  const backgroundColor = isDark ? "#151718" : "#FFFFFF";
+  const surfaceColor = isDark ? "#2A2A2A" : "#F8F9FA";
+  const primaryColor = isDark ? "#81C784" : "#1B5E20";
 
-  React.useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
+  console.log("NotificationSetupModal render:", {
+    visible,
+    currentStep,
+    colorScheme,
+    isDark,
+    textColor,
+    backgroundColor,
+    surfaceColor,
+  });
 
   const handleComplete = () => {
     const preferences: NotificationPreferences = {
@@ -65,17 +61,6 @@ export function NotificationSetupModal({
       hasAskedPermission: true,
     };
     onComplete(preferences);
-  };
-
-  const handleSkip = () => {
-    const preferences: NotificationPreferences = {
-      prayerBeginTimes: false,
-      jamahTimes: false,
-      jamahReminderMinutes: 10,
-      isEnabled: false,
-      hasAskedPermission: true,
-    };
-    onSkip();
   };
 
   const nextStep = () => {
@@ -90,13 +75,6 @@ export function NotificationSetupModal({
     }
   };
 
-  const canProceed = () => {
-    if (currentStep === 1) return true;
-    if (currentStep === 2) return true;
-    if (currentStep === 3) return !jamahTimes || jamahReminderMinutes > 0;
-    return false;
-  };
-
   const renderStepIndicator = () => (
     <View style={styles.stepIndicator}>
       {[1, 2, 3].map((step) => (
@@ -106,7 +84,7 @@ export function NotificationSetupModal({
             styles.stepDot,
             {
               backgroundColor:
-                step <= currentStep ? colors.primary : `${colors.text}30`,
+                step <= currentStep ? primaryColor : isDark ? "#555" : "#ccc",
             },
           ]}
         />
@@ -119,46 +97,41 @@ export function NotificationSetupModal({
       <View
         style={[
           styles.iconContainer,
-          { backgroundColor: `${colors.primary}20` },
+          { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
         ]}
       >
-        <IconSymbol name="bell" size={48} color={colors.primary} />
+        <Text style={styles.iconText}>🔔</Text>
       </View>
 
-      <ThemedText
-        type="title"
-        style={[styles.stepTitle, { color: colors.text }]}
-      >
+      <Text style={[styles.stepTitle, { color: textColor }]}>
         Stay Connected with Prayer Times
-      </ThemedText>
+      </Text>
 
-      <ThemedText
-        style={[styles.stepDescription, { color: `${colors.text}CC` }]}
-      >
+      <Text style={[styles.stepDescription, { color: subtextColor }]}>
         Get notified for prayer times and jamah schedules to never miss a
         prayer. You can customize these settings anytime in the app.
-      </ThemedText>
+      </Text>
 
       <View style={styles.benefitsList}>
         <View style={styles.benefitItem}>
-          <IconSymbol name="clock" size={24} color={colors.primary} />
-          <ThemedText style={[styles.benefitText, { color: colors.text }]}>
+          <Text style={styles.benefitIcon}>⏰</Text>
+          <Text style={[styles.benefitText, { color: textColor }]}>
             Timely prayer reminders
-          </ThemedText>
+          </Text>
         </View>
 
         <View style={styles.benefitItem}>
-          <IconSymbol name="person.3" size={24} color={colors.primary} />
-          <ThemedText style={[styles.benefitText, { color: colors.text }]}>
+          <Text style={styles.benefitIcon}>👥</Text>
+          <Text style={[styles.benefitText, { color: textColor }]}>
             Never miss jamah times
-          </ThemedText>
+          </Text>
         </View>
 
         <View style={styles.benefitItem}>
-          <IconSymbol name="gear" size={24} color={colors.primary} />
-          <ThemedText style={[styles.benefitText, { color: colors.text }]}>
+          <Text style={styles.benefitIcon}>⚙️</Text>
+          <Text style={[styles.benefitText, { color: textColor }]}>
             Fully customizable
-          </ThemedText>
+          </Text>
         </View>
       </View>
     </View>
@@ -166,115 +139,114 @@ export function NotificationSetupModal({
 
   const renderStep2 = () => (
     <View style={styles.stepContent}>
-      <ThemedText
-        type="subtitle"
-        style={[styles.stepTitle, { color: colors.text }]}
-      >
+      <Text style={[styles.stepTitle, { color: textColor }]}>
         Prayer Begin Times
-      </ThemedText>
+      </Text>
 
-      <ThemedText
-        style={[styles.stepDescription, { color: `${colors.text}CC` }]}
-      >
+      <Text style={[styles.stepDescription, { color: subtextColor }]}>
         Get notified when it's time for each prayer (Fajr, Zuhr, Asr, Maghrib,
         Isha)
-      </ThemedText>
+      </Text>
 
-      <View style={[styles.optionCard, { backgroundColor: colors.surface }]}>
+      <View style={[styles.optionCard, { backgroundColor: surfaceColor }]}>
         <View style={styles.optionHeader}>
-          <View style={styles.optionIcon}>
-            <IconSymbol name="sunrise" size={28} color={colors.primary} />
+          <View
+            style={[
+              styles.optionIcon,
+              { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
+            ]}
+          >
+            <Text style={styles.iconText}>🌅</Text>
           </View>
           <View style={styles.optionContent}>
-            <ThemedText style={[styles.optionTitle, { color: colors.text }]}>
+            <Text style={[styles.optionTitle, { color: textColor }]}>
               Prayer Time Notifications
-            </ThemedText>
-            <ThemedText
-              style={[styles.optionSubtitle, { color: `${colors.text}80` }]}
-            >
+            </Text>
+            <Text style={[styles.optionSubtitle, { color: subtextColor }]}>
               Get notified at the exact start time of each prayer
-            </ThemedText>
+            </Text>
           </View>
           <Switch
             value={prayerBeginTimes}
             onValueChange={setPrayerBeginTimes}
             trackColor={{
-              false: `${colors.text}30`,
-              true: `${colors.primary}60`,
+              false: isDark ? "#555" : "#ccc",
+              true: primaryColor,
             }}
-            thumbColor={prayerBeginTimes ? colors.primary : "#f4f3f4"}
+            thumbColor={prayerBeginTimes ? primaryColor : "#f4f3f4"}
           />
         </View>
       </View>
 
-      <View style={styles.exampleNotification}>
-        <ThemedText style={[styles.exampleTitle, { color: colors.primary }]}>
+      <View
+        style={[
+          styles.exampleNotification,
+          { backgroundColor: isDark ? "#2A2A2A" : "#f0f8f0" },
+        ]}
+      >
+        <Text style={[styles.exampleTitle, { color: primaryColor }]}>
           Example Notification:
-        </ThemedText>
-        <ThemedText style={[styles.exampleText, { color: `${colors.text}B3` }]}>
+        </Text>
+        <Text style={[styles.exampleText, { color: subtextColor }]}>
           "🕌 Fajr prayer time - It's time for Fajr prayer"
-        </ThemedText>
+        </Text>
       </View>
     </View>
   );
 
   const renderStep3 = () => (
     <View style={styles.stepContent}>
-      <ThemedText
-        type="subtitle"
-        style={[styles.stepTitle, { color: colors.text }]}
-      >
+      <Text style={[styles.stepTitle, { color: textColor }]}>
         Jamah Notifications
-      </ThemedText>
+      </Text>
 
-      <ThemedText
-        style={[styles.stepDescription, { color: `${colors.text}CC` }]}
-      >
+      <Text style={[styles.stepDescription, { color: subtextColor }]}>
         Get notified for congregation prayer times and set advance reminders
-      </ThemedText>
+      </Text>
 
-      <View style={[styles.optionCard, { backgroundColor: colors.surface }]}>
+      <View style={[styles.optionCard, { backgroundColor: surfaceColor }]}>
         <View style={styles.optionHeader}>
-          <View style={styles.optionIcon}>
-            <IconSymbol name="person.3" size={28} color={colors.primary} />
+          <View
+            style={[
+              styles.optionIcon,
+              { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
+            ]}
+          >
+            <Text style={styles.iconText}>👥</Text>
           </View>
           <View style={styles.optionContent}>
-            <ThemedText style={[styles.optionTitle, { color: colors.text }]}>
+            <Text style={[styles.optionTitle, { color: textColor }]}>
               Jamah Time Notifications
-            </ThemedText>
-            <ThemedText
-              style={[styles.optionSubtitle, { color: `${colors.text}80` }]}
-            >
+            </Text>
+            <Text style={[styles.optionSubtitle, { color: subtextColor }]}>
               Get notified when jamah is starting
-            </ThemedText>
+            </Text>
           </View>
           <Switch
             value={jamahTimes}
             onValueChange={setJamahTimes}
             trackColor={{
-              false: `${colors.text}30`,
-              true: `${colors.primary}60`,
+              false: isDark ? "#555" : "#ccc",
+              true: primaryColor,
             }}
-            thumbColor={jamahTimes ? colors.primary : "#f4f3f4"}
+            thumbColor={jamahTimes ? primaryColor : "#f4f3f4"}
           />
         </View>
       </View>
 
       {jamahTimes && (
-        <Animated.View
+        <View
           style={[
             styles.reminderSection,
-            { backgroundColor: `${colors.primary}10` },
+            { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
           ]}
         >
-          <ThemedText style={[styles.reminderTitle, { color: colors.text }]}>
+          <Text style={[styles.reminderTitle, { color: textColor }]}>
             Advance Reminder
-          </ThemedText>
-          <ThemedText
-            style={[styles.reminderSubtitle, { color: `${colors.text}80` }]}
-          >
+          </Text>
+          <Text style={[styles.reminderSubtitle, { color: subtextColor }]}>
             How many minutes before jamah would you like to be reminded?
-          </ThemedText>
+          </Text>
 
           <View style={styles.reminderOptions}>
             {REMINDER_OPTIONS.map((minutes) => (
@@ -285,65 +257,65 @@ export function NotificationSetupModal({
                   {
                     backgroundColor:
                       jamahReminderMinutes === minutes
-                        ? colors.primary
-                        : colors.surface,
+                        ? primaryColor
+                        : isDark
+                        ? "#151718"
+                        : "#fff",
                     borderColor:
                       jamahReminderMinutes === minutes
-                        ? colors.primary
-                        : `${colors.text}30`,
+                        ? primaryColor
+                        : isDark
+                        ? "#555"
+                        : "#ccc",
                   },
                 ]}
                 onPress={() => setJamahReminderMinutes(minutes)}
               >
-                <ThemedText
+                <Text
                   style={[
                     styles.reminderOptionText,
                     {
                       color:
-                        jamahReminderMinutes === minutes ? "#fff" : colors.text,
+                        jamahReminderMinutes === minutes ? "#fff" : textColor,
                     },
                   ]}
                 >
                   {minutes}m
-                </ThemedText>
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <View style={styles.exampleNotification}>
-            <ThemedText
-              style={[styles.exampleTitle, { color: colors.primary }]}
-            >
+          <View
+            style={[
+              styles.exampleNotification,
+              { backgroundColor: isDark ? "#333" : "#f0f8f0" },
+            ]}
+          >
+            <Text style={[styles.exampleTitle, { color: primaryColor }]}>
               Example:
-            </ThemedText>
-            <ThemedText
-              style={[styles.exampleText, { color: `${colors.text}B3` }]}
-            >
+            </Text>
+            <Text style={[styles.exampleText, { color: subtextColor }]}>
               "🕌 Fajr jamah starts in {jamahReminderMinutes} minutes"
-            </ThemedText>
+            </Text>
           </View>
-        </Animated.View>
+        </View>
       )}
     </View>
   );
 
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}
-      animationType="none"
+      animationType="fade"
       transparent={true}
       statusBarTranslucent={true}
     >
       <View style={styles.modalOverlay}>
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            { backgroundColor: colors.background },
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+        <View
+          style={[styles.modalContainer, { backgroundColor: backgroundColor }]}
         >
           <ScrollView
             style={styles.scrollView}
@@ -357,20 +329,25 @@ export function NotificationSetupModal({
             {currentStep === 3 && renderStep3()}
           </ScrollView>
 
-          <View style={styles.buttonContainer}>
+          <View
+            style={[
+              styles.buttonContainer,
+              { borderTopColor: isDark ? "#333" : "#eee" },
+            ]}
+          >
             {currentStep > 1 && (
               <TouchableOpacity
                 style={[
                   styles.secondaryButton,
-                  { borderColor: `${colors.text}30` },
+                  { borderColor: isDark ? "#555" : "#ccc" },
                 ]}
                 onPress={prevStep}
               >
-                <ThemedText
-                  style={[styles.secondaryButtonText, { color: colors.text }]}
+                <Text
+                  style={[styles.secondaryButtonText, { color: textColor }]}
                 >
                   Back
-                </ThemedText>
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -379,53 +356,44 @@ export function NotificationSetupModal({
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    { backgroundColor: colors.primary },
-                    !canProceed() && styles.disabledButton,
+                    { backgroundColor: primaryColor },
                   ]}
                   onPress={nextStep}
-                  disabled={!canProceed()}
                 >
-                  <ThemedText style={styles.primaryButtonText}>
-                    Continue
-                  </ThemedText>
+                  <Text style={styles.primaryButtonText}>Continue</Text>
                 </TouchableOpacity>
               ) : (
                 <>
                   <TouchableOpacity
                     style={[
                       styles.skipButton,
-                      { borderColor: `${colors.text}30` },
+                      { borderColor: isDark ? "#555" : "#ccc" },
                     ]}
-                    onPress={handleSkip}
+                    onPress={onSkip}
                   >
-                    <ThemedText
-                      style={[
-                        styles.skipButtonText,
-                        { color: `${colors.text}80` },
-                      ]}
+                    <Text
+                      style={[styles.skipButtonText, { color: subtextColor }]}
                     >
                       Skip
-                    </ThemedText>
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[
                       styles.primaryButton,
-                      { backgroundColor: colors.primary },
-                      !canProceed() && styles.disabledButton,
+                      { backgroundColor: primaryColor },
                     ]}
                     onPress={handleComplete}
-                    disabled={!canProceed()}
                   >
-                    <ThemedText style={styles.primaryButtonText}>
+                    <Text style={styles.primaryButtonText}>
                       Enable Notifications
-                    </ThemedText>
+                    </Text>
                   </TouchableOpacity>
                 </>
               )}
             </View>
           </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -442,19 +410,22 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: "100%",
     maxWidth: 400,
-    maxHeight: "90%",
+    height: "80%", // Give it a fixed height
+    minHeight: 500, // Ensure minimum height
     borderRadius: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 20,
+    flexDirection: "column", // Ensure proper flex direction
   },
   scrollView: {
-    flex: 1,
+    flex: 1, // Take up available space
   },
   scrollContent: {
     padding: 24,
+    minHeight: 400, // Ensure content has minimum height
   },
   stepIndicator: {
     flexDirection: "row",
@@ -470,6 +441,8 @@ const styles = StyleSheet.create({
   },
   stepContent: {
     alignItems: "center",
+    flex: 1, // Allow content to expand
+    minHeight: 300, // Ensure minimum content height
   },
   iconContainer: {
     width: 96,
@@ -478,6 +451,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
+  },
+  iconText: {
+    fontSize: 48,
   },
   stepTitle: {
     fontSize: 24,
@@ -502,6 +478,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 16,
     paddingHorizontal: 16,
+  },
+  benefitIcon: {
+    fontSize: 24,
   },
   benefitText: {
     fontSize: 16,
@@ -528,7 +507,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "rgba(27, 94, 32, 0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -584,7 +562,6 @@ const styles = StyleSheet.create({
   exampleNotification: {
     marginTop: 16,
     padding: 16,
-    backgroundColor: "rgba(27, 94, 32, 0.05)",
     borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: "#1B5E20",
@@ -605,7 +582,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.1)",
+    flexShrink: 0, // Don't let buttons shrink
   },
   secondaryButton: {
     flex: 1,
@@ -616,7 +593,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "600",
   },
   primaryButtons: {
@@ -638,7 +615,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "700",
   },
   skipButton: {
@@ -650,10 +627,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   skipButtonText: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "600",
-  },
-  disabledButton: {
-    opacity: 0.6,
   },
 });
