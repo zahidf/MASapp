@@ -2,6 +2,7 @@ import { User } from "@/types/prayer";
 import { ENV_CONFIG } from "@/utils/envConfig";
 import {
   GoogleSignin,
+  User as GoogleSignInUser,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
 
@@ -16,16 +17,12 @@ export class GoogleAuthService {
     if (this.initialized) return;
 
     try {
-      await GoogleSignin.configure({
+      GoogleSignin.configure({
         webClientId: ENV_CONFIG.auth.googleClientId.web,
         iosClientId: ENV_CONFIG.auth.googleClientId.ios,
-        offlineAccess: true, // Enable to get refresh tokens
-        hostedDomain: "", // Optional: restrict to specific domain (e.g., 'masjidabubakr.org.uk')
+        offlineAccess: true,
         forceCodeForRefreshToken: true,
-        accountName: "", // Optional: specify account name
-        googleServicePlistPath: "", // Optional: custom plist path
-        openIdRealm: "", // Optional: OpenID realm
-        profileImageSize: 120, // Optional: profile image size
+        profileImageSize: 120,
       });
 
       this.initialized = true;
@@ -41,10 +38,10 @@ export class GoogleAuthService {
    */
   static async checkPlayServices(): Promise<boolean> {
     try {
-      await GoogleSignin.hasPlayServices({
+      const hasPlayServices = await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
-      return true;
+      return hasPlayServices;
     } catch (error) {
       console.warn("Google Play Services not available:", error);
       return false;
@@ -53,17 +50,45 @@ export class GoogleAuthService {
 
   /**
    * Check if user is currently signed in with Google
+   * In v14.x, use hasPreviousSignIn() instead of isSignedIn()
    */
-  static async getCurrentUser(): Promise<any | null> {
+  static async getCurrentUser(): Promise<GoogleSignInUser | null> {
     try {
-      const isSignedIn = await GoogleSignin.isSignedIn();
-      if (isSignedIn) {
-        const userInfo = await GoogleSignin.getCurrentUser();
-        return userInfo;
-      }
-      return null;
+      const currentUser = GoogleSignin.getCurrentUser();
+      return currentUser;
     } catch (error) {
       console.error("Error checking current Google user:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if user has previously signed in
+   * This is the correct method in v14.x (replaces isSignedIn)
+   */
+  static async hasPreviousSignIn(): Promise<boolean> {
+    try {
+      const hasPreviousSignIn = GoogleSignin.hasPreviousSignIn();
+      return hasPreviousSignIn;
+    } catch (error) {
+      console.error("Error checking if user has previous sign in:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Try to sign in silently (for returning users)
+   */
+  static async signInSilently(): Promise<GoogleSignInUser | null> {
+    try {
+      const response = await GoogleSignin.signInSilently();
+      // Handle the response structure properly
+      if (response && "data" in response) {
+        return response.data;
+      }
+      return response;
+    } catch (error) {
+      console.error("Silent sign-in failed:", error);
       return null;
     }
   }
@@ -83,13 +108,25 @@ export class GoogleAuthService {
       }
 
       // Perform sign-in
-      const userInfo = await GoogleSignin.signIn();
+      const response = await GoogleSignin.signIn();
+
+      let userInfo: GoogleSignInUser | null = null;
+
+      // Handle different response structures
+      if (response && "data" in response) {
+        // Response has data property
+        userInfo = response.data;
+      } else {
+        // Direct user info response
+        userInfo = response as GoogleSignInUser;
+      }
 
       if (!userInfo || !userInfo.user) {
         throw new Error("Failed to get user information from Google");
       }
 
-      const { user } = userInfo;
+      // Access user data from the response
+      const user = userInfo.user;
       const userEmail = user.email;
 
       if (!userEmail) {
@@ -106,7 +143,7 @@ export class GoogleAuthService {
         // Sign out immediately if not authorized
         await this.signOut();
         throw new Error(
-          `Unauthorized access: ${userEmail} is not authorized for administrative access.\n\nContact: info@masjidabubakr.org.uk`
+          `Unauthorised access: ${userEmail} is not authorised for administrative access.\n\nContact: info@masjidabubakr.org.uk`
         );
       }
 

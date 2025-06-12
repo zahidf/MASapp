@@ -1,3 +1,4 @@
+// contexts/AuthContext.tsx
 import { User } from "@/types/prayer";
 import { ENV_CONFIG, type AppConfig } from "@/utils/envConfig";
 import { GoogleAuthService } from "@/utils/googleAuth";
@@ -58,8 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
 
-        // If user was signed in with Google, check if they're still signed in
-        if (parsedUser.id?.startsWith("google-")) {
+        // If user was signed in with Google (and not using mock auth), check if they're still signed in
+        if (parsedUser.id?.startsWith("google-") && !__DEV__) {
           const currentGoogleUser = await GoogleAuthService.getCurrentUser();
           if (!currentGoogleUser) {
             // Google session expired, clear local session
@@ -140,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!isAuthorizedAdmin) {
           throw new Error(
-            `Unauthorized: ${email} is not authorized for administrative access.\n\nContact: info@masjidabubakr.org.uk`
+            `Unauthorised: ${email} is not authorised for administrative access.\n\nContact: info@masjidabubakr.org.uk`
           );
         }
 
@@ -202,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Perform real Google Sign-In
+      // Perform Google Sign-In (handles both real and mock auth internally)
       const googleUser = await GoogleAuthService.signIn();
 
       // Save the authenticated user
