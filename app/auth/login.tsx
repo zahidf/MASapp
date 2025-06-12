@@ -40,14 +40,14 @@ export default function LoginScreen() {
       return;
     }
 
-    // Check if email is authorized for admin access (in production)
+    // Check if email is authorised for admin access (in production)
     if (
       !ENV_CONFIG.isDevelopment &&
       !ENV_CONFIG.auth.authorizedAdmins.includes(email.toLowerCase())
     ) {
       Alert.alert(
-        "Unauthorized Access",
-        "This email address is not authorized for administrative access.\n\nOnly authorized mosque administrators can access the admin panel.\n\nContact: info@masjidabubakr.org.uk",
+        "Unauthorised Access",
+        "This email address is not authorised for administrative access.\n\nOnly authorised mosque administrators can access the admin panel.\n\nContact: info@masjidabubakr.org.uk",
         [{ text: "OK" }]
       );
       return;
@@ -84,8 +84,8 @@ export default function LoginScreen() {
         } else if (error.message.includes("not available")) {
           errorMessage =
             "Google Play Services are not available on this device.";
-        } else if (error.message.includes("Unauthorized")) {
-          errorMessage = error.message; // Show the full unauthorized message
+        } else if (error.message.includes("Unauthorised")) {
+          errorMessage = error.message; // Show the full unauthorised message
         } else if (error.message.includes("not configured")) {
           errorMessage = "Google authentication is not properly configured.";
         } else {
@@ -187,7 +187,7 @@ export default function LoginScreen() {
             >
               {ENV_CONFIG.isDevelopment
                 ? "Development mode allows testing with any credentials."
-                : "Only authorized mosque administrators can access this area."}
+                : "Only authorised mosque administrators can access this area."}
             </ThemedText>
           </View>
         </View>
@@ -244,7 +244,7 @@ export default function LoginScreen() {
             placeholder={
               ENV_CONFIG.isDevelopment
                 ? "Email (any for testing)"
-                : "Authorized admin email only"
+                : "Authorised admin email only"
             }
             placeholderTextColor={Colors[colorScheme ?? "light"].text + "60"}
             value={email}
@@ -330,22 +330,22 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Authorized Admin Info */}
+        {/* Authorised Admin Info */}
         <View
           style={[
-            styles.authorizedAdminsSection,
+            styles.authorisedAdminsSection,
             { backgroundColor: `${colors.primary}10` },
           ]}
         >
           <ThemedText
-            style={[styles.authorizedAdminsTitle, { color: colors.primary }]}
+            style={[styles.authorisedAdminsTitle, { color: colors.primary }]}
           >
-            Authorized Administrators:
+            Authorised Administrators:
           </ThemedText>
           {ENV_CONFIG.auth.authorizedAdmins.map((email, index) => (
             <ThemedText
               key={index}
-              style={[styles.authorizedAdminEmail, { color: colors.text }]}
+              style={[styles.authorisedAdminEmail, { color: colors.text }]}
             >
               • {email}
             </ThemedText>
@@ -360,7 +360,7 @@ export default function LoginScreen() {
               🔧 Development Mode:
               {"\n"}• Use "Quick Dev Login" to bypass authentication
               {"\n"}• Any email with 'admin' or 'dev' gets admin privileges
-              {"\n"}• Authorized admins:{" "}
+              {"\n"}• Authorised admins:{" "}
               {ENV_CONFIG.auth.authorizedAdmins.join(", ")}
               {"\n"}• Auto-login on app start if no user exists
             </ThemedText>
@@ -377,7 +377,7 @@ export default function LoginScreen() {
               color="#F44336"
             />
             <ThemedText style={styles.productionNoticeText}>
-              🔒 Production Mode: Only pre-authorized email addresses can access
+              🔒 Production Mode: Only pre-authorised email addresses can access
               admin features.
               {"\n\n"}Contact info@masjidabubakr.org.uk for access requests.
             </ThemedText>
@@ -586,19 +586,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  authorizedAdminsSection: {
+  authorisedAdminsSection: {
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
     borderLeftWidth: 4,
     borderLeftColor: "#4CAF50",
   },
-  authorizedAdminsTitle: {
+  authorisedAdminsTitle: {
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
   },
-  authorizedAdminEmail: {
+  authorisedAdminEmail: {
     fontSize: 13,
     marginBottom: 4,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",

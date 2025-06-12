@@ -2,9 +2,9 @@
   "expo": {
     "name": "Masjid Abubakr Siddique",
     "slug": "masjid-abubakr-siddique",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/images/ios-light.png",
+    "icon": "./assets/images/ios-dark.png",
     "scheme": "masapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

@@ -36,8 +36,8 @@ export function AdminAccessGuard({
     }).start();
   }, []);
 
-  // Check if user is authorized admin
-  const isAuthorizedAdmin =
+  // Check if user is authorised admin
+  const isAuthorisedAdmin =
     user?.email &&
     ENV_CONFIG.auth.authorizedAdmins.includes(user.email.toLowerCase());
 
@@ -45,7 +45,7 @@ export function AdminAccessGuard({
   const isDevelopmentBypass =
     ENV_CONFIG.isDevelopment && ENV_CONFIG.auth.devSettings.bypassAuth;
 
-  if (isAuthorizedAdmin || isDevelopmentBypass) {
+  if (isAuthorisedAdmin || isDevelopmentBypass) {
     return <>{children}</>;
   }
 
@@ -54,7 +54,7 @@ export function AdminAccessGuard({
     return <>{fallback}</>;
   }
 
-  // Default unauthorized access screen
+  // Default unauthorised access screen
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
@@ -88,7 +88,7 @@ export function AdminAccessGuard({
               Only authorised mosque administrators can access this section.
             </>
           ) : (
-            "Please sign in with an authorized administrator account to access this section."
+            "Please sign in with an authorised administrator account to access this section."
           )}
         </ThemedText>
 
@@ -106,7 +106,7 @@ export function AdminAccessGuard({
               {"\n"}
               Current user: {user?.email || "Not signed in"}
               {"\n"}
-              Is authorised: {isAuthorizedAdmin ? "Yes" : "No"}
+              Is authorised: {isAuthorisedAdmin ? "Yes" : "No"}
               {"\n"}
               Dev bypass: {isDevelopmentBypass ? "Enabled" : "Disabled"}
             </ThemedText>
@@ -122,7 +122,7 @@ export function AdminAccessGuard({
                 // This would typically use navigation
                 Alert.alert(
                   "Sign In Required",
-                  "Please sign in with an authorized administrator account.",
+                  "Please sign in with an authorised administrator account.",
                   [{ text: "OK" }]
                 );
               }}
