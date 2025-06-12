@@ -64,8 +64,10 @@ export const loadPrayerTimes = async (): Promise<PrayerTime[]> => {
       }
     }
 
-    // If no stored data, load from bundled CSV file
-    console.log("No stored data found, loading from bundled CSV file");
+    // If no stored data, try to load from bundled CSV file
+    console.log(
+      "No stored data found, attempting to load from bundled CSV file"
+    );
     const bundledData = await loadBundledCSV();
 
     // Save the bundled data to storage for faster access next time
@@ -84,14 +86,32 @@ export const loadBundledCSV = async (): Promise<PrayerTime[]> => {
   console.log("loadBundledCSV called");
 
   try {
-    // Load the CSV file from assets
-    const asset = Asset.fromModule(require("../assets/mobilePrayerTimes.csv"));
-    await asset.downloadAsync();
+    // Try to load the CSV file from assets
+    let asset: Asset;
 
+    try {
+      asset = Asset.fromModule(require("../assets/mobilePrayerTimes.csv"));
+    } catch (requireError) {
+      const errorMessage =
+        requireError instanceof Error
+          ? requireError.message
+          : "Unknown require error";
+      console.warn("CSV file not found in assets:", errorMessage);
+      console.log("Falling back to sample data due to missing CSV file");
+      return generateFallbackData();
+    }
+
+    await asset.downloadAsync();
     console.log("Asset downloaded, localUri:", asset.localUri);
 
     if (!asset.localUri) {
       throw new Error("Could not get local URI for CSV asset");
+    }
+
+    // Check if file exists and is readable
+    const fileInfo = await FileSystem.getInfoAsync(asset.localUri);
+    if (!fileInfo.exists) {
+      throw new Error("CSV file does not exist at local URI");
     }
 
     // Read the file content
@@ -104,7 +124,7 @@ export const loadBundledCSV = async (): Promise<PrayerTime[]> => {
 
     if (!csvContent || csvContent.trim() === "") {
       console.warn("CSV file is empty");
-      return [];
+      return generateFallbackData();
     }
 
     // Parse the CSV content
@@ -116,7 +136,9 @@ export const loadBundledCSV = async (): Promise<PrayerTime[]> => {
     console.error("Error loading bundled CSV:", error);
 
     // Fallback to generate sample data if bundled file fails
-    console.log("Falling back to sample data");
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    console.log("Falling back to sample data due to error:", errorMessage);
     return generateFallbackData();
   }
 };
@@ -137,18 +159,35 @@ export const generateFallbackData = (): PrayerTime[] => {
       day
     ).padStart(2, "0")}`;
 
+    // Generate realistic prayer times that vary slightly day by day
+    const baseHour = 6;
+    const fajrMinutes = Math.max(0, 30 - day); // Gradually earlier
+    const sunriseMinutes = Math.max(0, 60 + day * 2); // Gradually later
+
     data.push({
       d_date: dateStr,
-      fajr_begins: "06:00:00",
-      fajr_jamah: "06:15:00",
-      sunrise: "07:30:00",
+      fajr_begins: `${String(baseHour).padStart(2, "0")}:${String(
+        fajrMinutes
+      ).padStart(2, "0")}:00`,
+      fajr_jamah: `${String(baseHour).padStart(2, "0")}:${String(
+        Math.min(59, fajrMinutes + 15)
+      ).padStart(2, "0")}:00`,
+      sunrise: `${String(7).padStart(2, "0")}:${String(
+        Math.min(59, sunriseMinutes)
+      ).padStart(2, "0")}:00`,
       zuhr_begins: "12:30:00",
       zuhr_jamah: "13:00:00",
       asr_mithl_1: "15:00:00",
       asr_mithl_2: "15:00:00",
       asr_jamah: "15:15:00",
-      maghrib_begins: "17:30:00",
-      maghrib_jamah: "17:35:00",
+      maghrib_begins: `${String(17 + Math.floor(day / 10)).padStart(
+        2,
+        "0"
+      )}:${String(30 + (day % 10) * 2).padStart(2, "0")}:00`,
+      maghrib_jamah: `${String(17 + Math.floor(day / 10)).padStart(
+        2,
+        "0"
+      )}:${String(35 + (day % 10) * 2).padStart(2, "0")}:00`,
       isha_begins: "19:00:00",
       isha_jamah: "19:30:00",
       is_ramadan: 0,
@@ -215,6 +254,26 @@ export const testStorage = async (): Promise<boolean> => {
     return retrievedValue === testValue;
   } catch (error) {
     console.error("Storage test failed:", error);
+    return false;
+  }
+};
+
+// Helper function to check if CSV file exists in assets
+export const checkCSVFileExists = async (): Promise<boolean> => {
+  try {
+    const asset = Asset.fromModule(require("../assets/mobilePrayerTimes.csv"));
+    await asset.downloadAsync();
+
+    if (!asset.localUri) {
+      return false;
+    }
+
+    const fileInfo = await FileSystem.getInfoAsync(asset.localUri);
+    return fileInfo.exists;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    console.log("CSV file check failed:", errorMessage);
     return false;
   }
 };

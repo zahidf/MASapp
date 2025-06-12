@@ -165,7 +165,7 @@
     ],
     "primaryColor": "#1B5E20",
     "notification": {
-      "icon": "./assets/images/notification-icon.png",
+      "icon": "./assets/images/splash-icon-light.png",
       "color": "#1B5E20",
       "androidMode": "default",
       "androidCollapsedTitle": "Prayer Time Reminder"

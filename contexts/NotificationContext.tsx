@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import React, { createContext, ReactNode, useEffect, useState } from "react";
 import { AppState, AppStateStatus } from "react-native";
 
+import { NotificationSetupModal } from "@/components/notifications/NotificationSetupModal";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { NotificationPreferences } from "@/types/notification";
 import { NotificationService } from "@/utils/notificationService";
@@ -13,6 +14,7 @@ interface NotificationContextType {
   updatePreferences: (preferences: NotificationPreferences) => Promise<void>;
   refreshNotifications: () => Promise<void>;
   checkPermissionStatus: () => Promise<boolean>;
+  dismissSetup: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -30,32 +32,51 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [shouldShowSetup, setShouldShowSetup] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
-    loadPreferences();
+    initializeNotifications();
     setupNotificationListeners();
     setupAppStateListener();
   }, []);
 
   useEffect(() => {
-    // Update notifications when prayer times change
-    if (prayerTimes.length > 0 && preferences.isEnabled) {
+    // Update notifications when prayer times change, but only after initialization
+    if (hasInitialized && prayerTimes.length > 0 && preferences.isEnabled) {
       refreshNotifications();
     }
-  }, [prayerTimes, preferences]);
+  }, [prayerTimes, preferences, hasInitialized]);
 
-  const loadPreferences = async () => {
+  const initializeNotifications = async () => {
     try {
       setIsLoading(true);
-      const savedPreferences = await NotificationService.loadPreferences();
-      setPreferences(savedPreferences);
+      console.log("NotificationProvider: Initializing...");
 
-      // Show setup modal if user hasn't been asked yet
+      // Small delay only for initialization to prevent race conditions
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const savedPreferences = await NotificationService.loadPreferences();
+      console.log(
+        "NotificationProvider: Loaded preferences:",
+        savedPreferences
+      );
+
+      setPreferences(savedPreferences);
+      setHasInitialized(true);
+
+      // Show setup modal if user hasn't been asked yet (only on first-time use)
       if (!savedPreferences.hasAskedPermission) {
-        setShouldShowSetup(true);
+        console.log(
+          "NotificationProvider: User hasn't been asked, will show setup modal"
+        );
+        // Small delay only to ensure UI is ready, not for user experience
+        setTimeout(() => {
+          setShouldShowSetup(true);
+        }, 1000); // Just 1 second to ensure app UI is stable
       }
     } catch (error) {
-      console.error("Error loading notification preferences:", error);
+      console.error("Error initializing notifications:", error);
+      setHasInitialized(true);
     } finally {
       setIsLoading(false);
     }
@@ -64,6 +85,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const updatePreferences = async (newPreferences: NotificationPreferences) => {
     try {
       setIsLoading(true);
+      console.log("Updating notification preferences:", newPreferences);
 
       // Request permissions if enabling notifications
       if (newPreferences.isEnabled && !preferences.isEnabled) {
@@ -75,6 +97,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           newPreferences.jamahTimes = false;
         }
       }
+
+      // Mark that user has been asked
+      newPreferences.hasAskedPermission = true;
 
       // Save preferences
       await NotificationService.savePreferences(newPreferences);
@@ -89,12 +114,31 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // Hide setup modal
       setShouldShowSetup(false);
 
-      console.log("Notification preferences updated:", newPreferences);
+      console.log("Notification preferences updated successfully");
     } catch (error) {
       console.error("Error updating notification preferences:", error);
       throw error;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const dismissSetup = async () => {
+    try {
+      // Mark that user has been asked, even if they dismissed
+      const dismissedPreferences = {
+        ...preferences,
+        hasAskedPermission: true,
+      };
+
+      await NotificationService.savePreferences(dismissedPreferences);
+      setPreferences(dismissedPreferences);
+      setShouldShowSetup(false);
+
+      console.log("Notification setup dismissed");
+    } catch (error) {
+      console.error("Error dismissing setup:", error);
+      setShouldShowSetup(false);
     }
   };
 
@@ -145,7 +189,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const setupAppStateListener = () => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === "active" && preferences.isEnabled) {
+      if (
+        nextAppState === "active" &&
+        preferences.isEnabled &&
+        hasInitialized
+      ) {
         // Refresh notifications when app becomes active
         // This helps ensure notifications stay current
         setTimeout(() => {
@@ -168,11 +216,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     updatePreferences,
     refreshNotifications,
     checkPermissionStatus,
+    dismissSetup,
   };
 
   return (
     <NotificationContext.Provider value={contextValue}>
       {children}
+
+      {/* Show notification setup modal */}
+      <NotificationSetupModal
+        visible={shouldShowSetup}
+        onComplete={updatePreferences}
+        onSkip={dismissSetup}
+      />
     </NotificationContext.Provider>
   );
 }
