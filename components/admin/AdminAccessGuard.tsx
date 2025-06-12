@@ -85,7 +85,7 @@ export function AdminAccessGuard({
               You are signed in as {user.email}, but this account does not have
               administrative privileges.
               {"\n\n"}
-              Only authorized mosque administrators can access this section.
+              Only authorised mosque administrators can access this section.
             </>
           ) : (
             "Please sign in with an authorized administrator account to access this section."
@@ -102,11 +102,11 @@ export function AdminAccessGuard({
             <ThemedText
               style={[styles.devInfoText, { color: `${colors.text}80` }]}
             >
-              Authorized admins: {ENV_CONFIG.auth.authorizedAdmins.join(", ")}
+              Authorised admins: {ENV_CONFIG.auth.authorizedAdmins.join(", ")}
               {"\n"}
               Current user: {user?.email || "Not signed in"}
               {"\n"}
-              Is authorized: {isAuthorizedAdmin ? "Yes" : "No"}
+              Is authorised: {isAuthorizedAdmin ? "Yes" : "No"}
               {"\n"}
               Dev bypass: {isDevelopmentBypass ? "Enabled" : "Disabled"}
             </ThemedText>

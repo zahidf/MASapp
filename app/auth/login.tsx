@@ -22,10 +22,17 @@ const DEV_MODE = __DEV__;
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme();
-  const { login, loginWithGoogle, devLogin } = useAuth();
+  const { login, loginWithGoogle, devLogin, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // If user is already authenticated as admin, redirect to admin
+  React.useEffect(() => {
+    if (user?.isAdmin) {
+      router.replace("/(tabs)/admin");
+    }
+  }, [user]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -49,7 +56,9 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email, password);
-      router.back();
+
+      // On successful login, navigate to admin
+      router.replace("/(tabs)/admin");
     } catch (error: any) {
       const errorMessage = error.message || "Login failed. Please try again.";
       Alert.alert("Login Failed", errorMessage);
@@ -62,11 +71,29 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await loginWithGoogle();
-      router.back();
+
+      // On successful login, navigate to admin
+      router.replace("/(tabs)/admin");
     } catch (error: any) {
-      const errorMessage =
-        error.message || "Google login failed. Please try again.";
-      Alert.alert("Google Login Failed", errorMessage);
+      let errorMessage = "Google login failed. Please try again.";
+
+      // Handle specific error messages
+      if (error.message) {
+        if (error.message.includes("cancelled")) {
+          errorMessage = "Google sign-in was cancelled.";
+        } else if (error.message.includes("not available")) {
+          errorMessage =
+            "Google Play Services are not available on this device.";
+        } else if (error.message.includes("Unauthorized")) {
+          errorMessage = error.message; // Show the full unauthorized message
+        } else if (error.message.includes("not configured")) {
+          errorMessage = "Google authentication is not properly configured.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      Alert.alert("Google Sign-In Failed", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +105,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await devLogin();
-      router.back();
+      router.replace("/(tabs)/admin");
     } catch (error) {
       Alert.alert("Error", "Dev login failed. Please try again.");
     } finally {
@@ -86,19 +113,52 @@ export default function LoginScreen() {
     }
   };
 
+  const handleBackToApp = () => {
+    router.back();
+  };
+
+  const colors = Colors[colorScheme ?? "light"];
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ThemedView style={styles.content}>
+        {/* Header with back button */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={handleBackToApp} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={colors.text} />
+            <ThemedText style={[styles.backText, { color: colors.text }]}>
+              Back to App
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
+          <View
+            style={[
+              styles.logoContainer,
+              { backgroundColor: `${colors.primary}20` },
+            ]}
+          >
+            <IconSymbol
+              name="gear.circle.fill"
+              size={48}
+              color={colors.primary}
+            />
+          </View>
+
+          <ThemedText
+            type="title"
+            style={[styles.title, { color: colors.text }]}
+          >
             Admin Login
           </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Sign in to access admin features
+          <ThemedText style={[styles.subtitle, { color: `${colors.text}80` }]}>
+            Sign in to access administrative features
           </ThemedText>
+
           {DEV_MODE && (
             <View style={styles.devBadge}>
               <ThemedText style={styles.devBadgeText}>
@@ -109,13 +169,22 @@ export default function LoginScreen() {
         </View>
 
         {/* Admin Access Notice */}
-        <View style={styles.accessNotice}>
-          <IconSymbol name="shield" size={24} color="#FF9800" />
+        <View
+          style={[
+            styles.accessNotice,
+            { backgroundColor: `${colors.primary}10` },
+          ]}
+        >
+          <IconSymbol name="shield" size={24} color={colors.primary} />
           <View style={styles.accessNoticeContent}>
-            <ThemedText style={styles.accessNoticeTitle}>
-              Restricted Access
+            <ThemedText
+              style={[styles.accessNoticeTitle, { color: colors.primary }]}
+            >
+              Administrative Access
             </ThemedText>
-            <ThemedText style={styles.accessNoticeText}>
+            <ThemedText
+              style={[styles.accessNoticeText, { color: colors.text }]}
+            >
               {ENV_CONFIG.isDevelopment
                 ? "Development mode allows testing with any credentials."
                 : "Only authorized mosque administrators can access this area."}
@@ -145,7 +214,9 @@ export default function LoginScreen() {
                   },
                 ]}
               />
-              <ThemedText style={styles.dividerText}>
+              <ThemedText
+                style={[styles.dividerText, { color: `${colors.text}60` }]}
+              >
                 OR USE REGULAR LOGIN
               </ThemedText>
               <View
@@ -165,9 +236,9 @@ export default function LoginScreen() {
             style={[
               styles.input,
               {
-                color: Colors[colorScheme ?? "light"].text,
-                borderColor: Colors[colorScheme ?? "light"].text + "30",
-                backgroundColor: Colors[colorScheme ?? "light"].background,
+                color: colors.text,
+                borderColor: `${colors.text}30`,
+                backgroundColor: colors.surface,
               },
             ]}
             placeholder={
@@ -187,9 +258,9 @@ export default function LoginScreen() {
             style={[
               styles.input,
               {
-                color: Colors[colorScheme ?? "light"].text,
-                borderColor: Colors[colorScheme ?? "light"].text + "30",
-                backgroundColor: Colors[colorScheme ?? "light"].background,
+                color: colors.text,
+                borderColor: `${colors.text}30`,
+                backgroundColor: colors.surface,
               },
             ]}
             placeholder="Password"
@@ -201,13 +272,24 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              { backgroundColor: colors.primary },
+              isLoading && styles.buttonDisabled,
+            ]}
             onPress={handleLogin}
             disabled={isLoading}
           >
-            <ThemedText style={styles.buttonText}>
-              {isLoading ? "Signing in..." : "Sign In"}
-            </ThemedText>
+            {isLoading ? (
+              <View style={styles.loadingRow}>
+                <ThemedText style={styles.buttonText}>Signing in...</ThemedText>
+              </View>
+            ) : (
+              <View style={styles.buttonRow}>
+                <IconSymbol name="person" size={20} color="#fff" />
+                <ThemedText style={styles.buttonText}>Sign In</ThemedText>
+              </View>
+            )}
           </TouchableOpacity>
 
           <View style={styles.divider}>
@@ -217,7 +299,11 @@ export default function LoginScreen() {
                 { backgroundColor: Colors[colorScheme ?? "light"].text + "30" },
               ]}
             />
-            <ThemedText style={styles.dividerText}>OR</ThemedText>
+            <ThemedText
+              style={[styles.dividerText, { color: `${colors.text}60` }]}
+            >
+              OR
+            </ThemedText>
             <View
               style={[
                 styles.dividerLine,
@@ -227,32 +313,50 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.googleButton, isLoading && styles.buttonDisabled]}
+            style={[
+              styles.googleButton,
+              { borderColor: colors.primary },
+              isLoading && styles.buttonDisabled,
+            ]}
             onPress={handleGoogleLogin}
             disabled={isLoading}
           >
-            <IconSymbol name="globe" size={20} color="#4285F4" />
-            <ThemedText style={styles.googleButtonText}>
+            <IconSymbol name="globe" size={20} color={colors.primary} />
+            <ThemedText
+              style={[styles.googleButtonText, { color: colors.primary }]}
+            >
               Sign in with Google
             </ThemedText>
           </TouchableOpacity>
         </View>
 
         {/* Authorized Admin Info */}
-        <View style={styles.authorizedAdminsSection}>
-          <ThemedText style={styles.authorizedAdminsTitle}>
+        <View
+          style={[
+            styles.authorizedAdminsSection,
+            { backgroundColor: `${colors.primary}10` },
+          ]}
+        >
+          <ThemedText
+            style={[styles.authorizedAdminsTitle, { color: colors.primary }]}
+          >
             Authorized Administrators:
           </ThemedText>
           {ENV_CONFIG.auth.authorizedAdmins.map((email, index) => (
-            <ThemedText key={index} style={styles.authorizedAdminEmail}>
+            <ThemedText
+              key={index}
+              style={[styles.authorizedAdminEmail, { color: colors.text }]}
+            >
               • {email}
             </ThemedText>
           ))}
         </View>
 
         {DEV_MODE && (
-          <View style={styles.devNote}>
-            <ThemedText style={styles.devNoteText}>
+          <View
+            style={[styles.devNote, { backgroundColor: `${colors.primary}10` }]}
+          >
+            <ThemedText style={[styles.devNoteText, { color: colors.text }]}>
               🔧 Development Mode:
               {"\n"}• Use "Quick Dev Login" to bypass authentication
               {"\n"}• Any email with 'admin' or 'dev' gets admin privileges
@@ -264,7 +368,14 @@ export default function LoginScreen() {
         )}
 
         {!ENV_CONFIG.isDevelopment && (
-          <View style={styles.productionNotice}>
+          <View
+            style={[styles.productionNotice, { backgroundColor: "#FFEBEE" }]}
+          >
+            <IconSymbol
+              name="exclamationmark.triangle"
+              size={20}
+              color="#F44336"
+            />
             <ThemedText style={styles.productionNoticeText}>
               🔒 Production Mode: Only pre-authorized email addresses can access
               admin features.
@@ -289,9 +400,35 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
+  headerRow: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 60 : 40,
+    left: 20,
+    right: 20,
+    zIndex: 1,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 8,
+  },
+  backText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
   header: {
     alignItems: "center",
     marginBottom: 30,
+    marginTop: 60,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,
@@ -301,9 +438,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    opacity: 0.7,
     textAlign: "center",
     lineHeight: 22,
+    marginBottom: 16,
   },
   devBadge: {
     backgroundColor: "#E3F2FD",
@@ -321,12 +458,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    backgroundColor: "#FFF3E0",
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF9800",
+    borderLeftColor: "#1B5E20",
   },
   accessNoticeContent: {
     flex: 1,
@@ -334,12 +470,10 @@ const styles = StyleSheet.create({
   accessNoticeTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#E65100",
     marginBottom: 4,
   },
   accessNoticeText: {
     fontSize: 14,
-    color: "#BF360C",
     lineHeight: 20,
   },
   devSection: {
@@ -384,7 +518,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   button: {
-    backgroundColor: "#2E7D32",
     height: 56,
     borderRadius: 12,
     justifyContent: "center",
@@ -401,6 +534,16 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   buttonText: {
     color: "white",
@@ -419,13 +562,11 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 16,
     fontSize: 12,
-    opacity: 0.6,
     fontWeight: "500",
   },
   googleButton: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#4285F4",
     height: 56,
     borderRadius: 12,
     justifyContent: "center",
@@ -442,12 +583,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   googleButtonText: {
-    color: "#4285F4",
     fontSize: 16,
     fontWeight: "600",
   },
   authorizedAdminsSection: {
-    backgroundColor: "#E8F5E9",
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
@@ -457,17 +596,14 @@ const styles = StyleSheet.create({
   authorizedAdminsTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#2E7D32",
     marginBottom: 8,
   },
   authorizedAdminEmail: {
     fontSize: 13,
-    color: "#388E3C",
     marginBottom: 4,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   devNote: {
-    backgroundColor: "#E8F5E9",
     padding: 16,
     borderRadius: 8,
     borderLeftWidth: 4,
@@ -476,11 +612,12 @@ const styles = StyleSheet.create({
   },
   devNoteText: {
     fontSize: 12,
-    color: "#2E7D32",
     lineHeight: 18,
   },
   productionNotice: {
-    backgroundColor: "#FFEBEE",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
     padding: 16,
     borderRadius: 12,
     marginTop: 20,
@@ -491,6 +628,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#C62828",
     lineHeight: 18,
-    textAlign: "center",
+    flex: 1,
   },
 });

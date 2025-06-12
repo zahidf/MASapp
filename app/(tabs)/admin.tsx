@@ -1,8 +1,8 @@
+import { router } from "expo-router";
 import React from "react";
 import {
   Alert,
   Animated,
-  Linking,
   Platform,
   ScrollView,
   StatusBar,
@@ -21,36 +21,51 @@ import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
-import { NotificationService } from "@/utils/notificationService";
 import { clearAllData, getLastUpdateTime } from "@/utils/storage";
-import * as Notifications from "expo-notifications";
 
-const DEV_MODE = __DEV__;
+// Custom hook for admin authentication guard
+function useAdminAuthGuard() {
+  const { user } = useAuth();
+  const isDev = __DEV__;
+
+  React.useEffect(() => {
+    // In production, redirect to login if not admin
+    if (!isDev && !user?.isAdmin) {
+      router.push("/auth/login");
+    }
+  }, [user, isDev]);
+
+  return {
+    isAuthenticated: !!user?.isAdmin,
+    isLoading: !isDev && !user?.isAdmin,
+    user,
+  };
+}
 
 export default function AdminScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const { user, logout, devLogin } = useAuth();
+  const { logout, devLogin } = useAuth();
   const { refreshData } = usePrayerTimes();
   const { preferences } = useNotificationContext();
   const [lastUpdate, setLastUpdate] = React.useState<string | null>(null);
   const [fadeAnim] = React.useState(new Animated.Value(0));
-  const [isTestingNotification, setIsTestingNotification] =
-    React.useState(false);
-  const [lastTestResult, setLastTestResult] = React.useState<string | null>(
-    null
-  );
+
+  // Use auth guard
+  const { isAuthenticated, isLoading, user } = useAdminAuthGuard();
 
   React.useEffect(() => {
-    loadLastUpdate();
+    if (isAuthenticated) {
+      loadLastUpdate();
 
-    // Fade in animation
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, []);
+      // Fade in animation
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isAuthenticated]);
 
   const loadLastUpdate = async () => {
     try {
@@ -94,6 +109,7 @@ export default function AdminScreen() {
         onPress: async () => {
           try {
             await logout();
+            // After logout, the auth guard will redirect to login
           } catch (error) {
             Alert.alert("Error", "Failed to logout.");
           }
@@ -103,7 +119,7 @@ export default function AdminScreen() {
   };
 
   const handleDevLoginAsAdmin = async () => {
-    if (!DEV_MODE) return;
+    if (!__DEV__) return;
 
     try {
       await devLogin();
@@ -113,413 +129,24 @@ export default function AdminScreen() {
     }
   };
 
-  const renderNotificationTestSection = () => {
-    const handleTestPrayerNotification = async () => {
-      setIsTestingNotification(true);
-      setLastTestResult(null);
-
-      try {
-        // Check permissions first
-        const hasPermission = await NotificationService.requestPermissions();
-        if (!hasPermission) {
-          Alert.alert(
-            "Permission Required",
-            "Please enable notifications in your device settings to test notifications.",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Open Settings", onPress: () => Linking.openSettings() },
-            ]
-          );
-          setIsTestingNotification(false);
-          return;
-        }
-
-        // Schedule a test prayer notification
-        await Notifications.scheduleNotificationAsync({
-          identifier: "admin_test_prayer",
-          content: {
-            title: "🕌 Fajr Prayer Time",
-            body: "It's time for Fajr prayer at Masjid Abubakr Siddique",
-            sound: true,
-            priority: Notifications.AndroidNotificationPriority.HIGH,
-            categoryIdentifier: "prayer-times",
-            data: {
-              prayerName: "Fajr",
-              type: "prayer_begin",
-              date: new Date().toISOString().split("T")[0],
-              isTest: true,
-            },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: 3,
-          },
-        });
-
-        setLastTestResult("Prayer notification scheduled for 3 seconds");
-        Alert.alert(
-          "Test Scheduled",
-          "A test prayer notification will appear in 3 seconds!\n\nPut the app in the background now to see it.",
-          [{ text: "OK" }]
-        );
-      } catch (error) {
-        console.error("Error testing prayer notification:", error);
-        Alert.alert("Error", "Failed to schedule test notification");
-        setLastTestResult("Error: Failed to schedule notification");
-      } finally {
-        setIsTestingNotification(false);
-      }
-    };
-
-    const handleTestJamahNotification = async () => {
-      setIsTestingNotification(true);
-      setLastTestResult(null);
-
-      try {
-        const hasPermission = await NotificationService.requestPermissions();
-        if (!hasPermission) {
-          Alert.alert(
-            "Permission Required",
-            "Please enable notifications in your device settings to test notifications.",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Open Settings", onPress: () => Linking.openSettings() },
-            ]
-          );
-          setIsTestingNotification(false);
-          return;
-        }
-
-        // Schedule a test jamah notification
-        await Notifications.scheduleNotificationAsync({
-          identifier: "admin_test_jamah",
-          content: {
-            title: "🕌 Fajr Jamah Starting",
-            body: "Fajr jamah is starting now at Masjid Abubakr Siddique",
-            sound: true,
-            priority: Notifications.AndroidNotificationPriority.HIGH,
-            categoryIdentifier: "prayer-times",
-            data: {
-              prayerName: "Fajr",
-              type: "jamah_time",
-              date: new Date().toISOString().split("T")[0],
-              isTest: true,
-            },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: 3,
-          },
-        });
-
-        setLastTestResult("Jamah notification scheduled for 3 seconds");
-        Alert.alert(
-          "Test Scheduled",
-          "A test jamah notification will appear in 3 seconds!\n\nPut the app in the background now to see it.",
-          [{ text: "OK" }]
-        );
-      } catch (error) {
-        console.error("Error testing jamah notification:", error);
-        Alert.alert("Error", "Failed to schedule test notification");
-        setLastTestResult("Error: Failed to schedule notification");
-      } finally {
-        setIsTestingNotification(false);
-      }
-    };
-
-    const handleTestReminderNotification = async () => {
-      setIsTestingNotification(true);
-      setLastTestResult(null);
-
-      try {
-        const hasPermission = await NotificationService.requestPermissions();
-        if (!hasPermission) {
-          Alert.alert(
-            "Permission Required",
-            "Please enable notifications in your device settings to test notifications.",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Open Settings", onPress: () => Linking.openSettings() },
-            ]
-          );
-          setIsTestingNotification(false);
-          return;
-        }
-
-        // Schedule a test reminder notification
-        await Notifications.scheduleNotificationAsync({
-          identifier: "admin_test_reminder",
-          content: {
-            title: "🕌 Fajr Jamah Reminder",
-            body: "Fajr jamah starts in 10 minutes at Masjid Abubakr Siddique",
-            sound: true,
-            priority: Notifications.AndroidNotificationPriority.HIGH,
-            categoryIdentifier: "prayer-times",
-            data: {
-              prayerName: "Fajr",
-              type: "jamah_reminder",
-              date: new Date().toISOString().split("T")[0],
-              reminderMinutes: 10,
-              isTest: true,
-            },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: 3,
-          },
-        });
-
-        setLastTestResult("Reminder notification scheduled for 3 seconds");
-        Alert.alert(
-          "Test Scheduled",
-          "A test reminder notification will appear in 3 seconds!\n\nPut the app in the background now to see it.",
-          [{ text: "OK" }]
-        );
-      } catch (error) {
-        console.error("Error testing reminder notification:", error);
-        Alert.alert("Error", "Failed to schedule test notification");
-        setLastTestResult("Error: Failed to schedule notification");
-      } finally {
-        setIsTestingNotification(false);
-      }
-    };
-
-    const handleShowScheduledNotifications = async () => {
-      try {
-        const scheduled =
-          await Notifications.getAllScheduledNotificationsAsync();
-        const testNotifications = scheduled.filter(
-          (n) =>
-            n.content.data?.isTest ||
-            n.identifier.includes("test") ||
-            n.identifier.includes("admin_test")
-        );
-
-        if (testNotifications.length === 0) {
-          Alert.alert(
-            "No Test Notifications",
-            "No test notifications are currently scheduled."
-          );
-        } else {
-          const notificationList = testNotifications
-            .map((n) => `• ${n.content.title} (${n.identifier})`)
-            .join("\n");
-
-          Alert.alert(
-            "Scheduled Test Notifications",
-            `Found ${testNotifications.length} test notification(s):\n\n${notificationList}`,
-            [
-              { text: "OK", style: "default" },
-              {
-                text: "Clear All Test",
-                style: "destructive",
-                onPress: async () => {
-                  for (const notification of testNotifications) {
-                    await Notifications.cancelScheduledNotificationAsync(
-                      notification.identifier
-                    );
-                  }
-                  Alert.alert(
-                    "Cleared",
-                    "All test notifications have been cleared."
-                  );
-                },
-              },
-            ]
-          );
-        }
-      } catch (error) {
-        console.error("Error getting scheduled notifications:", error);
-        Alert.alert("Error", "Failed to get scheduled notifications");
-      }
-    };
-
-    return (
-      <ThemedView style={[styles.section, { backgroundColor: colors.surface }]}>
-        <View style={styles.sectionHeader}>
-          <IconSymbol name="bell" size={24} color="#FF9800" />
-          <ThemedText
-            type="subtitle"
-            style={[styles.sectionTitle, { color: colors.text }]}
-          >
-            Notification Testing
-          </ThemedText>
-        </View>
-
-        <View
-          style={[
-            styles.notificationTestInfo,
-            { backgroundColor: colorScheme === "dark" ? "#1565C0" : "#E3F2FD" },
-          ]}
-        >
-          <ThemedText
-            style={[
-              styles.testInfoTitle,
-              { color: colorScheme === "dark" ? "#64B5F6" : "#1976D2" },
-            ]}
-          >
-            📱 Testing in Expo Go
-          </ThemedText>
-          <ThemedText
-            style={[
-              styles.testInfoText,
-              { color: colorScheme === "dark" ? "#BBDEFB" : "#1565C0" },
-            ]}
-          >
-            • Notifications work in Expo Go when app is in background{"\n"}• Put
-            app in background after clicking test buttons{"\n"}• You'll hear
-            sound and see notification banner{"\n"}• Check notification center
-            if you miss them
-          </ThemedText>
-        </View>
-
-        <View style={styles.testButtons}>
-          <TouchableOpacity
-            style={[
-              styles.testNotificationButton,
-              { backgroundColor: "#4CAF50" },
-              isTestingNotification && styles.testButtonDisabled,
-            ]}
-            onPress={handleTestPrayerNotification}
-            disabled={isTestingNotification}
-          >
-            <IconSymbol name="sunrise" size={20} color="#fff" />
-            <ThemedText style={styles.testButtonText}>
-              Test Prayer Time
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.testNotificationButton,
-              { backgroundColor: "#2196F3" },
-              isTestingNotification && styles.testButtonDisabled,
-            ]}
-            onPress={handleTestJamahNotification}
-            disabled={isTestingNotification}
-          >
-            <IconSymbol name="person.3" size={20} color="#fff" />
-            <ThemedText style={styles.testButtonText}>
-              Test Jamah Time
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.testNotificationButton,
-              { backgroundColor: "#FF9800" },
-              isTestingNotification && styles.testButtonDisabled,
-            ]}
-            onPress={handleTestReminderNotification}
-            disabled={isTestingNotification}
-          >
-            <IconSymbol name="clock" size={20} color="#fff" />
-            <ThemedText style={styles.testButtonText}>Test Reminder</ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.scheduleCheckButton, { borderColor: colors.primary }]}
-          onPress={handleShowScheduledNotifications}
-        >
-          <IconSymbol name="calendar" size={20} color={colors.primary} />
-          <ThemedText
-            style={[styles.scheduleCheckText, { color: colors.primary }]}
-          >
-            View Scheduled Tests
-          </ThemedText>
-        </TouchableOpacity>
-
-        {lastTestResult && (
-          <View
-            style={[
-              styles.testResult,
-              { backgroundColor: `${colors.primary}10` },
-            ]}
-          >
-            <ThemedText style={[styles.testResultText, { color: colors.text }]}>
-              {lastTestResult}
-            </ThemedText>
-          </View>
-        )}
-
-        {/* Current notification preferences status */}
-        <View
-          style={[
-            styles.preferencesStatus,
-            {
-              backgroundColor:
-                colorScheme === "dark" ? "#333333" : "rgba(0,0,0,0.05)",
-            },
-          ]}
-        >
-          <ThemedText style={[styles.preferencesTitle, { color: colors.text }]}>
-            Current Settings:
-          </ThemedText>
-          <ThemedText
-            style={[styles.preferencesText, { color: `${colors.text}80` }]}
-          >
-            • Notifications: {preferences.isEnabled ? "Enabled" : "Disabled"}
-            {"\n"}• Prayer Times:{" "}
-            {preferences.prayerBeginTimes ? "Enabled" : "Disabled"}
-            {"\n"}• Jamah Times:{" "}
-            {preferences.jamahTimes ? "Enabled" : "Disabled"}
-            {"\n"}• Reminder:{" "}
-            {preferences.jamahTimes
-              ? `${preferences.jamahReminderMinutes}m before`
-              : "Disabled"}
-          </ThemedText>
-        </View>
-      </ThemedView>
-    );
-  };
-
-  // Enhanced access denied screen for non-admin users
-  if (!user?.isAdmin && !DEV_MODE) {
+  // Show loading while redirecting
+  if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
         />
-        <Animated.View
-          style={[styles.accessDeniedContainer, { opacity: fadeAnim }]}
-        >
-          <View
-            style={[
-              styles.accessDeniedIcon,
-              { backgroundColor: `${colors.primary}20` },
-            ]}
-          >
-            <IconSymbol name="shield" size={80} color={colors.primary} />
-          </View>
-          <ThemedText
-            type="title"
-            style={[styles.accessDeniedTitle, { color: colors.text }]}
-          >
-            Access Restricted
+        <View style={styles.loadingContainer}>
+          <ThemedText style={[styles.loadingText, { color: colors.text }]}>
+            Checking authentication...
           </ThemedText>
-          <ThemedText
-            style={[styles.accessDeniedText, { color: `${colors.text}B3` }]}
-          >
-            You need admin privileges to access this section. Please contact the
-            mosque administration for access.
-          </ThemedText>
-
-          <View style={styles.accessDeniedActions}>
-            <TouchableOpacity
-              style={[styles.backButton, { backgroundColor: colors.primary }]}
-            >
-              <IconSymbol name="arrow.left" size={20} color="#fff" />
-              <ThemedText style={styles.backButtonText}>Go Back</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
+        </View>
       </View>
     );
   }
 
-  // Show bypass option for non-admin users in development mode
-  if (!user?.isAdmin && DEV_MODE) {
+  // Development mode: Show dev bypass if not authenticated
+  if (__DEV__ && !isAuthenticated) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar
@@ -553,11 +180,12 @@ export default function AdminScreen() {
           >
             Admin Access Required
           </ThemedText>
+
           <ThemedText
             style={[styles.accessDeniedText, { color: `${colors.text}B3` }]}
           >
             You need admin privileges to access the admin panel. In development
-            mode, you can bypass this restriction.
+            mode, you can bypass this restriction or use the login screen.
           </ThemedText>
 
           <View style={styles.devBypass}>
@@ -571,10 +199,20 @@ export default function AdminScreen() {
               </ThemedText>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={[styles.loginButton, { backgroundColor: colors.primary }]}
+              onPress={() => router.push("/auth/login")}
+            >
+              <IconSymbol name="person" size={24} color="#fff" />
+              <ThemedText style={styles.devBypassText}>
+                Go to Login Screen
+              </ThemedText>
+            </TouchableOpacity>
+
             <ThemedText
               style={[styles.devBypassNote, { color: `${colors.text}B3` }]}
             >
-              🔧 This option is only available in development mode
+              🔧 Development options - not available in production
             </ThemedText>
           </View>
         </Animated.View>
@@ -582,7 +220,7 @@ export default function AdminScreen() {
     );
   }
 
-  // Main admin interface for admin users
+  // Main admin interface (only shown if authenticated)
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar
@@ -604,7 +242,7 @@ export default function AdminScreen() {
                 <ThemedText type="title" style={styles.title}>
                   Admin Panel
                 </ThemedText>
-                {DEV_MODE && (
+                {__DEV__ && (
                   <View style={styles.devBadge}>
                     <ThemedText style={styles.devBadgeText}>
                       DEV MODE
@@ -670,24 +308,10 @@ export default function AdminScreen() {
                 Environment
               </ThemedText>
               <ThemedText style={[styles.statusValue, { color: colors.text }]}>
-                {DEV_MODE ? "Development" : "Production"}
-              </ThemedText>
-            </View>
-
-            <View style={styles.statusRow}>
-              <ThemedText
-                style={[styles.statusLabel, { color: `${colors.text}B3` }]}
-              >
-                Notifications
-              </ThemedText>
-              <ThemedText style={[styles.statusValue, { color: colors.text }]}>
-                {preferences.isEnabled ? "Enabled" : "Disabled"}
+                {__DEV__ ? "Development" : "Production"}
               </ThemedText>
             </View>
           </ThemedView>
-
-          {/* Notification Testing Section */}
-          {renderNotificationTestSection()}
 
           {/* Prayer Times Management */}
           <ThemedView
@@ -778,77 +402,6 @@ export default function AdminScreen() {
             </View>
           </ThemedView>
 
-          {/* Development Tools */}
-          {DEV_MODE && (
-            <ThemedView
-              style={[styles.section, { backgroundColor: colors.surface }]}
-            >
-              <View style={styles.sectionHeader}>
-                <IconSymbol name="hammer" size={24} color="#FF9800" />
-                <ThemedText
-                  type="subtitle"
-                  style={[styles.sectionTitle, { color: colors.text }]}
-                >
-                  Development Tools
-                </ThemedText>
-              </View>
-
-              <View style={styles.devTools}>
-                <TouchableOpacity
-                  style={[
-                    styles.devToolButton,
-                    {
-                      backgroundColor:
-                        colorScheme === "dark" ? "#404040" : "#f0f0f0",
-                    },
-                  ]}
-                  onPress={() =>
-                    Alert.alert(
-                      "Dev Info",
-                      `User ID: ${user?.id || "N/A"}\nEmail: ${
-                        user?.email || "N/A"
-                      }\nAdmin: ${
-                        user?.isAdmin || false
-                      }\nDev Mode: ${DEV_MODE}`
-                    )
-                  }
-                >
-                  <IconSymbol name="info.circle" size={20} color="#2196F3" />
-                  <ThemedText
-                    style={[styles.devToolText, { color: colors.text }]}
-                  >
-                    Show User Info
-                  </ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.devToolButton,
-                    {
-                      backgroundColor:
-                        colorScheme === "dark" ? "#404040" : "#f0f0f0",
-                    },
-                  ]}
-                  onPress={async () => {
-                    await refreshData();
-                    Alert.alert("Success", "Prayer times data refreshed!");
-                  }}
-                >
-                  <IconSymbol
-                    name="arrow.clockwise"
-                    size={20}
-                    color="#4CAF50"
-                  />
-                  <ThemedText
-                    style={[styles.devToolText, { color: colors.text }]}
-                  >
-                    Force Refresh Data
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-            </ThemedView>
-          )}
-
           {/* Data Management */}
           <ThemedView
             style={[styles.section, { backgroundColor: colors.surface }]}
@@ -903,9 +456,19 @@ export default function AdminScreen() {
   );
 }
 
+// Styles remain the same as your original file
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: "500",
   },
   scrollContainer: {
     flex: 1,
@@ -1066,22 +629,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
-  devTools: {
-    gap: 12,
-  },
-  devToolButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: "#FF9800",
-  },
-  devToolText: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
   dangerButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1161,34 +708,11 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingHorizontal: 16,
   },
-  accessDeniedActions: {
-    width: "100%",
-    alignItems: "center",
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  backButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
   devBypass: {
     marginTop: 40,
     alignItems: "center",
     width: "100%",
+    gap: 16,
   },
   devBypassButton: {
     flexDirection: "row",
@@ -1198,8 +722,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 12,
-    marginBottom: 16,
     shadowColor: "#FF9800",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  loginButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -1221,85 +759,5 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: Platform.OS === "ios" ? 100 : 80,
-  },
-
-  // Notification Testing Styles
-  notificationTestInfo: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: "#2196F3",
-  },
-  testInfoTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  testInfoText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  testButtons: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  testNotificationButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  testButtonDisabled: {
-    opacity: 0.6,
-  },
-  testButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  scheduleCheckButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    marginBottom: 16,
-  },
-  scheduleCheckText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  testResult: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  testResultText: {
-    fontSize: 14,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  preferencesStatus: {
-    padding: 16,
-    borderRadius: 12,
-  },
-  preferencesTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  preferencesText: {
-    fontSize: 14,
-    lineHeight: 20,
   },
 });

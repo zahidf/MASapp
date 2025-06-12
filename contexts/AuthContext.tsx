@@ -1,5 +1,6 @@
 import { User } from "@/types/prayer";
 import { ENV_CONFIG, type AppConfig } from "@/utils/envConfig";
+import { GoogleAuthService } from "@/utils/googleAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, ReactNode, useEffect, useState } from "react";
 
@@ -20,26 +21,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadUser();
-
-    // Log environment info in development
-    if (ENV_CONFIG.isDevelopment && ENV_CONFIG.debugMode) {
-      console.log("🔧 Auth Environment Config:", {
-        isDevelopment: ENV_CONFIG.isDevelopment,
-        isProduction: ENV_CONFIG.isProduction,
-        debugMode: ENV_CONFIG.debugMode,
-        hasGoogleConfig: !!ENV_CONFIG.auth.googleClientId.ios,
-        hasFirebaseConfig: !!ENV_CONFIG.auth.firebase.apiKey,
-        hasApiConfig: !!ENV_CONFIG.api.baseUrl,
-      });
-    }
+    initializeAuth();
   }, []);
+
+  const initializeAuth = async () => {
+    try {
+      // Initialize Google Sign-In if configured
+      if (GoogleAuthService.isConfigured()) {
+        await GoogleAuthService.initialize();
+      }
+
+      // Load existing user session
+      await loadUser();
+
+      // Log environment info in development
+      if (ENV_CONFIG.isDevelopment && ENV_CONFIG.debugMode) {
+        console.log("🔧 Auth Environment Config:", {
+          isDevelopment: ENV_CONFIG.isDevelopment,
+          isProduction: ENV_CONFIG.isProduction,
+          debugMode: ENV_CONFIG.debugMode,
+          googleConfigStatus: GoogleAuthService.getConfigStatus(),
+          hasApiConfig: !!ENV_CONFIG.api.baseUrl,
+        });
+      }
+    } catch (error) {
+      console.error("Auth initialization error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadUser = async () => {
     try {
       const userData = await AsyncStorage.getItem("@user_data");
       if (userData) {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+
+        // If user was signed in with Google, check if they're still signed in
+        if (parsedUser.id?.startsWith("google-")) {
+          const currentGoogleUser = await GoogleAuthService.getCurrentUser();
+          if (!currentGoogleUser) {
+            // Google session expired, clear local session
+            console.log("Google session expired, clearing local session");
+            await AsyncStorage.removeItem("@user_data");
+            setUser(null);
+          }
+        }
       } else if (
         ENV_CONFIG.isDevelopment &&
         ENV_CONFIG.auth.devSettings.bypassAuth
@@ -55,8 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error loading user:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -107,13 +133,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Production login logic
       if (!ENV_CONFIG.api.baseUrl) {
-        throw new Error("API configuration missing");
-      }
+        // No API configured, use mock authentication but with strict admin checking
+        const isAuthorizedAdmin = ENV_CONFIG.auth.authorizedAdmins.includes(
+          email.toLowerCase()
+        );
 
-      // In production, only authorize specific admin emails
-      const isAuthorizedAdmin = ENV_CONFIG.auth.authorizedAdmins.includes(
-        email.toLowerCase()
-      );
+        if (!isAuthorizedAdmin) {
+          throw new Error(
+            `Unauthorized: ${email} is not authorized for administrative access.\n\nContact: info@masjidabubakr.org.uk`
+          );
+        }
+
+        // Create authenticated user for authorized admin
+        const mockUser: User = {
+          id: "prod-" + Date.now(),
+          email,
+          name: email.split("@")[0],
+          isAdmin: true, // Only authorized emails reach this point
+        };
+
+        await saveUser(mockUser);
+        return;
+      }
 
       // TODO: Implement actual API call for production
       // const response = await fetch(`${ENV_CONFIG.api.baseUrl}/auth/login`, {
@@ -123,20 +164,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       //   },
       //   body: JSON.stringify({ email, password }),
       // });
+      //
+      // if (!response.ok) {
+      //   throw new Error('Login failed');
+      // }
+      //
+      // const userData = await response.json();
+      // await saveUser(userData);
 
-      // For now, use mock login but with proper admin authorization
-      if (!isAuthorizedAdmin) {
-        throw new Error("Unauthorized: Admin access restricted");
-      }
-
-      const mockUser: User = {
-        id: "prod-" + Date.now(),
-        email,
-        name: email.split("@")[0],
-        isAdmin: true, // Only authorized emails reach this point
-      };
-
-      await saveUser(mockUser);
+      throw new Error("API authentication not yet implemented");
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -145,11 +181,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     try {
-      // Check if Google configuration is available
-      if (
-        !ENV_CONFIG.auth.googleClientId.ios &&
-        !ENV_CONFIG.auth.googleClientId.android
-      ) {
+      // Check if Google authentication is configured
+      if (!GoogleAuthService.isConfigured()) {
         console.warn("Google OAuth configuration missing");
 
         if (ENV_CONFIG.isDevelopment) {
@@ -157,51 +190,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const mockUser: User = {
             id: "google-dev-" + Date.now(),
             email: ENV_CONFIG.auth.devSettings.adminEmail,
-            name: "Dev Admin (Google)",
+            name: "Dev Admin (Google Mock)",
             isAdmin: true,
           };
           await saveUser(mockUser);
           return;
         } else {
-          throw new Error("Google authentication not configured");
+          throw new Error(
+            "Google authentication is not configured. Please contact the administrator."
+          );
         }
       }
 
-      // TODO: Implement actual Google SSO
-      // const googleResult = await GoogleSignIn.signInAsync();
-      // const { user } = googleResult;
-      // const userEmail = user.email;
+      // Perform real Google Sign-In
+      const googleUser = await GoogleAuthService.signIn();
 
-      // For now, simulate Google login result
-      // In production, replace this with actual Google auth result
-      const simulatedGoogleEmail = ENV_CONFIG.isDevelopment
-        ? ENV_CONFIG.auth.devSettings.adminEmail
-        : "zahidfaqiri786@gmail.com"; // Default to authorized admin for testing
+      // Save the authenticated user
+      await saveUser(googleUser);
 
-      // Check if the Google account email is authorized for admin access
-      const isAuthorizedAdmin = ENV_CONFIG.auth.authorizedAdmins.includes(
-        simulatedGoogleEmail.toLowerCase()
-      );
-
-      if (!isAuthorizedAdmin && !ENV_CONFIG.isDevelopment) {
-        throw new Error(
-          "Unauthorized: This Google account does not have admin access"
-        );
-      }
-
-      const mockUser: User = {
-        id: "google-" + Date.now(),
-        email: simulatedGoogleEmail,
-        name:
-          simulatedGoogleEmail === "zahidfaqiri786@gmail.com"
-            ? "Zahid Faqiri"
-            : ENV_CONFIG.isDevelopment
-            ? "Dev Admin (Google)"
-            : "Admin User",
-        isAdmin: isAuthorizedAdmin,
-      };
-
-      await saveUser(mockUser);
+      console.log("Google authentication successful:", {
+        email: googleUser.email,
+        name: googleUser.name,
+        isAdmin: googleUser.isAdmin,
+      });
     } catch (error) {
       console.error("Google login error:", error);
       throw error;
@@ -225,8 +236,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      // If user was signed in with Google, sign out from Google too
+      if (user?.id?.startsWith("google-")) {
+        await GoogleAuthService.signOut();
+      }
+
+      // Clear local session
       await AsyncStorage.removeItem("@user_data");
       setUser(null);
+
+      console.log("Logout successful");
     } catch (error) {
       console.error("Error logging out:", error);
       throw error;
