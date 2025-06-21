@@ -4,14 +4,25 @@ import { AppState, AppStateStatus } from "react-native";
 
 import { NotificationSetupModal } from "@/components/notifications/NotificationSetupModal";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
-import { NotificationPreferences } from "@/types/notification";
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  NotificationPreferences,
+  PrayerNotificationSettings,
+} from "@/types/notification";
+import { PrayerName } from "@/types/prayer";
 import { NotificationService } from "@/utils/notificationService";
+
+type NotificationPrayerName = keyof NotificationPreferences["prayers"];
 
 interface NotificationContextType {
   preferences: NotificationPreferences;
   isLoading: boolean;
   shouldShowSetup: boolean;
   updatePreferences: (preferences: NotificationPreferences) => Promise<void>;
+  updatePrayerSettings: (
+    prayer: NotificationPrayerName, // Changed from PrayerName
+    settings: PrayerNotificationSettings
+  ) => Promise<void>;
   refreshNotifications: () => Promise<void>;
   checkPermissionStatus: () => Promise<boolean>;
   dismissSetup: () => void;
@@ -23,16 +34,27 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { prayerTimes } = usePrayerTimes();
-  const [preferences, setPreferences] = useState<NotificationPreferences>({
-    prayerBeginTimes: false,
-    jamahTimes: false,
-    jamahReminderMinutes: 10,
-    isEnabled: false,
-    hasAskedPermission: false,
-  });
+  const [preferences, setPreferences] = useState<NotificationPreferences>(
+    DEFAULT_NOTIFICATION_PREFERENCES
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [shouldShowSetup, setShouldShowSetup] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  const validPrayers: NotificationPrayerName[] = [
+    "fajr",
+    "zuhr",
+    "asr",
+    "maghrib",
+    "isha",
+  ];
+
+  // Helper function to check if a prayer name is valid for notifications
+  const isNotificationPrayer = (
+    prayer: PrayerName
+  ): prayer is NotificationPrayerName => {
+    return validPrayers.includes(prayer as NotificationPrayerName);
+  };
 
   useEffect(() => {
     initializeNotifications();
@@ -69,10 +91,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         console.log(
           "NotificationProvider: User hasn't been asked, will show setup modal"
         );
-        // Small delay only to ensure UI is ready, not for user experience
+        // Small delay only to ensure UI is ready
         setTimeout(() => {
           setShouldShowSetup(true);
-        }, 1000); // Just 1 second to ensure app UI is stable
+        }, 1000);
       }
     } catch (error) {
       console.error("Error initializing notifications:", error);
@@ -93,8 +115,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (!hasPermission) {
           // User denied permissions, disable notifications
           newPreferences.isEnabled = false;
-          newPreferences.prayerBeginTimes = false;
-          newPreferences.jamahTimes = false;
+          // Disable all prayer notifications
+          Object.keys(newPreferences.prayers).forEach((prayer) => {
+            const prayerKey = prayer as NotificationPrayerName;
+            newPreferences.prayers[prayerKey].beginTime = false;
+            newPreferences.prayers[prayerKey].jamahTime = false;
+          });
         }
       }
 
@@ -120,6 +146,48 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       throw error;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const updatePrayerSettings = async (
+    prayer: NotificationPrayerName, // Changed parameter type
+    settings: PrayerNotificationSettings
+  ) => {
+    try {
+      // Check if we need to request permissions
+      if (
+        !preferences.isEnabled &&
+        (settings.beginTime || settings.jamahTime)
+      ) {
+        const hasPermission = await NotificationService.requestPermissions();
+        if (!hasPermission) {
+          console.log("Permission denied, cannot enable notifications");
+          return;
+        }
+      }
+
+      const newPreferences: NotificationPreferences = {
+        ...preferences,
+        isEnabled: true, // Enable if any notification is turned on
+        prayers: {
+          ...preferences.prayers,
+          [prayer]: settings,
+        },
+      };
+
+      // Check if any notifications are still enabled
+      const hasAnyEnabled = Object.values(newPreferences.prayers).some(
+        (p) => p.beginTime || p.jamahTime
+      );
+
+      if (!hasAnyEnabled) {
+        newPreferences.isEnabled = false;
+      }
+
+      await updatePreferences(newPreferences);
+    } catch (error) {
+      console.error("Error updating prayer settings:", error);
+      throw error;
     }
   };
 
@@ -214,6 +282,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     isLoading,
     shouldShowSetup,
     updatePreferences,
+    updatePrayerSettings,
     refreshNotifications,
     checkPermissionStatus,
     dismissSetup,

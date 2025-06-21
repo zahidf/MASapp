@@ -1,4 +1,5 @@
 import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
   NotificationPreferences,
   PrayerNotification,
 } from "@/types/notification";
@@ -76,31 +77,61 @@ export class NotificationService {
       const stored = await AsyncStorage.getItem(NOTIFICATION_STORAGE_KEY);
       if (stored) {
         const preferences = JSON.parse(stored);
-        // Ensure all required fields exist (for backwards compatibility)
+
+        // Handle migration from old format to new format
+        if ("prayerBeginTimes" in preferences) {
+          // Old format detected, migrate to new format
+          console.log("Migrating old notification preferences format");
+
+          const newPreferences: NotificationPreferences = {
+            isEnabled: preferences.isEnabled ?? false,
+            hasAskedPermission: preferences.hasAskedPermission ?? false,
+            prayers: {
+              fajr: {
+                beginTime: preferences.prayerBeginTimes ?? false,
+                jamahTime: preferences.jamahTimes ?? false,
+                jamahReminderMinutes: preferences.jamahReminderMinutes ?? 10,
+              },
+              zuhr: {
+                beginTime: preferences.prayerBeginTimes ?? false,
+                jamahTime: preferences.jamahTimes ?? false,
+                jamahReminderMinutes: preferences.jamahReminderMinutes ?? 10,
+              },
+              asr: {
+                beginTime: preferences.prayerBeginTimes ?? false,
+                jamahTime: preferences.jamahTimes ?? false,
+                jamahReminderMinutes: preferences.jamahReminderMinutes ?? 10,
+              },
+              maghrib: {
+                beginTime: preferences.prayerBeginTimes ?? false,
+                jamahTime: preferences.jamahTimes ?? false,
+                jamahReminderMinutes: preferences.jamahReminderMinutes ?? 10,
+              },
+              isha: {
+                beginTime: preferences.prayerBeginTimes ?? false,
+                jamahTime: preferences.jamahTimes ?? false,
+                jamahReminderMinutes: preferences.jamahReminderMinutes ?? 10,
+              },
+            },
+          };
+
+          // Save migrated preferences
+          await this.savePreferences(newPreferences);
+          return newPreferences;
+        }
+
+        // Ensure all required fields exist
         return {
-          prayerBeginTimes: preferences.prayerBeginTimes ?? false,
-          jamahTimes: preferences.jamahTimes ?? false,
-          jamahReminderMinutes: preferences.jamahReminderMinutes ?? 10,
           isEnabled: preferences.isEnabled ?? false,
           hasAskedPermission: preferences.hasAskedPermission ?? false,
+          prayers:
+            preferences.prayers ?? DEFAULT_NOTIFICATION_PREFERENCES.prayers,
         };
       }
-      return {
-        prayerBeginTimes: false,
-        jamahTimes: false,
-        jamahReminderMinutes: 10,
-        isEnabled: false,
-        hasAskedPermission: false,
-      };
+      return DEFAULT_NOTIFICATION_PREFERENCES;
     } catch (error) {
       console.error("Error loading notification preferences:", error);
-      return {
-        prayerBeginTimes: false,
-        jamahTimes: false,
-        jamahReminderMinutes: 10,
-        isEnabled: false,
-        hasAskedPermission: false,
-      };
+      return DEFAULT_NOTIFICATION_PREFERENCES;
     }
   }
 
@@ -119,11 +150,18 @@ export class NotificationService {
     preferences: NotificationPreferences,
     daysAhead: number = 7
   ): Promise<void> {
-    if (
-      !preferences.isEnabled ||
-      (!preferences.prayerBeginTimes && !preferences.jamahTimes)
-    ) {
-      console.log("Notifications disabled or no preferences set");
+    if (!preferences.isEnabled) {
+      console.log("Notifications disabled");
+      return;
+    }
+
+    // Check if any prayer has notifications enabled
+    const hasAnyEnabled = Object.values(preferences.prayers).some(
+      (p) => p.beginTime || p.jamahTime
+    );
+
+    if (!hasAnyEnabled) {
+      console.log("No prayer notifications enabled");
       return;
     }
 
@@ -168,93 +206,105 @@ export class NotificationService {
     preferences: NotificationPreferences,
     scheduledNotifications: PrayerNotification[]
   ): Promise<void> {
-    const prayers = [
+    const prayers: Array<{
+      name: keyof NotificationPreferences["prayers"];
+      displayName: string;
+      beginTime: string;
+      jamahTime: string;
+    }> = [
       {
-        name: "Fajr",
+        name: "fajr",
+        displayName: "Fajr",
         beginTime: prayerTime.fajr_begins,
         jamahTime: prayerTime.fajr_jamah,
       },
       {
-        name: "Zuhr",
+        name: "zuhr",
+        displayName: "Zuhr",
         beginTime: prayerTime.zuhr_begins,
         jamahTime: prayerTime.zuhr_jamah,
       },
       {
-        name: "Asr",
+        name: "asr",
+        displayName: "Asr",
         beginTime: prayerTime.asr_mithl_1,
         jamahTime: prayerTime.asr_jamah,
       },
       {
-        name: "Maghrib",
+        name: "maghrib",
+        displayName: "Maghrib",
         beginTime: prayerTime.maghrib_begins,
         jamahTime: prayerTime.maghrib_jamah,
       },
       {
-        name: "Isha",
+        name: "isha",
+        displayName: "Isha",
         beginTime: prayerTime.isha_begins,
         jamahTime: prayerTime.isha_jamah,
       },
     ];
 
     for (const prayer of prayers) {
+      const prayerSettings = preferences.prayers[prayer.name];
+      if (!prayerSettings) continue;
+
       const baseDate = new Date(prayerTime.d_date);
 
       // Schedule prayer begin time notification
-      if (preferences.prayerBeginTimes && prayer.beginTime) {
+      if (prayerSettings.beginTime && prayer.beginTime) {
         await this.schedulePrayerNotification(
-          prayer.name,
+          prayer.displayName,
           "prayer_begin",
           baseDate,
           prayer.beginTime,
-          `${prayer.name} prayer time`,
-          `It's time for ${prayer.name} prayer`,
+          `${prayer.displayName} prayer time`,
+          `It's time for ${prayer.displayName} prayer`,
           scheduledNotifications
         );
       }
 
       // Schedule jamah time notifications
       if (
-        preferences.jamahTimes &&
+        prayerSettings.jamahTime &&
         prayer.jamahTime &&
         prayer.jamahTime.trim() !== ""
       ) {
         // Jamah time notification
         await this.schedulePrayerNotification(
-          prayer.name,
+          prayer.displayName,
           "jamah_time",
           baseDate,
           prayer.jamahTime,
-          `${prayer.name} Jamah`,
-          `${prayer.name} jamah is starting now`,
+          `${prayer.displayName} Jamah`,
+          `${prayer.displayName} jamah is starting now`,
           scheduledNotifications
         );
 
         // Jamah reminder notification (X minutes before)
-        if (preferences.jamahReminderMinutes > 0) {
+        if (prayerSettings.jamahReminderMinutes > 0) {
           const jamahDate = this.parseNotificationTime(
             baseDate,
             prayer.jamahTime
           );
           const reminderDate = new Date(
-            jamahDate.getTime() - preferences.jamahReminderMinutes * 60 * 1000
+            jamahDate.getTime() -
+              prayerSettings.jamahReminderMinutes * 60 * 1000
           );
 
           if (reminderDate > new Date()) {
             // Only schedule future notifications
-            const notificationId = `${prayer.name.toLowerCase()}_jamah_reminder_${
-              prayerTime.d_date
-            }`;
+            const notificationId = `${prayer.name}_jamah_reminder_${prayerTime.d_date}`;
 
             await Notifications.scheduleNotificationAsync({
               identifier: notificationId,
               content: {
-                title: `${prayer.name} Jamah Reminder`,
-                body: `${prayer.name} jamah starts in ${preferences.jamahReminderMinutes} minutes`,
+                title: `${prayer.displayName} Jamah Reminder`,
+                body: `${prayer.displayName} jamah starts in ${prayerSettings.jamahReminderMinutes} minutes`,
                 sound: true,
                 priority: Notifications.AndroidNotificationPriority.HIGH,
                 categoryIdentifier: "prayer-times",
                 data: {
-                  prayerName: prayer.name,
+                  prayerName: prayer.displayName,
                   type: "jamah_reminder",
                   date: prayerTime.d_date,
                 },
@@ -268,11 +318,11 @@ export class NotificationService {
             scheduledNotifications.push({
               id: notificationId,
               type: "jamah_reminder",
-              prayerName: prayer.name,
+              prayerName: prayer.displayName,
               scheduledDate: prayerTime.d_date,
               scheduledTime: this.formatTime(reminderDate),
-              title: `${prayer.name} Jamah Reminder`,
-              body: `${prayer.name} jamah starts in ${preferences.jamahReminderMinutes} minutes`,
+              title: `${prayer.displayName} Jamah Reminder`,
+              body: `${prayer.displayName} jamah starts in ${prayerSettings.jamahReminderMinutes} minutes`,
             });
           }
         }

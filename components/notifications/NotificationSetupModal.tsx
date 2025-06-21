@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,15 +12,16 @@ import {
 
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { NotificationPreferences } from "@/types/notification";
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  NotificationPreferences,
+} from "@/types/notification";
 
 interface NotificationSetupModalProps {
   visible: boolean;
   onComplete: (preferences: NotificationPreferences) => void;
   onSkip: () => void;
 }
-
-const REMINDER_OPTIONS = [5, 10, 15, 20, 30];
 
 export function NotificationSetupModal({
   visible,
@@ -29,9 +31,9 @@ export function NotificationSetupModal({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
 
-  const [prayerBeginTimes, setPrayerBeginTimes] = useState(false);
-  const [jamahTimes, setJamahTimes] = useState(false);
-  const [jamahReminderMinutes, setJamahReminderMinutes] = useState(10);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(
+    DEFAULT_NOTIFICATION_PREFERENCES
+  );
   const [currentStep, setCurrentStep] = useState(1);
 
   // Use dynamic colors based on color scheme
@@ -42,42 +44,66 @@ export function NotificationSetupModal({
   const surfaceColor = isDark ? "#2A2A2A" : "#F8F9FA";
   const primaryColor = isDark ? "#81C784" : "#1B5E20";
 
-  console.log("NotificationSetupModal render:", {
-    visible,
-    currentStep,
-    colorScheme,
-    isDark,
-    textColor,
-    backgroundColor,
-    surfaceColor,
-  });
-
   const handleComplete = () => {
-    const preferences: NotificationPreferences = {
-      prayerBeginTimes,
-      jamahTimes,
-      jamahReminderMinutes,
-      isEnabled: prayerBeginTimes || jamahTimes,
+    const updatedPreferences = {
+      ...preferences,
+      isEnabled: true,
       hasAskedPermission: true,
     };
-    onComplete(preferences);
+    onComplete(updatedPreferences);
   };
 
-  const nextStep = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    }
+  const handleSkip = () => {
+    onSkip();
   };
 
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
+  // Define the notification prayers type based on your actual prayers object
+  type NotificationPrayerName = keyof NotificationPreferences["prayers"];
+
+  const togglePrayerSetting = (
+    prayer: NotificationPrayerName,
+    type: "beginTime" | "jamahTime"
+  ) => {
+    setPreferences((prev) => ({
+      ...prev,
+      prayers: {
+        ...prev.prayers,
+        [prayer]: {
+          ...prev.prayers[prayer],
+          [type]: !prev.prayers[prayer][type],
+        },
+      },
+    }));
+  };
+
+  const toggleAllPrayers = (type: "beginTime" | "jamahTime") => {
+    const prayers: NotificationPrayerName[] = [
+      "fajr",
+      "zuhr",
+      "asr",
+      "maghrib",
+      "isha",
+    ];
+    const allEnabled = prayers.every((p) => preferences.prayers[p][type]);
+
+    setPreferences((prev) => {
+      const updated = { ...prev };
+      prayers.forEach((prayer) => {
+        updated.prayers[prayer][type] = !allEnabled;
+      });
+      return updated;
+    });
+  };
+
+  const hasAnyNotificationEnabled = () => {
+    return Object.values(preferences.prayers).some(
+      (p) => p.beginTime || p.jamahTime
+    );
   };
 
   const renderStepIndicator = () => (
     <View style={styles.stepIndicator}>
-      {[1, 2, 3].map((step) => (
+      {[1, 2].map((step) => (
         <View
           key={step}
           style={[
@@ -108,201 +134,147 @@ export function NotificationSetupModal({
       </Text>
 
       <Text style={[styles.stepDescription, { color: subtextColor }]}>
-        Get notified for prayer times and jamah schedules to never miss a
-        prayer. You can customize these settings anytime in the app.
+        Get notified for prayer times and jamah schedules. You can customize
+        notifications for each prayer individually.
       </Text>
 
       <View style={styles.benefitsList}>
         <View style={styles.benefitItem}>
           <Text style={styles.benefitIcon}>⏰</Text>
           <Text style={[styles.benefitText, { color: textColor }]}>
-            Timely prayer reminders
+            Never miss a prayer
           </Text>
         </View>
 
         <View style={styles.benefitItem}>
-          <Text style={styles.benefitIcon}>👥</Text>
+          <Text style={styles.benefitIcon}>🎯</Text>
           <Text style={[styles.benefitText, { color: textColor }]}>
-            Never miss jamah times
+            Customize for each prayer
           </Text>
         </View>
 
         <View style={styles.benefitItem}>
           <Text style={styles.benefitIcon}>⚙️</Text>
           <Text style={[styles.benefitText, { color: textColor }]}>
-            Fully customizable
+            Change settings anytime
           </Text>
         </View>
       </View>
     </View>
   );
 
-  const renderStep2 = () => (
-    <View style={styles.stepContent}>
-      <Text style={[styles.stepTitle, { color: textColor }]}>
-        Prayer Begin Times
-      </Text>
+  const renderStep2 = () => {
+    const prayers: Array<{ key: NotificationPrayerName; name: string }> = [
+      { key: "fajr", name: "Fajr" },
+      { key: "zuhr", name: "Zuhr" },
+      { key: "asr", name: "Asr" },
+      { key: "maghrib", name: "Maghrib" },
+      { key: "isha", name: "Isha" },
+    ];
 
-      <Text style={[styles.stepDescription, { color: subtextColor }]}>
-        Get notified when it's time for each prayer (Fajr, Zuhr, Asr, Maghrib,
-        Isha)
-      </Text>
-
-      <View style={[styles.optionCard, { backgroundColor: surfaceColor }]}>
-        <View style={styles.optionHeader}>
-          <View
-            style={[
-              styles.optionIcon,
-              { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
-            ]}
-          >
-            <Text style={styles.iconText}>🌅</Text>
-          </View>
-          <View style={styles.optionContent}>
-            <Text style={[styles.optionTitle, { color: textColor }]}>
-              Prayer Time Notifications
-            </Text>
-            <Text style={[styles.optionSubtitle, { color: subtextColor }]}>
-              Get notified at the exact start time of each prayer
-            </Text>
-          </View>
-          <Switch
-            value={prayerBeginTimes}
-            onValueChange={setPrayerBeginTimes}
-            trackColor={{
-              false: isDark ? "#555" : "#ccc",
-              true: primaryColor,
-            }}
-            thumbColor={prayerBeginTimes ? primaryColor : "#f4f3f4"}
-          />
-        </View>
-      </View>
-
-      <View
-        style={[
-          styles.exampleNotification,
-          { backgroundColor: isDark ? "#2A2A2A" : "#f0f8f0" },
-        ]}
-      >
-        <Text style={[styles.exampleTitle, { color: primaryColor }]}>
-          Example Notification:
+    return (
+      <View style={styles.stepContent}>
+        <Text style={[styles.stepTitle, { color: textColor }]}>
+          Choose Your Notifications
         </Text>
-        <Text style={[styles.exampleText, { color: subtextColor }]}>
-          "🕌 Fajr prayer time - It's time for Fajr prayer"
+
+        <Text style={[styles.stepDescription, { color: subtextColor }]}>
+          Select which prayers you'd like to be notified for
         </Text>
-      </View>
-    </View>
-  );
 
-  const renderStep3 = () => (
-    <View style={styles.stepContent}>
-      <Text style={[styles.stepTitle, { color: textColor }]}>
-        Jamah Notifications
-      </Text>
-
-      <Text style={[styles.stepDescription, { color: subtextColor }]}>
-        Get notified for congregation prayer times and set advance reminders
-      </Text>
-
-      <View style={[styles.optionCard, { backgroundColor: surfaceColor }]}>
-        <View style={styles.optionHeader}>
-          <View
-            style={[
-              styles.optionIcon,
-              { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
-            ]}
+        {/* Quick toggles */}
+        <View style={[styles.quickToggles, { backgroundColor: surfaceColor }]}>
+          <TouchableOpacity
+            style={styles.quickToggle}
+            onPress={() => toggleAllPrayers("beginTime")}
           >
-            <Text style={styles.iconText}>👥</Text>
-          </View>
-          <View style={styles.optionContent}>
-            <Text style={[styles.optionTitle, { color: textColor }]}>
-              Jamah Time Notifications
+            <Text style={[styles.quickToggleText, { color: primaryColor }]}>
+              Toggle All Begin Times
             </Text>
-            <Text style={[styles.optionSubtitle, { color: subtextColor }]}>
-              Get notified when jamah is starting
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickToggle}
+            onPress={() => toggleAllPrayers("jamahTime")}
+          >
+            <Text style={[styles.quickToggleText, { color: primaryColor }]}>
+              Toggle All Jamah Times
             </Text>
-          </View>
-          <Switch
-            value={jamahTimes}
-            onValueChange={setJamahTimes}
-            trackColor={{
-              false: isDark ? "#555" : "#ccc",
-              true: primaryColor,
-            }}
-            thumbColor={jamahTimes ? primaryColor : "#f4f3f4"}
-          />
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {jamahTimes && (
-        <View
-          style={[
-            styles.reminderSection,
-            { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
-          ]}
+        <ScrollView
+          style={styles.prayersList}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.reminderTitle, { color: textColor }]}>
-            Advance Reminder
-          </Text>
-          <Text style={[styles.reminderSubtitle, { color: subtextColor }]}>
-            How many minutes before jamah would you like to be reminded?
-          </Text>
+          {prayers.map((prayer) => (
+            <View
+              key={prayer.key}
+              style={[styles.prayerItem, { backgroundColor: surfaceColor }]}
+            >
+              <Text style={[styles.prayerName, { color: textColor }]}>
+                {prayer.name}
+              </Text>
 
-          <View style={styles.reminderOptions}>
-            {REMINDER_OPTIONS.map((minutes) => (
-              <TouchableOpacity
-                key={minutes}
-                style={[
-                  styles.reminderOption,
-                  {
-                    backgroundColor:
-                      jamahReminderMinutes === minutes
+              <View style={styles.prayerToggles}>
+                <View style={styles.toggleItem}>
+                  <Text style={[styles.toggleLabel, { color: subtextColor }]}>
+                    Begin
+                  </Text>
+                  <Switch
+                    value={preferences.prayers[prayer.key].beginTime}
+                    onValueChange={() =>
+                      togglePrayerSetting(prayer.key, "beginTime")
+                    }
+                    trackColor={{
+                      false: isDark ? "#555" : "#ccc",
+                      true: primaryColor,
+                    }}
+                    thumbColor={
+                      preferences.prayers[prayer.key].beginTime
                         ? primaryColor
-                        : isDark
-                        ? "#151718"
-                        : "#fff",
-                    borderColor:
-                      jamahReminderMinutes === minutes
-                        ? primaryColor
-                        : isDark
-                        ? "#555"
-                        : "#ccc",
-                  },
-                ]}
-                onPress={() => setJamahReminderMinutes(minutes)}
-              >
-                <Text
-                  style={[
-                    styles.reminderOptionText,
-                    {
-                      color:
-                        jamahReminderMinutes === minutes ? "#fff" : textColor,
-                    },
-                  ]}
-                >
-                  {minutes}m
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                        : "#f4f3f4"
+                    }
+                    style={styles.switch}
+                  />
+                </View>
 
-          <View
-            style={[
-              styles.exampleNotification,
-              { backgroundColor: isDark ? "#333" : "#f0f8f0" },
-            ]}
-          >
-            <Text style={[styles.exampleTitle, { color: primaryColor }]}>
-              Example:
-            </Text>
-            <Text style={[styles.exampleText, { color: subtextColor }]}>
-              "🕌 Fajr jamah starts in {jamahReminderMinutes} minutes"
+                <View style={styles.toggleItem}>
+                  <Text style={[styles.toggleLabel, { color: subtextColor }]}>
+                    Jamah
+                  </Text>
+                  <Switch
+                    value={preferences.prayers[prayer.key].jamahTime}
+                    onValueChange={() =>
+                      togglePrayerSetting(prayer.key, "jamahTime")
+                    }
+                    trackColor={{
+                      false: isDark ? "#555" : "#ccc",
+                      true: primaryColor,
+                    }}
+                    thumbColor={
+                      preferences.prayers[prayer.key].jamahTime
+                        ? primaryColor
+                        : "#f4f3f4"
+                    }
+                    style={styles.switch}
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        {!hasAnyNotificationEnabled() && (
+          <View style={[styles.warningBox, { backgroundColor: "#FFF3E0" }]}>
+            <Text style={[styles.warningText, { color: "#E65100" }]}>
+              ⚠️ No notifications selected. You won't receive any prayer
+              reminders.
             </Text>
           </View>
-        </View>
-      )}
-    </View>
-  );
+        )}
+      </View>
+    );
+  };
 
   if (!visible) return null;
 
@@ -326,7 +298,6 @@ export function NotificationSetupModal({
 
             {currentStep === 1 && renderStep1()}
             {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
           </ScrollView>
 
           <View
@@ -341,7 +312,7 @@ export function NotificationSetupModal({
                   styles.secondaryButton,
                   { borderColor: isDark ? "#555" : "#ccc" },
                 ]}
-                onPress={prevStep}
+                onPress={() => setCurrentStep(currentStep - 1)}
               >
                 <Text
                   style={[styles.secondaryButtonText, { color: textColor }]}
@@ -352,13 +323,13 @@ export function NotificationSetupModal({
             )}
 
             <View style={styles.primaryButtons}>
-              {currentStep < 3 ? (
+              {currentStep < 2 ? (
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
                     { backgroundColor: primaryColor },
                   ]}
-                  onPress={nextStep}
+                  onPress={() => setCurrentStep(2)}
                 >
                   <Text style={styles.primaryButtonText}>Continue</Text>
                 </TouchableOpacity>
@@ -369,7 +340,7 @@ export function NotificationSetupModal({
                       styles.skipButton,
                       { borderColor: isDark ? "#555" : "#ccc" },
                     ]}
-                    onPress={onSkip}
+                    onPress={handleSkip}
                   >
                     <Text
                       style={[styles.skipButtonText, { color: subtextColor }]}
@@ -381,9 +352,16 @@ export function NotificationSetupModal({
                   <TouchableOpacity
                     style={[
                       styles.primaryButton,
-                      { backgroundColor: primaryColor },
+                      {
+                        backgroundColor: hasAnyNotificationEnabled()
+                          ? primaryColor
+                          : isDark
+                          ? "#555"
+                          : "#ccc",
+                      },
                     ]}
                     onPress={handleComplete}
+                    disabled={!hasAnyNotificationEnabled()}
                   >
                     <Text style={styles.primaryButtonText}>
                       Enable Notifications
@@ -410,22 +388,22 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: "100%",
     maxWidth: 400,
-    height: "80%", // Give it a fixed height
-    minHeight: 500, // Ensure minimum height
+    height: "80%",
+    minHeight: 500,
     borderRadius: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 20,
-    flexDirection: "column", // Ensure proper flex direction
+    flexDirection: "column",
   },
   scrollView: {
-    flex: 1, // Take up available space
+    flex: 1,
   },
   scrollContent: {
     padding: 24,
-    minHeight: 400, // Ensure content has minimum height
+    minHeight: 400,
   },
   stepIndicator: {
     flexDirection: "row",
@@ -441,8 +419,8 @@ const styles = StyleSheet.create({
   },
   stepContent: {
     alignItems: "center",
-    flex: 1, // Allow content to expand
-    minHeight: 300, // Ensure minimum content height
+    flex: 1,
+    minHeight: 300,
   },
   iconContainer: {
     width: 96,
@@ -460,174 +438,149 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 16,
-    lineHeight: 32,
+    lineHeight: 30,
   },
   stepDescription: {
     fontSize: 16,
     textAlign: "center",
-    lineHeight: 24,
     marginBottom: 32,
+    lineHeight: 22,
     paddingHorizontal: 8,
   },
   benefitsList: {
     width: "100%",
-    gap: 20,
+    paddingHorizontal: 16,
   },
   benefitItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    paddingHorizontal: 16,
+    marginBottom: 20,
+    paddingVertical: 8,
   },
   benefitIcon: {
     fontSize: 24,
+    marginRight: 16,
+    width: 32,
+    textAlign: "center",
   },
   benefitText: {
     fontSize: 16,
     fontWeight: "500",
     flex: 1,
-  },
-  optionCard: {
-    width: "100%",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  optionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  optionContent: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  optionSubtitle: {
-    fontSize: 14,
     lineHeight: 20,
   },
-  reminderSection: {
+  quickToggles: {
     width: "100%",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 16,
-  },
-  reminderTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  reminderSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 20,
+    gap: 8,
   },
-  reminderOptions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 12,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-  reminderOption: {
+  quickToggle: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    minWidth: 60,
+    borderRadius: 8,
     alignItems: "center",
   },
-  reminderOptionText: {
-    fontSize: 16,
+  quickToggleText: {
+    fontSize: 14,
     fontWeight: "600",
   },
-  exampleNotification: {
-    marginTop: 16,
+  prayersList: {
+    width: "100%",
+    maxHeight: 280,
+  },
+  prayerItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: "#1B5E20",
+    marginBottom: 12,
   },
-  exampleTitle: {
-    fontSize: 14,
+  prayerName: {
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 8,
+    flex: 1,
   },
-  exampleText: {
+  prayerToggles: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 24,
+  },
+  toggleItem: {
+    alignItems: "center",
+    gap: 4,
+  },
+  toggleLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  switch: {
+    transform: Platform.OS === "ios" ? [{ scaleX: 0.8 }, { scaleY: 0.8 }] : [],
+  },
+  warningBox: {
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#FFB74D",
+  },
+  warningText: {
     fontSize: 14,
-    fontStyle: "italic",
-    lineHeight: 20,
+    fontWeight: "500",
+    textAlign: "center",
+    lineHeight: 18,
   },
   buttonContainer: {
     flexDirection: "row",
     padding: 24,
     paddingTop: 16,
-    gap: 12,
     borderTopWidth: 1,
-    flexShrink: 0, // Don't let buttons shrink
+    gap: 12,
+    alignItems: "center",
   },
   secondaryButton: {
-    flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
+    minWidth: 80,
     alignItems: "center",
-    justifyContent: "center",
   },
   secondaryButtonText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: "600",
   },
   primaryButtons: {
-    flex: 2,
+    flex: 1,
     flexDirection: "row",
     gap: 12,
   },
-  primaryButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-  },
   skipButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     alignItems: "center",
+    minHeight: 50,
     justifyContent: "center",
   },
   skipButtonText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: "600",
+  },
+  primaryButton: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    minHeight: 50,
+    justifyContent: "center",
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
