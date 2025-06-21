@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SvgXml } from "react-native-svg";
 
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
@@ -313,7 +314,7 @@ export default function TodayScreen() {
     }
   };
 
-  // iOS-native prayer card render function
+  // Enhanced prayer card render function with better visual hierarchy
   const renderPrayerCard = (
     name: string,
     time: string,
@@ -332,10 +333,11 @@ export default function TodayScreen() {
             opacity: cardOpacity,
             transform: [{ scale: cardScale }],
           },
+          styles.prayerCardWrapper,
         ]}
       >
         <BlurView
-          intensity={80}
+          intensity={isActive ? 100 : isNext ? 90 : 80}
           tint={colorScheme === "dark" ? "dark" : "light"}
           style={[
             styles.prayerCard,
@@ -343,15 +345,17 @@ export default function TodayScreen() {
             isNext && styles.nextPrayerCard,
             {
               backgroundColor: isActive
-                ? colors.primary + "15"
+                ? colors.primary + "20"
                 : isNext
-                ? colors.primary + "08"
-                : colors.surface + "90",
+                ? colors.primary + "12"
+                : colors.surface + "95",
               borderColor: isActive
                 ? colors.primary
                 : isNext
-                ? colors.primary + "40"
-                : "transparent",
+                ? colors.primary + "60"
+                : colorScheme === "dark"
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(0,0,0,0.06)",
             },
           ]}
         >
@@ -363,24 +367,24 @@ export default function TodayScreen() {
                   styles.prayerIconContainer,
                   {
                     backgroundColor: isActive
-                      ? colors.primary + "20"
+                      ? colors.primary + "25"
                       : isNext
-                      ? colors.primary + "10"
+                      ? colors.primary + "15"
                       : colorScheme === "dark"
-                      ? "rgba(255,255,255,0.05)"
-                      : "rgba(0,0,0,0.03)",
+                      ? "rgba(255,255,255,0.08)"
+                      : "rgba(0,0,0,0.05)",
                   },
                 ]}
               >
                 <IconSymbol
                   name={getPrayerIcon(name) as any}
-                  size={20}
+                  size={22}
                   color={
                     isActive
                       ? colors.primary
                       : isNext
                       ? colors.primary
-                      : colors.text + "80"
+                      : colors.text + "85"
                   }
                 />
               </View>
@@ -404,7 +408,7 @@ export default function TodayScreen() {
                       {
                         backgroundColor: isActive
                           ? colors.primary
-                          : colors.primary + "20",
+                          : colors.primary + "25",
                       },
                     ]}
                   >
@@ -424,7 +428,7 @@ export default function TodayScreen() {
             {/* Time Information */}
             <View style={styles.timeContainer}>
               <View style={styles.timeSection}>
-                <Text style={[styles.timeLabel, { color: colors.text + "60" }]}>
+                <Text style={[styles.timeLabel, { color: colors.text + "65" }]}>
                   BEGINS
                 </Text>
                 <Text
@@ -445,12 +449,12 @@ export default function TodayScreen() {
                   <View
                     style={[
                       styles.timeDivider,
-                      { backgroundColor: colors.text + "10" },
+                      { backgroundColor: colors.text + "12" },
                     ]}
                   />
                   <View style={styles.timeSection}>
                     <Text
-                      style={[styles.timeLabel, { color: colors.text + "60" }]}
+                      style={[styles.timeLabel, { color: colors.text + "65" }]}
                     >
                       JAMAH
                     </Text>
@@ -482,21 +486,38 @@ export default function TodayScreen() {
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
         />
 
-        {/* iOS-style Header */}
+        {/* Enhanced Header with Logo */}
         <BlurView
           intensity={80}
           tint={colorScheme === "dark" ? "dark" : "light"}
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Today
-            </Text>
-            <Text
-              style={[styles.headerSubtitle, { color: colors.text + "80" }]}
-            >
-              {formatCurrentDate()}
-            </Text>
+            <View style={styles.headerMainRow}>
+              <View style={styles.headerTextSection}>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                  Today
+                </Text>
+                <Text
+                  style={[styles.headerSubtitle, { color: colors.text + "80" }]}
+                >
+                  {formatCurrentDate()}
+                </Text>
+              </View>
+
+              {/* Mosque Logo */}
+              <View style={styles.logoContainer}>
+                {logoSvg ? (
+                  <SvgXml xml={logoSvg} width={32} height={32} />
+                ) : (
+                  <IconSymbol
+                    name="building.2"
+                    size={28}
+                    color={colors.text + "60"}
+                  />
+                )}
+              </View>
+            </View>
           </View>
         </BlurView>
 
@@ -543,67 +564,87 @@ export default function TodayScreen() {
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
 
-      {/* iOS-style Header with Blur */}
+      {/* Enhanced Header with Logo and Export */}
       <BlurView
         intensity={80}
         tint={colorScheme === "dark" ? "dark" : "light"}
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <View style={styles.headerTextSection}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Today
-            </Text>
-            <Text
-              style={[styles.headerSubtitle, { color: colors.text + "80" }]}
-            >
-              {formatCurrentDate()}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              { backgroundColor: colors.primary + "15" },
-            ]}
-            onPress={handlePrint}
-            disabled={isExporting}
-            activeOpacity={0.7}
-          >
-            <IconSymbol
-              name="square.and.arrow.up"
-              size={20}
-              color={colors.primary}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Next Prayer Summary */}
-        {nextPrayer && todaysPrayers && (
-          <View
-            style={[
-              styles.nextPrayerSummary,
-              { backgroundColor: colors.primary + "10" },
-            ]}
-          >
-            <View style={styles.nextPrayerContent}>
-              <Text
-                style={[
-                  styles.nextPrayerLabel,
-                  { color: colors.primary + "80" },
-                ]}
-              >
-                NEXT PRAYER
+          <View style={styles.headerMainRow}>
+            <View style={styles.headerTextSection}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                Today
               </Text>
-              <Text style={[styles.nextPrayerName, { color: colors.primary }]}>
-                {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
+              <Text
+                style={[styles.headerSubtitle, { color: colors.text + "80" }]}
+              >
+                {formatCurrentDate()}
               </Text>
             </View>
-            <Text style={[styles.nextPrayerTime, { color: colors.primary }]}>
-              {getCountdownToNext() || "Soon"}
-            </Text>
+
+            <View style={styles.headerActions}>
+              {/* Mosque Logo */}
+              <View style={styles.logoContainer}>
+                {logoSvg ? (
+                  <SvgXml xml={logoSvg} width={32} height={32} />
+                ) : (
+                  <IconSymbol
+                    name="building.2"
+                    size={28}
+                    color={colors.text + "60"}
+                  />
+                )}
+              </View>
+
+              {/* Export Button */}
+              <TouchableOpacity
+                style={[
+                  styles.headerButton,
+                  { backgroundColor: colors.primary + "15" },
+                ]}
+                onPress={handlePrint}
+                disabled={isExporting}
+                activeOpacity={0.7}
+              >
+                <IconSymbol
+                  name="square.and.arrow.up"
+                  size={20}
+                  color={colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
+
+          {/* Next Prayer Summary */}
+          {nextPrayer && todaysPrayers && (
+            <View
+              style={[
+                styles.nextPrayerSummary,
+                { backgroundColor: colors.primary + "12" },
+              ]}
+            >
+              <View style={styles.nextPrayerContent}>
+                <Text
+                  style={[
+                    styles.nextPrayerLabel,
+                    { color: colors.primary + "85" },
+                  ]}
+                >
+                  NEXT PRAYER
+                </Text>
+                <Text
+                  style={[styles.nextPrayerName, { color: colors.primary }]}
+                >
+                  {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
+                </Text>
+              </View>
+              <Text style={[styles.nextPrayerTime, { color: colors.primary }]}>
+                {getCountdownToNext() || "Soon"}
+              </Text>
+            </View>
+          )}
+        </View>
       </BlurView>
 
       {/* Main Content */}
@@ -685,18 +726,32 @@ export default function TodayScreen() {
                   )}
                 </View>
 
-                {/* Mosque Info Card */}
-                <View
+                {/* Enhanced Mosque Info Card */}
+                <BlurView
+                  intensity={60}
+                  tint={colorScheme === "dark" ? "dark" : "light"}
                   style={[
                     styles.mosqueInfoCard,
-                    { backgroundColor: colors.surface + "80" },
+                    {
+                      backgroundColor: colors.surface + "90",
+                      borderColor:
+                        colorScheme === "dark"
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(0,0,0,0.04)",
+                    },
                   ]}
                 >
-                  <IconSymbol
-                    name="building.2"
-                    size={20}
-                    color={colors.text + "60"}
-                  />
+                  <View style={styles.mosqueLogoContainer}>
+                    {logoSvg ? (
+                      <SvgXml xml={logoSvg} width={24} height={24} />
+                    ) : (
+                      <IconSymbol
+                        name="building.2"
+                        size={20}
+                        color={colors.text + "60"}
+                      />
+                    )}
+                  </View>
                   <View style={styles.mosqueInfoContent}>
                     <Text
                       style={[styles.mosqueInfoTitle, { color: colors.text }]}
@@ -712,7 +767,7 @@ export default function TodayScreen() {
                       Birmingham, UK
                     </Text>
                   </View>
-                </View>
+                </BlurView>
               </View>
             ) : (
               // Monthly view - keeping your existing implementation
@@ -727,26 +782,29 @@ export default function TodayScreen() {
   );
 }
 
-// iOS-optimized styles
+// Enhanced styles with better visual hierarchy
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
 
-  // iOS-style header with blur
+  // Enhanced header with logo support
   header: {
     paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight || 24,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(0,0,0,0.1)",
+    borderBottomColor: "rgba(0,0,0,0.08)",
   },
 
   headerContent: {
+    gap: 12,
+  },
+
+  headerMainRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
   },
 
   headerTextSection: {
@@ -766,13 +824,25 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
 
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  logoContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 16,
   },
 
   nextPrayerSummary: {
@@ -782,6 +852,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.04)",
   },
 
   nextPrayerContent: {
@@ -822,41 +894,62 @@ const styles = StyleSheet.create({
   },
 
   prayersList: {
-    gap: 12,
+    gap: 16, // Increased gap for better separation
   },
 
-  // iOS-style prayer cards with blur
+  // Enhanced prayer cards with better visual hierarchy
+  prayerCardWrapper: {
+    // Wrapper for enhanced shadow effects
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
   prayerCard: {
-    borderRadius: 16,
+    borderRadius: 18, // Slightly larger radius for modern look
     overflow: "hidden",
-    borderWidth: 1,
-  },
-
-  activePrayerCard: {
-    borderWidth: 2,
-  },
-
-  nextPrayerCard: {
     borderWidth: 1.5,
   },
 
+  activePrayerCard: {
+    borderWidth: 2.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+
+  nextPrayerCard: {
+    borderWidth: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+
   prayerCardContent: {
-    padding: 16,
+    padding: 18, // Increased padding for better breathing room
   },
 
   prayerHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14, // Increased margin
   },
 
   prayerIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 40, // Slightly larger
+    height: 40,
+    borderRadius: 14, // More rounded
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 14, // Increased margin
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.04)",
   },
 
   prayerNameContainer: {
@@ -867,14 +960,16 @@ const styles = StyleSheet.create({
   },
 
   prayerName: {
-    fontSize: 17,
+    fontSize: 18, // Slightly larger
     letterSpacing: -0.4,
   },
 
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10, // Increased padding
+    paddingVertical: 5,
+    borderRadius: 10, // More rounded
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.04)",
   },
 
   statusText: {
@@ -883,11 +978,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Time information layout
+  // Enhanced time information layout
   timeContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
+    paddingTop: 4,
   },
 
   timeSection: {
@@ -896,31 +992,47 @@ const styles = StyleSheet.create({
   },
 
   timeDivider: {
-    width: 1,
-    height: 40,
-    marginHorizontal: 16,
+    width: 1.5, // Slightly thicker
+    height: 44, // Taller
+    marginHorizontal: 18, // More spacing
+    borderRadius: 1,
   },
 
   timeLabel: {
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: 5, // Increased margin
   },
 
   timeValue: {
-    fontSize: 22,
+    fontSize: 24, // Larger for better readability
     letterSpacing: -0.4,
   },
 
-  // Mosque info card
+  // Enhanced mosque info card
   mosqueInfoCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 24,
-    padding: 16,
+    marginTop: 28, // Increased margin
+    padding: 18, // Increased padding
+    borderRadius: 16, // More rounded
+    borderWidth: 1,
+    gap: 14, // Increased gap
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+
+  mosqueLogoContainer: {
+    width: 36,
+    height: 36,
     borderRadius: 12,
-    gap: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.02)",
   },
 
   mosqueInfoContent: {
@@ -928,14 +1040,14 @@ const styles = StyleSheet.create({
   },
 
   mosqueInfoTitle: {
-    fontSize: 15,
+    fontSize: 16, // Slightly larger
     fontWeight: "600",
     letterSpacing: -0.4,
-    marginBottom: 2,
+    marginBottom: 3, // Increased margin
   },
 
   mosqueInfoSubtitle: {
-    fontSize: 13,
+    fontSize: 14, // Slightly larger
     letterSpacing: -0.08,
   },
 
@@ -1006,7 +1118,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
 
-  // Monthly view improvements
   monthlyView: {
     padding: 20,
   },
