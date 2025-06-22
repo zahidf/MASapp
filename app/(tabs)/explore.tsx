@@ -1,4 +1,5 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { Asset } from "expo-asset";
+import { BlurView } from "expo-blur";
 import React from "react";
 import {
   Alert,
@@ -8,12 +9,12 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SvgXml } from "react-native-svg";
 
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -29,18 +30,46 @@ interface MenuItem {
   icon: string;
   action: () => void;
   color?: string;
+  destructive?: boolean;
 }
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
   const [fadeAnim] = React.useState(new Animated.Value(0));
+  const [headerAnim] = React.useState(new Animated.Value(0));
+  const [logoSvg, setLogoSvg] = React.useState<string>("");
 
   React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    // Load SVG logo
+    const loadLogo = async () => {
+      try {
+        const asset = Asset.fromModule(
+          require("@/assets/logos/mosqueLogo.svg")
+        );
+        await asset.downloadAsync();
+        const response = await fetch(asset.localUri || asset.uri);
+        const svgContent = await response.text();
+        setLogoSvg(svgContent);
+      } catch (error) {
+        console.error("Error loading logo:", error);
+      }
+    };
+    loadLogo();
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerAnim, {
+        toValue: 1,
+        tension: 65,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const handleOpenMaps = () => {
@@ -123,21 +152,18 @@ export default function ExploreScreen() {
           subtitle: "Grove St, Smethwick, Birmingham",
           icon: "location.fill",
           action: handleOpenMaps,
-          color: "#1976D2",
         },
         {
           title: "Contact Us",
           subtitle: "Call the mosque directly",
           icon: "phone.fill",
           action: handleCall,
-          color: "#388E3C",
         },
         {
           title: "Visit Website",
           subtitle: "Learn more about our community",
           icon: "globe",
           action: handleWebsite,
-          color: "#7B1FA2",
         },
       ],
     },
@@ -149,35 +175,36 @@ export default function ExploreScreen() {
           subtitle: "Donation feature coming soon",
           icon: "heart.fill",
           action: handleDonate,
-          color: "#D32F2F",
         },
         {
           title: "Send Feedback",
           subtitle: "Help us improve the app",
           icon: "envelope.fill",
           action: handleFeedback,
-          color: "#F57C00",
         },
       ],
     },
     {
-      title: "App Information",
+      title: "About",
       items: [
         {
-          title: "About",
-          subtitle: "App version and information",
+          title: "About This App",
+          subtitle: "Version 1.0.0",
           icon: "info.circle.fill",
           action: handleAbout,
-          color: "#5D4037",
         },
       ],
     },
   ];
 
-  const renderMenuItem = (item: MenuItem) => (
+  const renderMenuItem = (item: MenuItem, isLast: boolean) => (
     <TouchableOpacity
       key={item.title}
-      style={styles.menuItem}
+      style={[
+        styles.menuItem,
+        isLast && styles.lastMenuItem,
+        item.destructive && styles.destructiveMenuItem,
+      ]}
       onPress={item.action}
       activeOpacity={0.7}
     >
@@ -185,120 +212,224 @@ export default function ExploreScreen() {
         style={[
           styles.menuItemIcon,
           {
-            backgroundColor:
-              item.color || Colors[colorScheme ?? "light"].primary,
+            backgroundColor: item.color
+              ? `${item.color}15`
+              : `${colors.primary}15`,
           },
         ]}
       >
-        <IconSymbol name={item.icon as any} size={24} color="#fff" />
+        <IconSymbol
+          name={item.icon as any}
+          size={22}
+          color={item.destructive ? colors.error : item.color || colors.primary}
+        />
       </View>
       <View style={styles.menuItemContent}>
-        <ThemedText style={styles.menuItemTitle}>{item.title}</ThemedText>
-        <ThemedText style={styles.menuItemSubtitle}>{item.subtitle}</ThemedText>
+        <Text
+          style={[
+            styles.menuItemTitle,
+            { color: item.destructive ? colors.error : colors.text },
+          ]}
+        >
+          {item.title}
+        </Text>
+        <Text style={[styles.menuItemSubtitle, { color: colors.text + "60" }]}>
+          {item.subtitle}
+        </Text>
       </View>
-      <IconSymbol
-        name="chevron.right"
-        size={20}
-        color={Colors[colorScheme ?? "light"].icon}
-      />
+      <IconSymbol name="chevron.right" size={18} color={colors.text + "30"} />
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
 
-      {/* Enhanced Header */}
-      <LinearGradient
-        colors={
-          colorScheme === "dark"
-            ? ["#1B5E20", "#2E7D32", "#388E3C"]
-            : ["#E8F5E9", "#C8E6C9", "#A5D6A7"]
-        }
-        style={styles.header}
+      {/* Enhanced iOS-style Header with Blur */}
+      <Animated.View
+        style={[
+          styles.headerWrapper,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
       >
-        <View style={styles.headerContent}>
-          <ThemedText type="title" style={styles.headerTitle}>
-            More
-          </ThemedText>
-          <ThemedText style={styles.headerSubtitle}>
-            Mosque information and app settings
-          </ThemedText>
+        <BlurView
+          intensity={85}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              More
+            </Text>
+            <Text
+              style={[styles.headerSubtitle, { color: colors.text + "80" }]}
+            >
+              Mosque information and app settings
+            </Text>
+          </View>
+        </BlurView>
+
+        {/* Header edge effect */}
+        <View style={styles.headerEdgeEffect}>
+          <View
+            style={[
+              styles.headerEdgeGradient,
+              {
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "rgba(0,0,0,0.2)"
+                    : "rgba(0,0,0,0.08)",
+              },
+            ]}
+          />
         </View>
-      </LinearGradient>
+      </Animated.View>
 
       <ScrollView
-        style={styles.scrollContent}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Mosque Info Card */}
-          <ThemedView style={styles.mosqueCard}>
+          {/* Mosque Info Card - Redesigned for iOS consistency */}
+          <BlurView
+            intensity={60}
+            tint={colorScheme === "dark" ? "dark" : "light"}
+            style={[
+              styles.mosqueCard,
+              {
+                backgroundColor: colors.surface + "95",
+                borderColor:
+                  colorScheme === "dark"
+                    ? "rgba(255,255,255,0.06)"
+                    : "rgba(0,0,0,0.04)",
+              },
+            ]}
+          >
             <View style={styles.mosqueHeader}>
-              <IconSymbol
-                name="building.2"
-                size={32}
-                color={Colors[colorScheme ?? "light"].primary}
-              />
-              <View style={styles.mosqueInfo}>
-                <ThemedText type="subtitle" style={styles.mosqueTitle}>
-                  Masjid Abubakr Siddique
-                </ThemedText>
-                <ThemedText style={styles.mosqueAddress}>
-                  Grove St, Smethwick, Birmingham B66 2QS
-                </ThemedText>
+              <View
+                style={[
+                  styles.mosqueIconContainer,
+                  { backgroundColor: colors.primary + "15" },
+                ]}
+              >
+                {logoSvg ? (
+                  <SvgXml xml={logoSvg} width={48} height={48} />
+                ) : (
+                  <IconSymbol
+                    name="building.2.fill"
+                    size={32}
+                    color={colors.primary}
+                  />
+                )}
               </View>
             </View>
+
+            <Text style={[styles.mosqueTitle, { color: colors.text }]}>
+              Masjid Abubakr Siddique
+            </Text>
+            <Text style={[styles.mosqueAddress, { color: colors.text + "60" }]}>
+              Grove St, Smethwick, Birmingham B66 2QS
+            </Text>
 
             <View style={styles.mosqueStats}>
               <View style={styles.statItem}>
-                <ThemedText style={styles.statValue}>5</ThemedText>
-                <ThemedText style={styles.statLabel}>Daily Prayers</ThemedText>
+                <Text style={[styles.statValue, { color: colors.primary }]}>
+                  5
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
+                  Daily Prayers
+                </Text>
               </View>
-              <View style={styles.statDivider} />
+              <View
+                style={[
+                  styles.statDivider,
+                  { backgroundColor: colors.text + "10" },
+                ]}
+              />
               <View style={styles.statItem}>
-                <ThemedText style={styles.statValue}>365</ThemedText>
-                <ThemedText style={styles.statLabel}>Days a Year</ThemedText>
+                <Text style={[styles.statValue, { color: colors.primary }]}>
+                  365
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
+                  Days Open
+                </Text>
               </View>
-              <View style={styles.statDivider} />
+              <View
+                style={[
+                  styles.statDivider,
+                  { backgroundColor: colors.text + "10" },
+                ]}
+              />
               <View style={styles.statItem}>
-                <ThemedText style={styles.statValue}>∞</ThemedText>
-                <ThemedText style={styles.statLabel}>Blessings</ThemedText>
+                <Text style={[styles.statValue, { color: colors.primary }]}>
+                  ∞
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
+                  Blessings
+                </Text>
               </View>
             </View>
-          </ThemedView>
+          </BlurView>
 
-          {/* Menu Sections */}
+          {/* Menu Sections - iOS-style grouped lists */}
           {menuSections.map((section, sectionIndex) => (
-            <ThemedView key={section.title} style={styles.menuSection}>
-              <ThemedText style={styles.sectionTitle}>
+            <View key={section.title} style={styles.menuSection}>
+              <Text
+                style={[styles.sectionTitle, { color: colors.text + "60" }]}
+              >
                 {section.title}
-              </ThemedText>
-              {section.items.map(renderMenuItem)}
-            </ThemedView>
+              </Text>
+              <BlurView
+                intensity={60}
+                tint={colorScheme === "dark" ? "dark" : "light"}
+                style={[
+                  styles.sectionCard,
+                  {
+                    backgroundColor: colors.surface + "95",
+                    borderColor:
+                      colorScheme === "dark"
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(0,0,0,0.04)",
+                  },
+                ]}
+              >
+                {section.items.map((item, index) =>
+                  renderMenuItem(item, index === section.items.length - 1)
+                )}
+              </BlurView>
+            </View>
           ))}
 
-          {/* App Version Footer */}
+          {/* Footer - iOS-style centered text */}
           <View style={styles.footer}>
-            <ThemedText style={styles.footerText}>
-              Masjid Abubakr Siddique App v1.0.0
-            </ThemedText>
-            <ThemedText style={styles.footerSubtext}>
+            <Text style={[styles.footerText, { color: colors.text + "40" }]}>
+              Masjid Abubakr Siddique App
+            </Text>
+            <Text style={[styles.footerVersion, { color: colors.text + "30" }]}>
+              Version 1.0.0
+            </Text>
+            <Text style={[styles.footerSubtext, { color: colors.text + "30" }]}>
               Made with ❤️ for the Muslim community
-            </ThemedText>
+            </Text>
             {__DEV__ && (
               <View style={styles.devFooter}>
-                <ThemedText style={styles.devText}>
-                  🔧 Development Build
-                </ThemedText>
+                <Text style={styles.devText}>🔧 Development Build</Text>
               </View>
             )}
           </View>
-
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
         </Animated.View>
       </ScrollView>
     </View>
@@ -308,166 +439,226 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
+
+  // Enhanced iOS-style header
+  headerWrapper: {
+    backgroundColor: "transparent",
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+
   header: {
-    paddingTop: Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 24,
-    paddingBottom: 24,
+    paddingTop: Platform.OS === "ios" ? 60 : StatusBar.currentHeight || 24,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 12,
+    paddingBottom: 16,
   },
+
+  headerEdgeEffect: {
+    height: 1,
+  },
+
+  headerEdgeGradient: {
+    height: 1,
+    opacity: 0.15,
+  },
+
   headerContent: {
-    marginBottom: 0,
+    gap: 4,
   },
+
   headerTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#fff",
-    marginBottom: 4,
+    fontSize: 34,
+    fontWeight: "700",
+    letterSpacing: 0.37,
   },
+
   headerSubtitle: {
-    fontSize: 16,
-    color: "rgba(255,255,255,0.9)",
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "400",
+    letterSpacing: -0.4,
   },
-  scrollContent: {
+
+  scrollView: {
     flex: 1,
   },
-  mosqueCard: {
-    margin: 20,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 8,
+
+  scrollContent: {
+    paddingBottom: Platform.OS === "ios" ? 100 : 80,
   },
-  mosqueHeader: {
-    flexDirection: "row",
+
+  // Mosque Card - iOS style
+  mosqueCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: "hidden",
     alignItems: "center",
-    gap: 16,
+  },
+
+  mosqueHeader: {
+    marginBottom: 16,
+  },
+
+  mosqueIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  mosqueTitle: {
+    fontSize: 22,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+
+  mosqueAddress: {
+    fontSize: 15,
+    letterSpacing: -0.2,
+    textAlign: "center",
     marginBottom: 20,
   },
-  mosqueInfo: {
-    flex: 1,
-  },
-  mosqueTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  mosqueAddress: {
-    fontSize: 14,
-    opacity: 0.7,
-    fontWeight: "500",
-  },
+
   mosqueStats: {
     flexDirection: "row",
-    justifyContent: "space-around",
     alignItems: "center",
+    width: "100%",
+    justifyContent: "space-around",
   },
+
   statItem: {
     alignItems: "center",
     flex: 1,
   },
+
   statValue: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: Colors.light.primary,
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: -0.4,
     marginBottom: 4,
   },
+
   statLabel: {
-    fontSize: 12,
-    opacity: 0.7,
-    fontWeight: "600",
+    fontSize: 13,
+    letterSpacing: -0.08,
     textAlign: "center",
   },
+
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: "rgba(0,0,0,0.1)",
+    opacity: 0.5,
   },
+
+  // Menu Sections - iOS grouped style
   menuSection: {
-    margin: 20,
-    marginTop: 0,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 35,
   },
+
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 16,
-    opacity: 0.8,
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.08,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    marginLeft: 32,
+    marginBottom: 8,
   },
+
+  sectionCard: {
+    marginHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.06)",
+    minHeight: 60,
   },
+
+  lastMenuItem: {
+    borderBottomWidth: 0,
+  },
+
+  destructiveMenuItem: {
+    // For future use if needed
+  },
+
   menuItemIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 12,
   },
+
   menuItemContent: {
     flex: 1,
+    justifyContent: "center",
   },
+
   menuItemTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
     marginBottom: 2,
   },
+
   menuItemSubtitle: {
-    fontSize: 14,
-    opacity: 0.7,
-    fontWeight: "500",
+    fontSize: 13,
+    letterSpacing: -0.08,
   },
+
+  // Footer - iOS style
   footer: {
     alignItems: "center",
-    padding: 20,
-    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
+
   footerText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#666",
+    letterSpacing: -0.2,
     marginBottom: 4,
   },
+
+  footerVersion: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+    marginBottom: 8,
+  },
+
   footerSubtext: {
-    fontSize: 12,
-    color: "#888",
-    fontWeight: "500",
+    fontSize: 13,
+    letterSpacing: -0.08,
     textAlign: "center",
   },
+
   devFooter: {
     marginTop: 12,
     backgroundColor: "#FF9800",
@@ -475,12 +666,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
+
   devText: {
     fontSize: 12,
     color: "#fff",
     fontWeight: "600",
-  },
-  bottomSpacing: {
-    height: Platform.OS === "ios" ? 100 : 80,
   },
 });
