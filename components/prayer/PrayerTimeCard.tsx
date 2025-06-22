@@ -118,13 +118,6 @@ export function PrayerTimeCard({
     }
   };
 
-  const handleSaveSettings = async (settings: PrayerNotificationSettings) => {
-    if (prayerKey) {
-      await updatePrayerSettings(prayerKey, settings);
-      setShowNotificationSheet(false);
-    }
-  };
-
   const cardOpacity = isActive ? 1 : isNext ? 0.98 : 0.95;
   const cardScale = isActive && pulseAnim ? pulseAnim : 1;
 
@@ -319,8 +312,8 @@ export function PrayerTimeCard({
         <NotificationSettingsSheet
           visible={showNotificationSheet}
           prayerName={name}
+          prayerKey={prayerKey}
           settings={notificationSettings}
-          onSave={handleSaveSettings}
           onClose={() => setShowNotificationSheet(false)}
         />
       )}
@@ -332,21 +325,21 @@ export function PrayerTimeCard({
 interface NotificationSettingsSheetProps {
   visible: boolean;
   prayerName: string;
+  prayerKey: NotificationPrayerName;
   settings: PrayerNotificationSettings;
-  onSave: (settings: PrayerNotificationSettings) => void;
   onClose: () => void;
 }
 
 function NotificationSettingsSheet({
   visible,
   prayerName,
+  prayerKey,
   settings,
-  onSave,
   onClose,
 }: NotificationSettingsSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const [localSettings, setLocalSettings] = useState(settings);
+  const { updatePrayerSettings } = useNotificationContext();
   const [slideAnim] = useState(new Animated.Value(0));
 
   React.useEffect(() => {
@@ -368,8 +361,25 @@ function NotificationSettingsSheet({
 
   const reminderOptions = [5, 10, 15, 20, 30];
 
-  const handleSave = () => {
-    onSave(localSettings);
+  const handleToggleBeginTime = async (value: boolean) => {
+    await updatePrayerSettings(prayerKey, {
+      ...settings,
+      beginTime: value,
+    });
+  };
+
+  const handleToggleJamahTime = async (value: boolean) => {
+    await updatePrayerSettings(prayerKey, {
+      ...settings,
+      jamahTime: value,
+    });
+  };
+
+  const handleReminderChange = async (minutes: number) => {
+    await updatePrayerSettings(prayerKey, {
+      ...settings,
+      jamahReminderMinutes: minutes,
+    });
   };
 
   if (!visible) return null;
@@ -448,17 +458,13 @@ function NotificationSettingsSheet({
                 </ThemedText>
               </View>
               <Switch
-                value={localSettings.beginTime}
-                onValueChange={(value) =>
-                  setLocalSettings({ ...localSettings, beginTime: value })
-                }
+                value={settings.beginTime}
+                onValueChange={handleToggleBeginTime}
                 trackColor={{
                   false: colors.text + "20",
                   true: colors.primary + "60",
                 }}
-                thumbColor={
-                  localSettings.beginTime ? colors.primary : "#f4f3f4"
-                }
+                thumbColor={settings.beginTime ? colors.primary : "#f4f3f4"}
               />
             </View>
 
@@ -485,22 +491,18 @@ function NotificationSettingsSheet({
                 </ThemedText>
               </View>
               <Switch
-                value={localSettings.jamahTime}
-                onValueChange={(value) =>
-                  setLocalSettings({ ...localSettings, jamahTime: value })
-                }
+                value={settings.jamahTime}
+                onValueChange={handleToggleJamahTime}
                 trackColor={{
                   false: colors.text + "20",
                   true: colors.primary + "60",
                 }}
-                thumbColor={
-                  localSettings.jamahTime ? colors.primary : "#f4f3f4"
-                }
+                thumbColor={settings.jamahTime ? colors.primary : "#f4f3f4"}
               />
             </View>
 
             {/* Jamah Reminder */}
-            {localSettings.jamahTime && (
+            {settings.jamahTime && (
               <View style={styles.reminderSection}>
                 <ThemedText
                   style={[styles.reminderTitle, { color: colors.text }]}
@@ -515,28 +517,23 @@ function NotificationSettingsSheet({
                         styles.reminderOption,
                         {
                           backgroundColor:
-                            localSettings.jamahReminderMinutes === minutes
+                            settings.jamahReminderMinutes === minutes
                               ? colors.primary
                               : colors.surface,
                           borderColor:
-                            localSettings.jamahReminderMinutes === minutes
+                            settings.jamahReminderMinutes === minutes
                               ? colors.primary
                               : colors.text + "20",
                         },
                       ]}
-                      onPress={() =>
-                        setLocalSettings({
-                          ...localSettings,
-                          jamahReminderMinutes: minutes,
-                        })
-                      }
+                      onPress={() => handleReminderChange(minutes)}
                     >
                       <ThemedText
                         style={[
                           styles.reminderOptionText,
                           {
                             color:
-                              localSettings.jamahReminderMinutes === minutes
+                              settings.jamahReminderMinutes === minutes
                                 ? "#fff"
                                 : colors.text,
                           },
@@ -550,16 +547,6 @@ function NotificationSettingsSheet({
               </View>
             )}
           </ThemedView>
-
-          {/* Save Button */}
-          <View style={styles.sheetFooter}>
-            <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.primary }]}
-              onPress={handleSave}
-            >
-              <ThemedText style={styles.saveButtonText}>Save</ThemedText>
-            </TouchableOpacity>
-          </View>
         </Animated.View>
       </TouchableOpacity>
     </Modal>
@@ -780,22 +767,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     letterSpacing: -0.2,
-  },
-  sheetFooter: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  saveButton: {
-    height: 50,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "600",
-    letterSpacing: -0.4,
   },
 });
 export default PrayerTimeCard;
