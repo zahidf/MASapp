@@ -1,10 +1,7 @@
 import { BlurView } from "expo-blur";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Dimensions,
   Platform,
@@ -18,6 +15,7 @@ import {
 } from "react-native";
 import { SvgXml } from "react-native-svg";
 
+import { PrayerTimeCard } from "@/components/prayer/PrayerTimeCard";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -28,7 +26,6 @@ import {
   getTodayString,
   parseTimeString,
 } from "@/utils/dateHelpers";
-import { generatePDFHTML } from "@/utils/pdfGenerator";
 import { Asset } from "expo-asset";
 
 const { width, height } = Dimensions.get("window");
@@ -231,25 +228,6 @@ export default function TodayScreen() {
     });
   };
 
-  const getPrayerIcon = (prayerName: string) => {
-    switch (prayerName.toLowerCase()) {
-      case "fajr":
-        return "sunrise";
-      case "sunrise":
-        return "sun.max";
-      case "zuhr":
-        return "sun.max.fill";
-      case "asr":
-        return "sun.min";
-      case "maghrib":
-        return "sunset";
-      case "isha":
-        return "moon.stars";
-      default:
-        return "clock";
-    }
-  };
-
   const getMonthName = (monthIndex: number) => {
     const months = [
       "January",
@@ -268,216 +246,51 @@ export default function TodayScreen() {
     return months[monthIndex];
   };
 
-  const handlePrint = async () => {
-    setIsExporting(true);
+  // const handlePrint = async () => {
+  //   setIsExporting(true);
 
-    try {
-      let html = "";
-      let filename = "";
+  //   try {
+  //     let html = "";
+  //     let filename = "";
 
-      if (viewMode === "daily" && todaysPrayers) {
-        html = await generatePDFHTML([todaysPrayers], "day");
-        const dayDate = new Date(todaysPrayers.d_date);
-        filename = `prayer-times-${dayDate.toISOString().split("T")[0]}.pdf`;
-      } else if (viewMode === "monthly" && monthData.length > 0) {
-        html = await generatePDFHTML(monthData, "month");
-        filename = `prayer-times-${getMonthName(
-          currentMonth
-        )}-${currentYear}.pdf`;
-      } else {
-        Alert.alert("Error", "No data available to print");
-        setIsExporting(false);
-        return;
-      }
+  //     if (viewMode === "daily" && todaysPrayers) {
+  //       html = await generatePDFHTML([todaysPrayers], "day");
+  //       const dayDate = new Date(todaysPrayers.d_date);
+  //       filename = `prayer-times-${dayDate.toISOString().split("T")[0]}.pdf`;
+  //     } else if (viewMode === "monthly" && monthData.length > 0) {
+  //       html = await generatePDFHTML(monthData, "month");
+  //       filename = `prayer-times-${getMonthName(
+  //         currentMonth
+  //       )}-${currentYear}.pdf`;
+  //     } else {
+  //       Alert.alert("Error", "No data available to print");
+  //       setIsExporting(false);
+  //       return;
+  //     }
 
-      const { uri } = await Print.printToFileAsync({
-        html,
-        base64: false,
-      });
+  //     const { uri } = await Print.printToFileAsync({
+  //       html,
+  //       base64: false,
+  //     });
 
-      if (Platform.OS === "ios") {
-        await Sharing.shareAsync(uri, {
-          UTI: ".pdf",
-          mimeType: "application/pdf",
-        });
-      } else {
-        await Sharing.shareAsync(uri, {
-          mimeType: "application/pdf",
-          dialogTitle: "Share Prayer Times PDF",
-        });
-      }
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      Alert.alert("Error", "Failed to generate PDF. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  // Enhanced prayer card render function with better visual hierarchy
-  const renderPrayerCard = (
-    name: string,
-    time: string,
-    jamah?: string,
-    isActive = false,
-    isNext = false
-  ) => {
-    const cardOpacity = isActive ? 1 : isNext ? 0.98 : 0.95;
-    const cardScale = isActive ? pulseAnim : 1;
-
-    return (
-      <Animated.View
-        key={name}
-        style={[
-          {
-            opacity: cardOpacity,
-            transform: [{ scale: cardScale }],
-          },
-          styles.prayerCardWrapper,
-        ]}
-      >
-        <BlurView
-          intensity={isActive ? 100 : isNext ? 90 : 80}
-          tint={colorScheme === "dark" ? "dark" : "light"}
-          style={[
-            styles.prayerCard,
-            isActive && styles.activePrayerCard,
-            isNext && styles.nextPrayerCard,
-            {
-              backgroundColor: isActive
-                ? colors.primary + "20"
-                : isNext
-                ? colors.primary + "12"
-                : colors.surface + "95",
-              borderColor: isActive
-                ? colors.primary
-                : isNext
-                ? colors.primary + "60"
-                : colorScheme === "dark"
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(0,0,0,0.06)",
-            },
-          ]}
-        >
-          <View style={styles.prayerCardContent}>
-            {/* Prayer Icon and Name */}
-            <View style={styles.prayerHeaderRow}>
-              <View
-                style={[
-                  styles.prayerIconContainer,
-                  {
-                    backgroundColor: isActive
-                      ? colors.primary + "25"
-                      : isNext
-                      ? colors.primary + "15"
-                      : colorScheme === "dark"
-                      ? "rgba(255,255,255,0.08)"
-                      : "rgba(0,0,0,0.05)",
-                  },
-                ]}
-              >
-                <IconSymbol
-                  name={getPrayerIcon(name) as any}
-                  size={22}
-                  color={
-                    isActive
-                      ? colors.primary
-                      : isNext
-                      ? colors.primary
-                      : colors.text + "85"
-                  }
-                />
-              </View>
-
-              <View style={styles.prayerNameContainer}>
-                <Text
-                  style={[
-                    styles.prayerName,
-                    {
-                      color: isActive ? colors.primary : colors.text,
-                      fontWeight: isActive || isNext ? "700" : "600",
-                    },
-                  ]}
-                >
-                  {name}
-                </Text>
-                {(isActive || isNext) && (
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor: isActive
-                          ? colors.primary
-                          : colors.primary + "25",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        { color: isActive ? "#fff" : colors.primary },
-                      ]}
-                    >
-                      {isActive ? "NOW" : getCountdownToNext() || "NEXT"}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Time Information */}
-            <View style={styles.timeContainer}>
-              <View style={styles.timeSection}>
-                <Text style={[styles.timeLabel, { color: colors.text + "65" }]}>
-                  BEGINS
-                </Text>
-                <Text
-                  style={[
-                    styles.timeValue,
-                    {
-                      color: isActive ? colors.primary : colors.text,
-                      fontWeight: isActive ? "700" : "600",
-                    },
-                  ]}
-                >
-                  {formatTime(time)}
-                </Text>
-              </View>
-
-              {jamah && jamah.trim() !== "" && name !== "Sunrise" && (
-                <>
-                  <View
-                    style={[
-                      styles.timeDivider,
-                      { backgroundColor: colors.text + "12" },
-                    ]}
-                  />
-                  <View style={styles.timeSection}>
-                    <Text
-                      style={[styles.timeLabel, { color: colors.text + "65" }]}
-                    >
-                      JAMAH
-                    </Text>
-                    <Text
-                      style={[
-                        styles.timeValue,
-                        {
-                          color: isActive ? colors.primary : colors.text,
-                          fontWeight: isActive ? "700" : "600",
-                        },
-                      ]}
-                    >
-                      {formatTime(jamah)}
-                    </Text>
-                  </View>
-                </>
-              )}
-            </View>
-          </View>
-        </BlurView>
-      </Animated.View>
-    );
-  };
+  //     if (Platform.OS === "ios") {
+  //       await Sharing.shareAsync(uri, {
+  //         UTI: ".pdf",
+  //         mimeType: "application/pdf",
+  //       });
+  //     } else {
+  //       await Sharing.shareAsync(uri, {
+  //         mimeType: "application/pdf",
+  //         dialogTitle: "Share Prayer Times PDF",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Error generating PDF:", error);
+  //     Alert.alert("Error", "Failed to generate PDF. Please try again.");
+  //   } finally {
+  //     setIsExporting(false);
+  //   }
+  // };
 
   if (!Array.isArray(prayerTimes) || prayerTimes.length === 0) {
     return (
@@ -587,7 +400,7 @@ export default function TodayScreen() {
               {/* Mosque Logo */}
               <View style={styles.logoContainer}>
                 {logoSvg ? (
-                  <SvgXml xml={logoSvg} width={32} height={32} />
+                  <SvgXml xml={logoSvg} width={48} height={48} />
                 ) : (
                   <IconSymbol
                     name="building.2"
@@ -597,7 +410,7 @@ export default function TodayScreen() {
                 )}
               </View>
 
-              {/* Export Button */}
+              {/* Export Button 
               <TouchableOpacity
                 style={[
                   styles.headerButton,
@@ -613,6 +426,7 @@ export default function TodayScreen() {
                   color={colors.primary}
                 />
               </TouchableOpacity>
+              */}
             </View>
           </View>
 
@@ -668,48 +482,59 @@ export default function TodayScreen() {
                 <View style={styles.prayersList}>
                   {todaysPrayers ? (
                     <>
-                      {renderPrayerCard(
-                        "Fajr",
-                        todaysPrayers.fajr_begins,
-                        todaysPrayers.fajr_jamah,
-                        currentPrayer === "fajr",
-                        nextPrayer === "fajr"
-                      )}
-                      {renderPrayerCard(
-                        "Sunrise",
-                        todaysPrayers.sunrise,
-                        undefined,
-                        currentPrayer === "sunrise",
-                        nextPrayer === "sunrise"
-                      )}
-                      {renderPrayerCard(
-                        "Zuhr",
-                        todaysPrayers.zuhr_begins,
-                        todaysPrayers.zuhr_jamah,
-                        currentPrayer === "zuhr",
-                        nextPrayer === "zuhr"
-                      )}
-                      {renderPrayerCard(
-                        "Asr",
-                        todaysPrayers.asr_mithl_1,
-                        todaysPrayers.asr_jamah,
-                        currentPrayer === "asr",
-                        nextPrayer === "asr"
-                      )}
-                      {renderPrayerCard(
-                        "Maghrib",
-                        todaysPrayers.maghrib_begins,
-                        todaysPrayers.maghrib_jamah,
-                        currentPrayer === "maghrib",
-                        nextPrayer === "maghrib"
-                      )}
-                      {renderPrayerCard(
-                        "Isha",
-                        todaysPrayers.isha_begins,
-                        todaysPrayers.isha_jamah,
-                        currentPrayer === "isha",
-                        nextPrayer === "isha"
-                      )}
+                      <PrayerTimeCard
+                        name="Fajr"
+                        time={todaysPrayers.fajr_begins}
+                        jamah={todaysPrayers.fajr_jamah}
+                        isActive={currentPrayer === "fajr"}
+                        isNext={nextPrayer === "fajr"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Sunrise"
+                        time={todaysPrayers.sunrise}
+                        isActive={currentPrayer === "sunrise"}
+                        isNext={nextPrayer === "sunrise"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Zuhr"
+                        time={todaysPrayers.zuhr_begins}
+                        jamah={todaysPrayers.zuhr_jamah}
+                        isActive={currentPrayer === "zuhr"}
+                        isNext={nextPrayer === "zuhr"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Asr"
+                        time={todaysPrayers.asr_mithl_1}
+                        jamah={todaysPrayers.asr_jamah}
+                        isActive={currentPrayer === "asr"}
+                        isNext={nextPrayer === "asr"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Maghrib"
+                        time={todaysPrayers.maghrib_begins}
+                        jamah={todaysPrayers.maghrib_jamah}
+                        isActive={currentPrayer === "maghrib"}
+                        isNext={nextPrayer === "maghrib"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Isha"
+                        time={todaysPrayers.isha_begins}
+                        jamah={todaysPrayers.isha_jamah}
+                        isActive={currentPrayer === "isha"}
+                        isNext={nextPrayer === "isha"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
                     </>
                   ) : (
                     <View style={styles.noDataSection}>
@@ -743,7 +568,7 @@ export default function TodayScreen() {
                 >
                   <View style={styles.mosqueLogoContainer}>
                     {logoSvg ? (
-                      <SvgXml xml={logoSvg} width={24} height={24} />
+                      <SvgXml xml={logoSvg} width={32} height={32} />
                     ) : (
                       <IconSymbol
                         name="building.2"
@@ -772,7 +597,7 @@ export default function TodayScreen() {
             ) : (
               // Monthly view - keeping your existing implementation
               <View style={styles.monthlyView}>
-                {/* ... your existing monthly view code ... */}
+                {/* Monthly view content would go here if needed */}
               </View>
             )}
           </Animated.View>
@@ -897,119 +722,6 @@ const styles = StyleSheet.create({
     gap: 16, // Increased gap for better separation
   },
 
-  // Enhanced prayer cards with better visual hierarchy
-  prayerCardWrapper: {
-    // Wrapper for enhanced shadow effects
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-
-  prayerCard: {
-    borderRadius: 18, // Slightly larger radius for modern look
-    overflow: "hidden",
-    borderWidth: 1.5,
-  },
-
-  activePrayerCard: {
-    borderWidth: 2.5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-
-  nextPrayerCard: {
-    borderWidth: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-
-  prayerCardContent: {
-    padding: 18, // Increased padding for better breathing room
-  },
-
-  prayerHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 14, // Increased margin
-  },
-
-  prayerIconContainer: {
-    width: 40, // Slightly larger
-    height: 40,
-    borderRadius: 14, // More rounded
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14, // Increased margin
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(0,0,0,0.04)",
-  },
-
-  prayerNameContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  prayerName: {
-    fontSize: 18, // Slightly larger
-    letterSpacing: -0.4,
-  },
-
-  statusBadge: {
-    paddingHorizontal: 10, // Increased padding
-    paddingVertical: 5,
-    borderRadius: 10, // More rounded
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(0,0,0,0.04)",
-  },
-
-  statusText: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-
-  // Enhanced time information layout
-  timeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    paddingTop: 4,
-  },
-
-  timeSection: {
-    flex: 1,
-    alignItems: "center",
-  },
-
-  timeDivider: {
-    width: 1.5, // Slightly thicker
-    height: 44, // Taller
-    marginHorizontal: 18, // More spacing
-    borderRadius: 1,
-  },
-
-  timeLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    marginBottom: 5, // Increased margin
-  },
-
-  timeValue: {
-    fontSize: 24, // Larger for better readability
-    letterSpacing: -0.4,
-  },
-
   // Enhanced mosque info card
   mosqueInfoCard: {
     flexDirection: "row",
@@ -1027,8 +739,8 @@ const styles = StyleSheet.create({
   },
 
   mosqueLogoContainer: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",

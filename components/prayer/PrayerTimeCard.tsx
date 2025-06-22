@@ -19,54 +19,39 @@ import {
   NotificationPreferences,
   PrayerNotificationSettings,
 } from "@/types/notification";
+import { BlurView } from "expo-blur";
 
 // Define the notification prayer type based on your actual prayers object
 type NotificationPrayerName = keyof NotificationPreferences["prayers"];
 
-interface Prayer {
-  name: string;
-  begins: string;
-  jamah?: string;
-}
-
 interface PrayerTimeCardProps {
-  prayer: Prayer;
+  name: string;
+  time: string;
+  jamah?: string;
   isActive?: boolean;
   isNext?: boolean;
+  pulseAnim?: Animated.Value;
+  getCountdownToNext?: () => string;
 }
 
 export function PrayerTimeCard({
-  prayer,
-  isActive,
-  isNext,
+  name,
+  time,
+  jamah,
+  isActive = false,
+  isNext = false,
+  pulseAnim,
+  getCountdownToNext,
 }: PrayerTimeCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { preferences, updatePrayerSettings } = useNotificationContext();
   const [showNotificationSheet, setShowNotificationSheet] = useState(false);
-  const [pulseAnim] = useState(new Animated.Value(1));
-
-  React.useEffect(() => {
-    if (isActive) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.02,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }
-  }, [isActive]);
 
   const getPrayerKey = (): NotificationPrayerName | null => {
-    const lowerName = prayer.name.toLowerCase();
+    if (!name || typeof name !== "string") return null;
+
+    const lowerName = name.toLowerCase();
     if (lowerName === "sunrise") return null; // No notifications for sunrise
 
     // Type guard to ensure we only return valid notification prayer names
@@ -92,46 +77,9 @@ export function PrayerTimeCard({
     notificationSettings &&
     (notificationSettings.beginTime || notificationSettings.jamahTime);
 
-  const getCardStyle = () => {
-    const baseStyle = [
-      styles.prayerCard,
-      {
-        backgroundColor: colors.surface,
-        borderColor: `${colors.text}10`,
-      },
-    ];
-
-    if (isActive) {
-      return [
-        ...baseStyle,
-        styles.activePrayerCard,
-        {
-          backgroundColor: `${colors.primary}15`,
-          borderColor: colors.primary,
-        },
-      ];
-    }
-    if (isNext) {
-      return [
-        ...baseStyle,
-        styles.nextPrayerCard,
-        { borderColor: `${colors.primary}80` },
-      ];
-    }
-    return baseStyle;
-  };
-
-  const getTextColor = () => {
-    if (isActive) return colors.primary;
-    return colors.text;
-  };
-
-  const getSecondaryTextColor = () => {
-    if (isActive) return `${colors.primary}B3`;
-    return `${colors.text}80`;
-  };
-
   const getPrayerIcon = (prayerName: string) => {
+    if (!prayerName || typeof prayerName !== "string") return "clock";
+
     switch (prayerName.toLowerCase()) {
       case "fajr":
         return "sunrise";
@@ -150,6 +98,20 @@ export function PrayerTimeCard({
     }
   };
 
+  const formatTime = (timeString: string | undefined) => {
+    if (!timeString) return "N/A";
+    if (timeString.length === 5 && timeString.includes(":")) {
+      return timeString;
+    }
+    if (timeString.includes(":")) {
+      const parts = timeString.split(":");
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}`;
+      }
+    }
+    return timeString;
+  };
+
   const handleNotificationPress = () => {
     if (prayerKey) {
       setShowNotificationSheet(true);
@@ -163,120 +125,200 @@ export function PrayerTimeCard({
     }
   };
 
+  const cardOpacity = isActive ? 1 : isNext ? 0.98 : 0.95;
+  const cardScale = isActive && pulseAnim ? pulseAnim : 1;
+
   return (
     <>
       <Animated.View
         style={[
-          getCardStyle(),
-          isActive && { transform: [{ scale: pulseAnim }] },
+          {
+            opacity: cardOpacity,
+            transform: [{ scale: cardScale }],
+          },
+          styles.prayerCardWrapper,
         ]}
       >
-        <View style={styles.prayerCardContent}>
-          {/* Prayer Icon */}
-          <View
-            style={[
-              styles.prayerIconContainer,
-              {
-                backgroundColor: isActive
-                  ? `${colors.primary}20`
-                  : `${colors.text}08`,
-              },
-            ]}
-          >
-            <IconSymbol
-              name={getPrayerIcon(prayer.name) as any}
-              size={24}
-              color={isActive ? colors.primary : `${colors.text}60`}
-            />
-          </View>
-
-          {/* Prayer Info */}
-          <View style={styles.prayerInfo}>
-            <ThemedText
-              style={[
-                styles.prayerName,
-                {
-                  color: getTextColor(),
-                  fontWeight: isActive || isNext ? "700" : "600",
-                },
-              ]}
-            >
-              {prayer.name}
-            </ThemedText>
-            <View style={styles.timeInfo}>
-              <ThemedText
-                style={[styles.prayerTime, { color: getTextColor() }]}
+        <BlurView
+          intensity={isActive ? 100 : isNext ? 90 : 80}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={[
+            styles.prayerCard,
+            isActive && styles.activePrayerCard,
+            isNext && styles.nextPrayerCard,
+            {
+              backgroundColor: isActive
+                ? colors.primary + "20"
+                : isNext
+                ? colors.primary + "12"
+                : colors.surface + "95",
+              borderColor: isActive
+                ? colors.primary
+                : isNext
+                ? colors.primary + "60"
+                : colorScheme === "dark"
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(0,0,0,0.06)",
+            },
+          ]}
+        >
+          <View style={styles.prayerCardContent}>
+            {/* Prayer Icon and Name */}
+            <View style={styles.prayerHeaderRow}>
+              <View
+                style={[
+                  styles.prayerIconContainer,
+                  {
+                    backgroundColor: isActive
+                      ? colors.primary + "25"
+                      : isNext
+                      ? colors.primary + "15"
+                      : colorScheme === "dark"
+                      ? "rgba(255,255,255,0.08)"
+                      : "rgba(0,0,0,0.05)",
+                  },
+                ]}
               >
-                {prayer.begins}
-              </ThemedText>
-              {prayer.jamah && prayer.jamah.trim() !== "" && (
+                <IconSymbol
+                  name={getPrayerIcon(name) as any}
+                  size={22}
+                  color={
+                    isActive
+                      ? colors.primary
+                      : isNext
+                      ? colors.primary
+                      : colors.text + "85"
+                  }
+                />
+              </View>
+
+              <View style={styles.prayerNameContainer}>
                 <ThemedText
-                  style={[styles.jamahTime, { color: getSecondaryTextColor() }]}
+                  style={[
+                    styles.prayerName,
+                    {
+                      color: isActive ? colors.primary : colors.text,
+                      fontWeight: isActive || isNext ? "700" : "600",
+                    },
+                  ]}
                 >
-                  Jamah: {prayer.jamah}
+                  {name}
                 </ThemedText>
+                {(isActive || isNext) && (
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: isActive
+                          ? colors.primary
+                          : colors.primary + "25",
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.statusText,
+                        { color: isActive ? "#fff" : colors.primary },
+                      ]}
+                    >
+                      {isActive
+                        ? "NOW"
+                        : getCountdownToNext
+                        ? getCountdownToNext() || "NEXT"
+                        : "NEXT"}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+
+              {/* Notification Toggle - Only show for prayers (not sunrise) */}
+              {prayerKey && (
+                <TouchableOpacity
+                  style={[
+                    styles.notificationButton,
+                    {
+                      backgroundColor: hasNotificationsEnabled
+                        ? colors.primary + "15"
+                        : colorScheme === "dark"
+                        ? "rgba(255,255,255,0.08)"
+                        : "rgba(0,0,0,0.05)",
+                    },
+                  ]}
+                  onPress={handleNotificationPress}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <IconSymbol
+                    name={hasNotificationsEnabled ? "bell.fill" : "bell"}
+                    size={18}
+                    color={
+                      hasNotificationsEnabled
+                        ? colors.primary
+                        : colors.text + "60"
+                    }
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Time Information */}
+            <View style={styles.timeContainer}>
+              <View style={styles.timeSection}>
+                <ThemedText
+                  style={[styles.timeLabel, { color: colors.text + "65" }]}
+                >
+                  BEGINS
+                </ThemedText>
+                <ThemedText
+                  style={[
+                    styles.timeValue,
+                    {
+                      color: isActive ? colors.primary : colors.text,
+                      fontWeight: isActive ? "700" : "600",
+                    },
+                  ]}
+                >
+                  {formatTime(time)}
+                </ThemedText>
+              </View>
+
+              {jamah && jamah.trim() !== "" && name !== "Sunrise" && (
+                <>
+                  <View
+                    style={[
+                      styles.timeDivider,
+                      { backgroundColor: colors.text + "12" },
+                    ]}
+                  />
+                  <View style={styles.timeSection}>
+                    <ThemedText
+                      style={[styles.timeLabel, { color: colors.text + "65" }]}
+                    >
+                      JAMAH
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.timeValue,
+                        {
+                          color: isActive ? colors.primary : colors.text,
+                          fontWeight: isActive ? "700" : "600",
+                        },
+                      ]}
+                    >
+                      {formatTime(jamah)}
+                    </ThemedText>
+                  </View>
+                </>
               )}
             </View>
           </View>
-
-          {/* Status & Notification */}
-          <View style={styles.rightSection}>
-            {(isActive || isNext) && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor: isActive
-                      ? colors.primary
-                      : `${colors.primary}20`,
-                  },
-                ]}
-              >
-                <ThemedText
-                  style={[
-                    styles.statusText,
-                    { color: isActive ? "#fff" : colors.primary },
-                  ]}
-                >
-                  {isActive ? "NOW" : "NEXT"}
-                </ThemedText>
-              </View>
-            )}
-
-            {/* Notification Toggle - Only show for prayers (not sunrise) */}
-            {prayerKey && (
-              <TouchableOpacity
-                style={[
-                  styles.notificationButton,
-                  {
-                    backgroundColor: hasNotificationsEnabled
-                      ? `${colors.primary}15`
-                      : `${colors.text}08`,
-                  },
-                ]}
-                onPress={handleNotificationPress}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <IconSymbol
-                  name={hasNotificationsEnabled ? "bell.fill" : "bell"}
-                  size={20}
-                  color={
-                    hasNotificationsEnabled
-                      ? colors.primary
-                      : `${colors.text}40`
-                  }
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        </BlurView>
       </Animated.View>
 
       {/* Notification Settings Sheet */}
       {prayerKey && notificationSettings && (
         <NotificationSettingsSheet
           visible={showNotificationSheet}
-          prayerName={prayer.name}
+          prayerName={name}
           settings={notificationSettings}
           onSave={handleSaveSettings}
           onClose={() => setShowNotificationSheet(false)}
@@ -366,7 +408,7 @@ function NotificationSettingsSheet({
             <View
               style={[
                 styles.sheetHandleBar,
-                { backgroundColor: `${colors.text}30` },
+                { backgroundColor: colors.text + "30" },
               ]}
             />
           </View>
@@ -377,7 +419,7 @@ function NotificationSettingsSheet({
               {prayerName} Notifications
             </ThemedText>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <IconSymbol name="xmark" size={20} color={`${colors.text}80`} />
+              <IconSymbol name="xmark" size={20} color={colors.text + "80"} />
             </TouchableOpacity>
           </View>
 
@@ -387,7 +429,7 @@ function NotificationSettingsSheet({
             <View
               style={[
                 styles.settingRow,
-                { borderBottomColor: `${colors.text}10` },
+                { borderBottomColor: colors.text + "10" },
               ]}
             >
               <View style={styles.settingInfo}>
@@ -399,7 +441,7 @@ function NotificationSettingsSheet({
                 <ThemedText
                   style={[
                     styles.settingDescription,
-                    { color: `${colors.text}60` },
+                    { color: colors.text + "60" },
                   ]}
                 >
                   Notify when {prayerName} prayer time begins
@@ -411,8 +453,8 @@ function NotificationSettingsSheet({
                   setLocalSettings({ ...localSettings, beginTime: value })
                 }
                 trackColor={{
-                  false: `${colors.text}20`,
-                  true: `${colors.primary}60`,
+                  false: colors.text + "20",
+                  true: colors.primary + "60",
                 }}
                 thumbColor={
                   localSettings.beginTime ? colors.primary : "#f4f3f4"
@@ -424,7 +466,7 @@ function NotificationSettingsSheet({
             <View
               style={[
                 styles.settingRow,
-                { borderBottomColor: `${colors.text}10` },
+                { borderBottomColor: colors.text + "10" },
               ]}
             >
               <View style={styles.settingInfo}>
@@ -436,7 +478,7 @@ function NotificationSettingsSheet({
                 <ThemedText
                   style={[
                     styles.settingDescription,
-                    { color: `${colors.text}60` },
+                    { color: colors.text + "60" },
                   ]}
                 >
                   Notify when congregation prayer starts
@@ -448,8 +490,8 @@ function NotificationSettingsSheet({
                   setLocalSettings({ ...localSettings, jamahTime: value })
                 }
                 trackColor={{
-                  false: `${colors.text}20`,
-                  true: `${colors.primary}60`,
+                  false: colors.text + "20",
+                  true: colors.primary + "60",
                 }}
                 thumbColor={
                   localSettings.jamahTime ? colors.primary : "#f4f3f4"
@@ -479,7 +521,7 @@ function NotificationSettingsSheet({
                           borderColor:
                             localSettings.jamahReminderMinutes === minutes
                               ? colors.primary
-                              : `${colors.text}20`,
+                              : colors.text + "20",
                         },
                       ]}
                       onPress={() =>
@@ -525,86 +567,131 @@ function NotificationSettingsSheet({
 }
 
 const styles = StyleSheet.create({
-  prayerCard: {
-    borderRadius: 16,
-    marginVertical: 6,
-    borderWidth: 1,
+  // Enhanced prayer cards with better visual hierarchy
+  prayerCardWrapper: {
+    // Wrapper for enhanced shadow effects
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    overflow: "hidden",
-  },
-  activePrayerCard: {
-    borderWidth: 2,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
+    elevation: 4,
+  },
+
+  prayerCard: {
+    borderRadius: 18, // Slightly larger radius for modern look
+    overflow: "hidden",
+    borderWidth: 1.5,
+  },
+
+  activePrayerCard: {
+    borderWidth: 2.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
     elevation: 8,
   },
+
   nextPrayerCard: {
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 5,
+    borderWidth: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 6,
   },
+
   prayerCardContent: {
+    padding: 18, // Increased padding for better breathing room
+  },
+
+  prayerHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    gap: 12,
+    marginBottom: 14, // Increased margin
   },
+
   prayerIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
+    width: 40, // Slightly larger
+    height: 40,
+    borderRadius: 14, // More rounded
     justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14, // Increased margin
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.04)",
   },
-  prayerInfo: {
+
+  prayerNameContainer: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+
   prayerName: {
-    fontSize: 17,
-    marginBottom: 2,
+    fontSize: 18, // Slightly larger
     letterSpacing: -0.4,
   },
-  timeInfo: {
-    gap: 2,
-  },
-  prayerTime: {
-    fontSize: 15,
-    fontWeight: "600",
-    letterSpacing: -0.2,
-  },
-  jamahTime: {
-    fontSize: 13,
-    fontWeight: "500",
-    letterSpacing: -0.08,
-  },
-  rightSection: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
+
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10, // Increased padding
+    paddingVertical: 5,
+    borderRadius: 10, // More rounded
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.04)",
   },
+
   statusText: {
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
+
   notificationButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.04)",
   },
+
+  // Enhanced time information layout
+  timeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingTop: 4,
+  },
+
+  timeSection: {
+    flex: 1,
+    alignItems: "center",
+  },
+
+  timeDivider: {
+    width: 1.5, // Slightly thicker
+    height: 44, // Taller
+    marginHorizontal: 18, // More spacing
+    borderRadius: 1,
+  },
+
+  timeLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginBottom: 5, // Increased margin
+  },
+
+  timeValue: {
+    fontSize: 24, // Larger for better readability
+    letterSpacing: -0.4,
+  },
+
+  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -711,3 +798,4 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
 });
+export default PrayerTimeCard;
