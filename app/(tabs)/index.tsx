@@ -402,39 +402,70 @@ export default function TodayScreen() {
         />
 
         {/* Enhanced Header with Logo */}
-        <BlurView
-          intensity={80}
-          tint={colorScheme === "dark" ? "dark" : "light"}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            <View style={styles.headerMainRow}>
-              <View style={styles.headerTextSection}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>
-                  Today
-                </Text>
-                <Text
-                  style={[styles.headerSubtitle, { color: colors.text + "80" }]}
-                >
-                  {formatCurrentDate()}
-                </Text>
-              </View>
+        <View style={styles.headerWrapper}>
+          <BlurView
+            intensity={85}
+            tint={colorScheme === "dark" ? "dark" : "light"}
+            style={styles.header}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerMainRow}>
+                <View style={styles.headerTextSection}>
+                  <Text style={[styles.headerTitle, { color: colors.text }]}>
+                    Today
+                  </Text>
+                  <Text
+                    style={[
+                      styles.headerSubtitle,
+                      { color: colors.text + "80" },
+                    ]}
+                  >
+                    {formatCurrentDate()}
+                  </Text>
+                </View>
 
-              {/* Mosque Logo */}
-              <View style={styles.logoContainer}>
-                {logoSvg ? (
-                  <SvgXml xml={logoSvg} width={32} height={32} />
-                ) : (
-                  <IconSymbol
-                    name="building.2"
-                    size={28}
-                    color={colors.text + "60"}
-                  />
-                )}
+                {/* Mosque Logo */}
+                <View style={styles.logoContainer}>
+                  {logoSvg ? (
+                    <SvgXml xml={logoSvg} width={32} height={32} />
+                  ) : (
+                    <IconSymbol
+                      name="building.2"
+                      size={28}
+                      color={colors.text + "60"}
+                    />
+                  )}
+                </View>
               </View>
             </View>
+          </BlurView>
+
+          {/* Enhanced multi-layer edge effect */}
+          <View style={styles.headerEdgeEffect}>
+            <View
+              style={[
+                styles.headerEdgeGradient1,
+                {
+                  backgroundColor:
+                    colorScheme === "dark"
+                      ? "rgba(0,0,0,0.4)"
+                      : "rgba(0,0,0,0.1)",
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.headerEdgeGradient2,
+                {
+                  backgroundColor:
+                    colorScheme === "dark"
+                      ? "rgba(0,0,0,0.2)"
+                      : "rgba(0,0,0,0.05)",
+                },
+              ]}
+            />
           </View>
-        </BlurView>
+        </View>
 
         <ScrollView
           style={styles.scrollContent}
@@ -496,70 +527,100 @@ export default function TodayScreen() {
       />
 
       {/* Enhanced Header with Logo and Export */}
-      <BlurView
-        intensity={80}
-        tint={colorScheme === "dark" ? "dark" : "light"}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerMainRow}>
-            <View style={styles.headerTextSection}>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>
-                Today
-              </Text>
-              <Text
-                style={[styles.headerSubtitle, { color: colors.text + "80" }]}
+      <View style={styles.headerWrapper}>
+        <BlurView
+          intensity={85}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.headerMainRow}>
+              <View style={styles.headerTextSection}>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                  Today
+                </Text>
+                <Text
+                  style={[styles.headerSubtitle, { color: colors.text + "80" }]}
+                >
+                  {formatCurrentDate()}
+                </Text>
+              </View>
+
+              <View style={styles.headerActions}>
+                {/* Mosque Logo */}
+                <View style={styles.logoContainer}>
+                  {logoSvg ? (
+                    <SvgXml xml={logoSvg} width={48} height={48} />
+                  ) : (
+                    <IconSymbol
+                      name="building.2"
+                      size={28}
+                      color={colors.text + "60"}
+                    />
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Next Prayer Summary */}
+            {nextPrayer && todaysPrayers && (
+              <View
+                style={[
+                  styles.nextPrayerSummary,
+                  { backgroundColor: colors.primary + "12" },
+                ]}
               >
-                {formatCurrentDate()}
-              </Text>
-            </View>
-
-            <View style={styles.headerActions}>
-              {/* Mosque Logo */}
-              <View style={styles.logoContainer}>
-                {logoSvg ? (
-                  <SvgXml xml={logoSvg} width={48} height={48} />
-                ) : (
-                  <IconSymbol
-                    name="building.2"
-                    size={28}
-                    color={colors.text + "60"}
-                  />
-                )}
+                <View style={styles.nextPrayerContent}>
+                  <Text
+                    style={[
+                      styles.nextPrayerLabel,
+                      { color: colors.primary + "85" },
+                    ]}
+                  >
+                    NEXT PRAYER
+                  </Text>
+                  <Text
+                    style={[styles.nextPrayerName, { color: colors.primary }]}
+                  >
+                    {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
+                  </Text>
+                </View>
+                <Text
+                  style={[styles.nextPrayerTime, { color: colors.primary }]}
+                >
+                  {getCountdownToNext() || "Soon"}
+                </Text>
               </View>
-            </View>
+            )}
           </View>
+        </BlurView>
 
-          {/* Next Prayer Summary */}
-          {nextPrayer && todaysPrayers && (
-            <View
-              style={[
-                styles.nextPrayerSummary,
-                { backgroundColor: colors.primary + "12" },
-              ]}
-            >
-              <View style={styles.nextPrayerContent}>
-                <Text
-                  style={[
-                    styles.nextPrayerLabel,
-                    { color: colors.primary + "85" },
-                  ]}
-                >
-                  NEXT PRAYER
-                </Text>
-                <Text
-                  style={[styles.nextPrayerName, { color: colors.primary }]}
-                >
-                  {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
-                </Text>
-              </View>
-              <Text style={[styles.nextPrayerTime, { color: colors.primary }]}>
-                {getCountdownToNext() || "Soon"}
-              </Text>
-            </View>
-          )}
+        {/* Enhanced multi-layer edge effect */}
+        <View style={styles.headerEdgeEffect}>
+          <View
+            style={[
+              styles.headerEdgeGradient1,
+              {
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "rgba(0,0,0,0.4)"
+                    : "rgba(0,0,0,0.1)",
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.headerEdgeGradient2,
+              {
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "rgba(0,0,0,0.2)"
+                    : "rgba(0,0,0,0.05)",
+              },
+            ]}
+          />
         </View>
-      </BlurView>
+      </View>
 
       {/* Main Content */}
       <ScrollView
@@ -570,6 +631,21 @@ export default function TodayScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {/* Add subtle scroll edge effect at the top */}
+        <View style={styles.scrollEdgeContainer}>
+          <View
+            style={[
+              styles.scrollEdgeGradient,
+              {
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "rgba(0,0,0,0.15)"
+                    : "rgba(0,0,0,0.04)",
+              },
+            ]}
+          />
+        </View>
+
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -577,77 +653,95 @@ export default function TodayScreen() {
         ) : (
           <Animated.View style={{ opacity: fadeAnim }}>
             <View style={styles.dailyView}>
-              {/* Prayer Cards */}
-              <View style={styles.prayersList}>
-                {todaysPrayers ? (
-                  <>
-                    <PrayerTimeCard
-                      name="Fajr"
-                      time={todaysPrayers.fajr_begins}
-                      jamah={todaysPrayers.fajr_jamah}
-                      isActive={currentPrayer === "fajr"}
-                      isNext={nextPrayer === "fajr"}
-                      pulseAnim={pulseAnim}
-                      getCountdownToNext={getCountdownToNext}
-                    />
-                    <PrayerTimeCard
-                      name="Sunrise"
-                      time={todaysPrayers.sunrise}
-                      isActive={currentPrayer === "sunrise"}
-                      isNext={nextPrayer === "sunrise"}
-                      pulseAnim={pulseAnim}
-                      getCountdownToNext={getCountdownToNext}
-                    />
-                    <PrayerTimeCard
-                      name="Zuhr"
-                      time={todaysPrayers.zuhr_begins}
-                      jamah={todaysPrayers.zuhr_jamah}
-                      isActive={currentPrayer === "zuhr"}
-                      isNext={nextPrayer === "zuhr"}
-                      pulseAnim={pulseAnim}
-                      getCountdownToNext={getCountdownToNext}
-                    />
-                    <PrayerTimeCard
-                      name="Asr"
-                      time={todaysPrayers.asr_mithl_1}
-                      jamah={todaysPrayers.asr_jamah}
-                      isActive={currentPrayer === "asr"}
-                      isNext={nextPrayer === "asr"}
-                      pulseAnim={pulseAnim}
-                      getCountdownToNext={getCountdownToNext}
-                    />
-                    <PrayerTimeCard
-                      name="Maghrib"
-                      time={todaysPrayers.maghrib_begins}
-                      jamah={todaysPrayers.maghrib_jamah}
-                      isActive={currentPrayer === "maghrib"}
-                      isNext={nextPrayer === "maghrib"}
-                      pulseAnim={pulseAnim}
-                      getCountdownToNext={getCountdownToNext}
-                    />
-                    <PrayerTimeCard
-                      name="Isha"
-                      time={todaysPrayers.isha_begins}
-                      jamah={todaysPrayers.isha_jamah}
-                      isActive={currentPrayer === "isha"}
-                      isNext={nextPrayer === "isha"}
-                      pulseAnim={pulseAnim}
-                      getCountdownToNext={getCountdownToNext}
-                    />
-                  </>
-                ) : (
-                  <View style={styles.noDataSection}>
-                    <Text style={styles.noDataIcon}>📅</Text>
-                    <Text
-                      style={[
-                        styles.noDataMessage,
-                        { color: colors.text + "80" },
-                      ]}
-                    >
-                      No prayer times available for today
-                    </Text>
-                  </View>
-                )}
+              {/* Content Section Container */}
+              <View
+                style={[
+                  styles.contentSection,
+                  { backgroundColor: colors.background },
+                ]}
+              >
+                {/* Prayer Cards */}
+                <View style={styles.prayersList}>
+                  {todaysPrayers ? (
+                    <>
+                      <PrayerTimeCard
+                        name="Fajr"
+                        time={todaysPrayers.fajr_begins}
+                        jamah={todaysPrayers.fajr_jamah}
+                        isActive={currentPrayer === "fajr"}
+                        isNext={nextPrayer === "fajr"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Sunrise"
+                        time={todaysPrayers.sunrise}
+                        isActive={currentPrayer === "sunrise"}
+                        isNext={nextPrayer === "sunrise"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Zuhr"
+                        time={todaysPrayers.zuhr_begins}
+                        jamah={todaysPrayers.zuhr_jamah}
+                        isActive={currentPrayer === "zuhr"}
+                        isNext={nextPrayer === "zuhr"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Asr"
+                        time={todaysPrayers.asr_mithl_1}
+                        jamah={todaysPrayers.asr_jamah}
+                        isActive={currentPrayer === "asr"}
+                        isNext={nextPrayer === "asr"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Maghrib"
+                        time={todaysPrayers.maghrib_begins}
+                        jamah={todaysPrayers.maghrib_jamah}
+                        isActive={currentPrayer === "maghrib"}
+                        isNext={nextPrayer === "maghrib"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                      <PrayerTimeCard
+                        name="Isha"
+                        time={todaysPrayers.isha_begins}
+                        jamah={todaysPrayers.isha_jamah}
+                        isActive={currentPrayer === "isha"}
+                        isNext={nextPrayer === "isha"}
+                        pulseAnim={pulseAnim}
+                        getCountdownToNext={getCountdownToNext}
+                      />
+                    </>
+                  ) : (
+                    <View style={styles.noDataSection}>
+                      <Text style={styles.noDataIcon}>📅</Text>
+                      <Text
+                        style={[
+                          styles.noDataMessage,
+                          { color: colors.text + "80" },
+                        ]}
+                      >
+                        No prayer times available for today
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Visual Separator */}
+              <View style={styles.sectionDivider}>
+                <View
+                  style={[
+                    styles.dividerLine,
+                    { backgroundColor: colors.text + "10" },
+                  ]}
+                />
               </View>
 
               {/* Quick Actions - Enhanced with Notifications and Print */}
@@ -878,13 +972,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Enhanced header wrapper with stronger shadow
+  headerWrapper: {
+    backgroundColor: "transparent",
+    zIndex: 10,
+    // Enhanced iOS-specific shadow for better separation
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+
   // Enhanced header with logo support
   header: {
     paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight || 24,
     paddingHorizontal: 20,
     paddingBottom: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(0,0,0,0.08)",
+  },
+
+  // Multi-layer edge effect for better visual separation
+  headerEdgeEffect: {
+    flexDirection: "column",
+  },
+
+  headerEdgeGradient1: {
+    height: 1,
+    opacity: 0.15,
+  },
+
+  headerEdgeGradient2: {
+    height: 1,
+    opacity: 0.08,
+  },
+
+  // Scroll edge effect container
+  scrollEdgeContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 8,
+    zIndex: 1,
+    pointerEvents: "none",
+  },
+
+  scrollEdgeGradient: {
+    flex: 1,
+    borderRadius: 8,
   },
 
   headerContent: {
@@ -977,26 +1118,58 @@ const styles = StyleSheet.create({
 
   scrollContentContainer: {
     paddingBottom: Platform.OS === "ios" ? 100 : 80,
+    paddingTop: 8, // Add subtle top padding
   },
 
   dailyView: {
-    padding: 16,
+    flex: 1,
+  },
+
+  // Enhanced content section with more top padding
+  contentSection: {
+    paddingHorizontal: 16,
+    paddingTop: 20, // Increased from 16 for better separation
+    paddingBottom: 8,
+    borderRadius: 12,
+    marginHorizontal: 0,
+    marginTop: 0,
+  },
+
+  // Section divider between content areas
+  sectionDivider: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+
+  dividerLine: {
+    height: 1,
+    width: "100%",
+    borderRadius: 0.5,
   },
 
   // Quick Actions with Notifications
   quickActionsContainer: {
-    marginTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
 
   quickActionsCard: {
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    // Enhanced shadow for better depth perception
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
 
   quickActionsHeader: {
@@ -1090,16 +1263,25 @@ const styles = StyleSheet.create({
   mosqueInfoCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 28,
+    marginTop: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 18,
     borderRadius: 16,
     borderWidth: 1,
     gap: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    // Consistent shadow styling
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
 
   mosqueLogoContainer: {
