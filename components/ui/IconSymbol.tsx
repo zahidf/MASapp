@@ -30,6 +30,7 @@ type CustomIconName =
   | "gear.circle.fill"
   | "info.circle"
   | "info.circle.fill"
+  | "checkmark"
   | "checkmark.circle"
   | "checkmark.circle.fill"
   | "xmark"
@@ -112,6 +113,7 @@ const ICON_MAPPING: Record<CustomIconName, MaterialIconName> = {
   "gear.circle.fill": "settings",
   "info.circle": "info",
   "info.circle.fill": "info",
+  checkmark: "check",
   "checkmark.circle": "check-circle",
   "checkmark.circle.fill": "check-circle",
   xmark: "close",
