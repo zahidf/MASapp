@@ -16,6 +16,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "zahidfaqiri786@outlook.com",
+        "ascAppId": "6747142367",
+        "appleTeamId": "XKM7KC4JG7"
+      }
+    }
   }
 }
