@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import React from "react";
@@ -101,6 +102,47 @@ export default function AdminScreen() {
               Alert.alert("Success", "All data has been cleared.");
             } catch (error) {
               Alert.alert("Error", "Failed to clear data.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResetNotificationSetup = async () => {
+    Alert.alert(
+      "Reset Notification Setup",
+      "This will reset the notification preferences and show the setup modal again when you restart the app. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Reset notification preferences to show setup modal again
+              await AsyncStorage.setItem(
+                "@notification_preferences",
+                JSON.stringify({
+                  isEnabled: false,
+                  hasAskedPermission: false,
+                  prayers: {
+                    fajr: { beginTime: false, jamahTime: false, jamahReminderMinutes: 10 },
+                    zuhr: { beginTime: false, jamahTime: false, jamahReminderMinutes: 10 },
+                    asr: { beginTime: false, jamahTime: false, jamahReminderMinutes: 10 },
+                    maghrib: { beginTime: false, jamahTime: false, jamahReminderMinutes: 10 },
+                    isha: { beginTime: false, jamahTime: false, jamahReminderMinutes: 10 },
+                  },
+                })
+              );
+              Alert.alert(
+                "Success",
+                "Notification setup has been reset. The setup modal will appear when you restart the app.",
+                [{ text: "OK" }]
+              );
+            } catch (error) {
+              console.error("Error resetting notification setup:", error);
+              Alert.alert("Error", "Failed to reset notification setup.");
             }
           },
         },
@@ -286,7 +328,9 @@ export default function AdminScreen() {
             <Text style={[styles.headerTitle, { color: colors.text }]}>
               Admin Panel
             </Text>
-            <Text style={[styles.headerSubtitle, { color: colors.text + "80" }]}>
+            <Text
+              style={[styles.headerSubtitle, { color: colors.text + "80" }]}
+            >
               Manage prayer times and app settings
             </Text>
             {__DEV__ && (
@@ -337,7 +381,12 @@ export default function AdminScreen() {
             ]}
           >
             <View style={styles.userHeader}>
-              <View style={[styles.userAvatar, { backgroundColor: colors.primary + "15" }]}>
+              <View
+                style={[
+                  styles.userAvatar,
+                  { backgroundColor: colors.primary + "15" },
+                ]}
+              >
                 <IconSymbol name="person.fill" size={28} color={colors.primary} />
               </View>
               <View style={styles.userInfo}>
@@ -356,14 +405,24 @@ export default function AdminScreen() {
                 <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Role</Text>
                 <Text style={[styles.statusValue, { color: colors.text }]}>Administrator</Text>
               </View>
-              <View style={[styles.statusDivider, { backgroundColor: colors.text + "10" }]} />
+              <View
+                style={[
+                  styles.statusDivider,
+                  { backgroundColor: colors.text + "10" },
+                ]}
+              />
               <View style={styles.statusItem}>
                 <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Last Update</Text>
                 <Text style={[styles.statusValue, { color: colors.text }]}>
                   {lastUpdate ? new Date(lastUpdate).toLocaleDateString() : "Never"}
                 </Text>
               </View>
-              <View style={[styles.statusDivider, { backgroundColor: colors.text + "10" }]} />
+              <View
+                style={[
+                  styles.statusDivider,
+                  { backgroundColor: colors.text + "10" },
+                ]}
+              />
               <View style={styles.statusItem}>
                 <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Environment</Text>
                 <Text style={[styles.statusValue, { color: colors.text }]}>
@@ -480,6 +539,26 @@ export default function AdminScreen() {
                   </Text>
                   <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
                     Delete all prayer times and user data
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+              </TouchableOpacity>
+
+              {/* Reset Notification Setup Button */}
+              <TouchableOpacity
+                style={[styles.actionRow, { borderBottomColor: colors.text + "10" }]}
+                onPress={handleResetNotificationSetup}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: colors.primary + "15" }]}>
+                  <IconSymbol name="bell.slash" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    Reset Notification Setup
+                  </Text>
+                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
+                    Show notification setup modal again
                   </Text>
                 </View>
                 <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />

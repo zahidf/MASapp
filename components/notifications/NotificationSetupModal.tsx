@@ -10,6 +10,7 @@ import {
   Switch,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 
@@ -27,13 +28,14 @@ interface NotificationSetupModalProps {
   onSkip: () => void;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export function NotificationSetupModal({
   visible,
   onComplete,
   onSkip,
 }: NotificationSetupModalProps) {
+  console.log("NotificationSetupModal: Rendering with visible:", visible);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const [preferences, setPreferences] = useState<NotificationPreferences>(
@@ -42,6 +44,7 @@ export function NotificationSetupModal({
   const [currentStep, setCurrentStep] = useState(1);
   const [slideAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [isModalReady, setIsModalReady] = useState(false);
 
   // Animation values for prayer items
   const [prayerAnimations] = useState(() =>
@@ -51,11 +54,25 @@ export function NotificationSetupModal({
   );
 
   React.useEffect(() => {
-    if (visible) {
-      // Reset animations when modal becomes visible
+    if (visible && !isModalReady) {
+      console.log("NotificationSetupModal: Setting modal ready");
+      // Small delay to ensure modal is mounted
+      setTimeout(() => {
+        setIsModalReady(true);
+      }, 50);
+    } else if (!visible) {
+      console.log("NotificationSetupModal: Resetting modal state");
+      setIsModalReady(false);
+      // Reset animations
       slideAnim.setValue(0);
       fadeAnim.setValue(0);
-      
+      prayerAnimations.forEach(anim => anim.setValue(0));
+    }
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (visible && isModalReady) {
+      console.log("NotificationSetupModal: Starting animations");
       // Animate modal entrance
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -63,18 +80,17 @@ export function NotificationSetupModal({
           tension: 65,
           friction: 10,
           useNativeDriver: true,
-          delay: 100, // Small delay to ensure modal is ready
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 300,
           useNativeDriver: true,
-          delay: 100,
         }),
       ]).start();
 
       // Animate prayer items in sequence on step 2
       if (currentStep === 2) {
+        prayerAnimations.forEach(anim => anim.setValue(0));
         Animated.stagger(
           50,
           prayerAnimations.map((anim) =>
@@ -88,9 +104,10 @@ export function NotificationSetupModal({
         ).start();
       }
     }
-  }, [visible, currentStep]);
+  }, [isModalReady, currentStep, visible]);
 
   const handleComplete = () => {
+    console.log("NotificationSetupModal: Complete button pressed");
     const updatedPreferences = {
       ...preferences,
       isEnabled: true,
@@ -100,6 +117,7 @@ export function NotificationSetupModal({
   };
 
   const handleSkip = () => {
+    console.log("NotificationSetupModal: Skip button pressed");
     onSkip();
   };
 
@@ -466,214 +484,219 @@ export function NotificationSetupModal({
     );
   };
 
-  // Don't render anything if not visible
+  // Don't render modal content until ready
   if (!visible) {
+    console.log("NotificationSetupModal: Not visible, returning null");
     return null;
   }
 
+  console.log("NotificationSetupModal: Rendering modal, isModalReady:", isModalReady);
+
   return (
     <Modal
-      visible={visible}
-      animationType="slide"
+      visible={visible && isModalReady}
+      animationType="none" // We'll handle animation ourselves
       transparent={true}
       statusBarTranslucent={true}
       presentationStyle="overFullScreen"
       onRequestClose={onSkip}
+      onShow={() => console.log("NotificationSetupModal: Modal onShow called")}
     >
-      <Animated.View
-        style={[
-          styles.modalOverlay,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
-      >
-        <TouchableOpacity 
-          style={StyleSheet.absoluteFillObject} 
-          activeOpacity={1} 
-          onPress={onSkip}
-        />
+      <TouchableWithoutFeedback onPress={onSkip}>
         <Animated.View
           style={[
-            styles.modalContainer,
+            styles.modalOverlay,
             {
-              transform: [
-                {
-                  translateY: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [100, 0],
-                  }),
-                },
-                {
-                  scale: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.9, 1],
-                  }),
-                },
-              ],
+              opacity: isModalReady ? fadeAnim : 0,
+              backgroundColor: "rgba(0,0,0,0.5)",
             },
           ]}
         >
-          <BlurView
-            intensity={90}
-            tint={colorScheme === "dark" ? "dark" : "light"}
-            style={[
-              styles.modalContent,
-              { backgroundColor: colors.background + "F5" },
-            ]}
-          >
-            {/* iOS-style handle */}
-            <View style={styles.handleContainer}>
-              <View
-                style={[styles.handle, { backgroundColor: colors.text + "30" }]}
-              />
-            </View>
-
-            {/* Progress Indicator */}
-            <View style={styles.progressContainer}>
-              {[1, 2].map((step) => (
-                <View
-                  key={step}
-                  style={[
-                    styles.progressDot,
-                    {
-                      backgroundColor:
-                        step <= currentStep
-                          ? colors.primary
-                          : colors.text + "20",
-                      width: step === currentStep ? 24 : 8,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-
-            {/* Content */}
-            <View style={styles.contentContainer}>
-              {currentStep === 1 && renderStep1()}
-              {currentStep === 2 && renderStep2()}
-            </View>
-
-            {/* iOS-style Button Bar */}
-            <BlurView
-              intensity={85}
-              tint={colorScheme === "dark" ? "dark" : "light"}
+          <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+            <Animated.View
               style={[
-                styles.buttonBar,
+                styles.modalContainer,
                 {
-                  borderTopColor: colors.text + "10",
+                  opacity: isModalReady ? 1 : 0,
+                  transform: [
+                    {
+                      translateY: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [100, 0],
+                      }),
+                    },
+                    {
+                      scale: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.9, 1],
+                      }),
+                    },
+                  ],
                 },
               ]}
             >
-              <View style={styles.buttonContainer}>
-                {currentStep === 1 ? (
-                  <>
-                    <TouchableOpacity
-                      style={[
-                        styles.button,
-                        styles.secondaryButton,
-                        { borderColor: colors.text + "20" },
-                      ]}
-                      onPress={handleSkip}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.secondaryButtonText,
-                          { color: colors.text + "80" },
-                        ]}
-                      >
-                        Skip
-                      </Text>
-                    </TouchableOpacity>
+              <BlurView
+                intensity={90}
+                tint={colorScheme === "dark" ? "dark" : "light"}
+                style={[
+                  styles.modalContent,
+                  { backgroundColor: colors.background + "F5" },
+                ]}
+              >
+                {/* iOS-style handle */}
+                <View style={styles.handleContainer}>
+                  <View
+                    style={[styles.handle, { backgroundColor: colors.text + "30" }]}
+                  />
+                </View>
 
-                    <TouchableOpacity
+                {/* Progress Indicator */}
+                <View style={styles.progressContainer}>
+                  {[1, 2].map((step) => (
+                    <View
+                      key={step}
                       style={[
-                        styles.button,
-                        styles.primaryButton,
-                        { backgroundColor: colors.primary },
-                      ]}
-                      onPress={() => setCurrentStep(2)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.primaryButtonText}>Continue</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={[
-                        styles.button,
-                        styles.tertiaryButton,
-                      ]}
-                      onPress={() => setCurrentStep(1)}
-                      activeOpacity={0.7}
-                    >
-                      <IconSymbol
-                        name="chevron.left"
-                        size={20}
-                        color={colors.primary}
-                      />
-                      <Text
-                        style={[styles.tertiaryButtonText, { color: colors.primary }]}
-                      >
-                        Back
-                      </Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.rightButtons}>
-                      <TouchableOpacity
-                        style={[
-                          styles.button,
-                          styles.secondaryButton,
-                          { borderColor: colors.text + "20" },
-                        ]}
-                        onPress={handleSkip}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          style={[
-                            styles.secondaryButtonText,
-                            { color: colors.text + "80" },
-                          ]}
-                        >
-                          Not Now
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.button,
-                          styles.primaryButton,
-                          {
-                            backgroundColor: hasAnyNotificationEnabled()
+                        styles.progressDot,
+                        {
+                          backgroundColor:
+                            step <= currentStep
                               ? colors.primary
                               : colors.text + "20",
-                          },
-                        ]}
-                        onPress={handleComplete}
-                        disabled={!hasAnyNotificationEnabled()}
-                        activeOpacity={0.8}
-                      >
-                        <Text
+                          width: step === currentStep ? 24 : 8,
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+
+                {/* Content */}
+                <View style={styles.contentContainer}>
+                  {currentStep === 1 && renderStep1()}
+                  {currentStep === 2 && renderStep2()}
+                </View>
+
+                {/* iOS-style Button Bar */}
+                <BlurView
+                  intensity={85}
+                  tint={colorScheme === "dark" ? "dark" : "light"}
+                  style={[
+                    styles.buttonBar,
+                    {
+                      borderTopColor: colors.text + "10",
+                    },
+                  ]}
+                >
+                  <View style={styles.buttonContainer}>
+                    {currentStep === 1 ? (
+                      <>
+                        <TouchableOpacity
                           style={[
-                            styles.primaryButtonText,
-                            {
-                              opacity: hasAnyNotificationEnabled() ? 1 : 0.5,
-                            },
+                            styles.button,
+                            styles.secondaryButton,
+                            { borderColor: colors.text + "20" },
                           ]}
+                          onPress={handleSkip}
+                          activeOpacity={0.7}
                         >
-                          Enable
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                )}
-              </View>
-            </BlurView>
-          </BlurView>
+                          <Text
+                            style={[
+                              styles.secondaryButtonText,
+                              { color: colors.text + "80" },
+                            ]}
+                          >
+                            Skip
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.button,
+                            styles.primaryButton,
+                            { backgroundColor: colors.primary },
+                          ]}
+                          onPress={() => setCurrentStep(2)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.primaryButtonText}>Continue</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[
+                            styles.button,
+                            styles.tertiaryButton,
+                          ]}
+                          onPress={() => setCurrentStep(1)}
+                          activeOpacity={0.7}
+                        >
+                          <IconSymbol
+                            name="chevron.left"
+                            size={20}
+                            color={colors.primary}
+                          />
+                          <Text
+                            style={[styles.tertiaryButtonText, { color: colors.primary }]}
+                          >
+                            Back
+                          </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.rightButtons}>
+                          <TouchableOpacity
+                            style={[
+                              styles.button,
+                              styles.secondaryButton,
+                              { borderColor: colors.text + "20" },
+                            ]}
+                            onPress={handleSkip}
+                            activeOpacity={0.7}
+                          >
+                            <Text
+                              style={[
+                                styles.secondaryButtonText,
+                                { color: colors.text + "80" },
+                              ]}
+                            >
+                              Not Now
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.button,
+                              styles.primaryButton,
+                              {
+                                backgroundColor: hasAnyNotificationEnabled()
+                                  ? colors.primary
+                                  : colors.text + "20",
+                              },
+                            ]}
+                            onPress={handleComplete}
+                            disabled={!hasAnyNotificationEnabled()}
+                            activeOpacity={0.8}
+                          >
+                            <Text
+                              style={[
+                                styles.primaryButtonText,
+                                {
+                                  opacity: hasAnyNotificationEnabled() ? 1 : 0.5,
+                                },
+                              ]}
+                            >
+                              Enable
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </BlurView>
+              </BlurView>
+            </Animated.View>
+          </TouchableWithoutFeedback>
         </Animated.View>
-      </Animated.View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -681,7 +704,6 @@ export function NotificationSetupModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
