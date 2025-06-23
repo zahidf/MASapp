@@ -1,8 +1,12 @@
+import { BlurView } from "expo-blur";
 import React, { useState } from "react";
 import {
   Alert,
+  Animated,
   Linking,
+  Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Switch,
   TouchableOpacity,
@@ -10,7 +14,6 @@ import {
 } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
@@ -27,10 +30,29 @@ export function NotificationSettingsScreen() {
 
   const [localPreferences, setLocalPreferences] = useState(preferences);
   const [isSaving, setIsSaving] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [headerAnim] = useState(new Animated.Value(0));
 
   React.useEffect(() => {
     setLocalPreferences(preferences);
   }, [preferences]);
+
+  React.useEffect(() => {
+    // Animate entrance
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerAnim, {
+        toValue: 1,
+        tension: 65,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleToggleNotifications = async () => {
     if (!localPreferences.isEnabled) {
@@ -140,302 +162,457 @@ export function NotificationSettingsScreen() {
     if (permissionGranted === null) return null;
 
     return (
-      <ThemedView
-        style={[styles.permissionCard, { backgroundColor: colors.surface }]}
+      <BlurView
+        intensity={60}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        style={[
+          styles.statusCard,
+          {
+            backgroundColor: colors.surface + "95",
+            borderColor: permissionGranted
+              ? colors.primary + "30"
+              : colors.error + "30",
+          },
+        ]}
       >
-        <View style={styles.permissionHeader}>
-          <IconSymbol
-            name={
-              permissionGranted
-                ? "checkmark.circle"
-                : "exclamationmark.triangle"
-            }
-            size={24}
-            color={permissionGranted ? "#4CAF50" : "#FF9800"}
-          />
-          <View style={styles.permissionContent}>
+        <View style={styles.statusContent}>
+          <View
+            style={[
+              styles.statusIconContainer,
+              {
+                backgroundColor: permissionGranted
+                  ? colors.primary + "15"
+                  : colors.error + "15",
+              },
+            ]}
+          >
+            <IconSymbol
+              name={
+                permissionGranted
+                  ? "checkmark.circle.fill"
+                  : "exclamationmark.triangle.fill"
+              }
+              size={24}
+              color={permissionGranted ? colors.primary : colors.error}
+            />
+          </View>
+          <View style={styles.statusTextContainer}>
             <ThemedText
-              style={[styles.permissionTitle, { color: colors.text }]}
+              style={[styles.statusTitle, { color: colors.text }]}
             >
               System Permissions
             </ThemedText>
             <ThemedText
               style={[
-                styles.permissionStatus,
-                { color: permissionGranted ? "#4CAF50" : "#FF9800" },
+                styles.statusSubtitle,
+                { color: colors.text + "80" },
               ]}
             >
-              {permissionGranted ? "Granted" : "Not Granted"}
+              {permissionGranted
+                ? "Notifications are enabled"
+                : "Notifications are disabled"}
             </ThemedText>
           </View>
           {!permissionGranted && (
             <TouchableOpacity
               style={[
-                styles.permissionButton,
+                styles.statusButton,
                 { backgroundColor: colors.primary },
               ]}
               onPress={() => Linking.openSettings()}
+              activeOpacity={0.8}
             >
-              <ThemedText style={styles.permissionButtonText}>
-                Settings
+              <ThemedText style={styles.statusButtonText}>
+                Enable
               </ThemedText>
             </TouchableOpacity>
           )}
         </View>
-      </ThemedView>
+      </BlurView>
     );
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <ThemedText
-            type="title"
-            style={[styles.title, { color: colors.text }]}
-          >
-            Notification Settings
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: `${colors.text}CC` }]}>
-            Customize your prayer time notifications
-          </ThemedText>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+      />
+
+      {/* Enhanced iOS-style Header with Blur */}
+      <Animated.View
+        style={[
+          styles.headerWrapper,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <BlurView
+          intensity={85}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <ThemedText style={[styles.headerTitle, { color: colors.text }]}>
+              Notifications
+            </ThemedText>
+            <ThemedText style={[styles.headerSubtitle, { color: colors.text + "80" }]}>
+              Customize your prayer time reminders
+            </ThemedText>
+          </View>
+        </BlurView>
+
+        {/* Header edge effect */}
+        <View style={styles.headerEdgeEffect}>
+          <View
+            style={[
+              styles.headerEdgeGradient,
+              {
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "rgba(0,0,0,0.2)"
+                    : "rgba(0,0,0,0.08)",
+              },
+            ]}
+          />
         </View>
+      </Animated.View>
 
-        {/* Permission Status */}
-        {renderPermissionStatus()}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Permission Status Card */}
+          {renderPermissionStatus()}
 
-        {/* Master Toggle */}
-        <ThemedView
-          style={[styles.settingCard, { backgroundColor: colors.surface }]}
-        >
-          <View style={styles.settingHeader}>
-            <View
+          {/* Master Toggle Section */}
+          <View style={styles.section}>
+            <ThemedText style={[styles.sectionTitle, { color: colors.text + "60" }]}>
+              NOTIFICATION SETTINGS
+            </ThemedText>
+
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
               style={[
-                styles.settingIcon,
-                { backgroundColor: `${colors.primary}20` },
+                styles.sectionCard,
+                {
+                  backgroundColor: colors.surface + "95",
+                  borderColor:
+                    colorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                },
               ]}
             >
-              <IconSymbol name="bell" size={24} color={colors.primary} />
-            </View>
-            <View style={styles.settingContent}>
-              <ThemedText style={[styles.settingTitle, { color: colors.text }]}>
-                Enable Notifications
-              </ThemedText>
-              <ThemedText
-                style={[
-                  styles.settingDescription,
-                  { color: `${colors.text}80` },
-                ]}
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={handleToggleNotifications}
+                activeOpacity={0.7}
               >
-                Master switch for all prayer time notifications
-              </ThemedText>
-            </View>
-            <Switch
-              value={localPreferences.isEnabled}
-              onValueChange={handleToggleNotifications}
-              disabled={isLoading || isSaving}
-              trackColor={{
-                false: `${colors.text}30`,
-                true: `${colors.primary}60`,
-              }}
-              thumbColor={
-                localPreferences.isEnabled ? colors.primary : "#f4f3f4"
-              }
-            />
-          </View>
-        </ThemedView>
-
-        {/* Prayer Begin Times */}
-        <ThemedView
-          style={[
-            styles.settingCard,
-            {
-              backgroundColor: colors.surface,
-              opacity: localPreferences.isEnabled ? 1 : 0.5,
-            },
-          ]}
-        >
-          <View style={styles.settingHeader}>
-            <View
-              style={[
-                styles.settingIcon,
-                { backgroundColor: `${colors.primary}20` },
-              ]}
-            >
-              <IconSymbol name="sunrise" size={24} color={colors.primary} />
-            </View>
-            <View style={styles.settingContent}>
-              <ThemedText style={[styles.settingTitle, { color: colors.text }]}>
-                Prayer Begin Times
-              </ThemedText>
-              <ThemedText
-                style={[
-                  styles.settingDescription,
-                  { color: `${colors.text}80` },
-                ]}
-              >
-                Get notified when each prayer time begins
-              </ThemedText>
-            </View>
-            <Switch
-              value={localPreferences.prayerBeginTimes}
-              onValueChange={handleTogglePrayerBeginTimes}
-              disabled={!localPreferences.isEnabled || isLoading || isSaving}
-              trackColor={{
-                false: `${colors.text}30`,
-                true: `${colors.primary}60`,
-              }}
-              thumbColor={
-                localPreferences.prayerBeginTimes ? colors.primary : "#f4f3f4"
-              }
-            />
-          </View>
-        </ThemedView>
-
-        {/* Jamah Times */}
-        <ThemedView
-          style={[
-            styles.settingCard,
-            {
-              backgroundColor: colors.surface,
-              opacity: localPreferences.isEnabled ? 1 : 0.5,
-            },
-          ]}
-        >
-          <View style={styles.settingHeader}>
-            <View
-              style={[
-                styles.settingIcon,
-                { backgroundColor: `${colors.primary}20` },
-              ]}
-            >
-              <IconSymbol name="people" size={24} color={colors.primary} />
-            </View>
-            <View style={styles.settingContent}>
-              <ThemedText style={[styles.settingTitle, { color: colors.text }]}>
-                Jamah Times
-              </ThemedText>
-              <ThemedText
-                style={[
-                  styles.settingDescription,
-                  { color: `${colors.text}80` },
-                ]}
-              >
-                Get notified for congregation prayer times
-              </ThemedText>
-            </View>
-            <Switch
-              value={localPreferences.jamahTimes}
-              onValueChange={handleToggleJamahTimes}
-              disabled={!localPreferences.isEnabled || isLoading || isSaving}
-              trackColor={{
-                false: `${colors.text}30`,
-                true: `${colors.primary}60`,
-              }}
-              thumbColor={
-                localPreferences.jamahTimes ? colors.primary : "#f4f3f4"
-              }
-            />
-          </View>
-
-          {/* Reminder Minutes Selection */}
-          {localPreferences.jamahTimes && localPreferences.isEnabled && (
-            <View style={styles.reminderSection}>
-              <ThemedText
-                style={[styles.reminderTitle, { color: colors.text }]}
-              >
-                Advance Reminder
-              </ThemedText>
-              <ThemedText
-                style={[styles.reminderSubtitle, { color: `${colors.text}80` }]}
-              >
-                Get reminded this many minutes before jamah starts
-              </ThemedText>
-
-              <View style={styles.reminderOptions}>
-                {REMINDER_OPTIONS.map((minutes) => (
-                  <TouchableOpacity
-                    key={minutes}
+                <View style={styles.settingLeft}>
+                  <View
                     style={[
-                      styles.reminderOption,
-                      {
-                        backgroundColor:
-                          localPreferences.jamahReminderMinutes === minutes
-                            ? colors.primary
-                            : colors.background,
-                        borderColor:
-                          localPreferences.jamahReminderMinutes === minutes
-                            ? colors.primary
-                            : `${colors.text}30`,
-                      },
+                      styles.settingIcon,
+                      { backgroundColor: colors.primary + "15" },
                     ]}
-                    onPress={() => handleReminderMinutesChange(minutes)}
-                    disabled={isLoading || isSaving}
                   >
+                    <IconSymbol name="bell.fill" size={22} color={colors.primary} />
+                  </View>
+                  <View style={styles.settingInfo}>
+                    <ThemedText style={[styles.settingTitle, { color: colors.text }]}>
+                      Enable Notifications
+                    </ThemedText>
                     <ThemedText
                       style={[
-                        styles.reminderOptionText,
-                        {
-                          color:
-                            localPreferences.jamahReminderMinutes === minutes
-                              ? "#fff"
-                              : colors.text,
-                        },
+                        styles.settingDescription,
+                        { color: colors.text + "60" },
                       ]}
                     >
-                      {minutes}m
+                      Master switch for all prayer reminders
                     </ThemedText>
+                  </View>
+                </View>
+                <Switch
+                  value={localPreferences.isEnabled}
+                  onValueChange={handleToggleNotifications}
+                  disabled={isLoading || isSaving}
+                  trackColor={{
+                    false: colors.text + "20",
+                    true: colors.primary + "60",
+                  }}
+                  thumbColor={
+                    localPreferences.isEnabled ? colors.primary : "#f4f3f4"
+                  }
+                  style={styles.switch}
+                />
+              </TouchableOpacity>
+            </BlurView>
+          </View>
+
+          {/* Prayer Notification Types */}
+          {localPreferences.isEnabled && (
+            <Animated.View
+              style={[
+                styles.section,
+                {
+                  opacity: fadeAnim,
+                },
+              ]}
+            >
+              <ThemedText style={[styles.sectionTitle, { color: colors.text + "60" }]}>
+                PRAYER REMINDERS
+              </ThemedText>
+
+              <BlurView
+                intensity={60}
+                tint={colorScheme === "dark" ? "dark" : "light"}
+                style={[
+                  styles.sectionCard,
+                  {
+                    backgroundColor: colors.surface + "95",
+                    borderColor:
+                      colorScheme === "dark"
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(0,0,0,0.04)",
+                  },
+                ]}
+              >
+                {/* Prayer Begin Times */}
+                <TouchableOpacity
+                  style={[
+                    styles.settingRow,
+                    { borderBottomColor: colors.text + "10" },
+                  ]}
+                  onPress={handleTogglePrayerBeginTimes}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.settingLeft}>
+                    <View
+                      style={[
+                        styles.settingIcon,
+                        { backgroundColor: colors.primary + "15" },
+                      ]}
+                    >
+                      <IconSymbol name="sunrise" size={22} color={colors.primary} />
+                    </View>
+                    <View style={styles.settingInfo}>
+                      <ThemedText style={[styles.settingTitle, { color: colors.text }]}>
+                        Prayer Begin Times
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.settingDescription,
+                          { color: colors.text + "60" },
+                        ]}
+                      >
+                        Notify when each prayer time begins
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <Switch
+                    value={localPreferences.prayerBeginTimes}
+                    onValueChange={handleTogglePrayerBeginTimes}
+                    disabled={!localPreferences.isEnabled || isLoading || isSaving}
+                    trackColor={{
+                      false: colors.text + "20",
+                      true: colors.primary + "60",
+                    }}
+                    thumbColor={
+                      localPreferences.prayerBeginTimes ? colors.primary : "#f4f3f4"
+                    }
+                    style={styles.switch}
+                  />
+                </TouchableOpacity>
+
+                {/* Jamah Times */}
+                <View>
+                  <TouchableOpacity
+                    style={[
+                      styles.settingRow,
+                      localPreferences.jamahTimes && styles.settingRowActive,
+                    ]}
+                    onPress={handleToggleJamahTimes}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.settingLeft}>
+                      <View
+                        style={[
+                          styles.settingIcon,
+                          { backgroundColor: colors.secondary + "15" },
+                        ]}
+                      >
+                        <IconSymbol name="people" size={22} color={colors.secondary} />
+                      </View>
+                      <View style={styles.settingInfo}>
+                        <ThemedText style={[styles.settingTitle, { color: colors.text }]}>
+                          Jamah Times
+                        </ThemedText>
+                        <ThemedText
+                          style={[
+                            styles.settingDescription,
+                            { color: colors.text + "60" },
+                          ]}
+                        >
+                          Notify for congregation prayers
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <Switch
+                      value={localPreferences.jamahTimes}
+                      onValueChange={handleToggleJamahTimes}
+                      disabled={!localPreferences.isEnabled || isLoading || isSaving}
+                      trackColor={{
+                        false: colors.text + "20",
+                        true: colors.primary + "60",
+                      }}
+                      thumbColor={
+                        localPreferences.jamahTimes ? colors.primary : "#f4f3f4"
+                      }
+                      style={styles.switch}
+                    />
                   </TouchableOpacity>
-                ))}
-              </View>
+
+                  {/* Reminder Minutes Selection */}
+                  {localPreferences.jamahTimes && localPreferences.isEnabled && (
+                    <Animated.View
+                      style={[
+                        styles.reminderSection,
+                        { borderTopColor: colors.text + "10" },
+                      ]}
+                    >
+                      <ThemedText
+                        style={[styles.reminderTitle, { color: colors.text }]}
+                      >
+                        Reminder Before Jamah
+                      </ThemedText>
+                      <ThemedText
+                        style={[styles.reminderSubtitle, { color: colors.text + "60" }]}
+                      >
+                        Get notified this many minutes before jamah starts
+                      </ThemedText>
+
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.reminderScroll}
+                        contentContainerStyle={styles.reminderOptions}
+                      >
+                        {REMINDER_OPTIONS.map((minutes) => (
+                          <TouchableOpacity
+                            key={minutes}
+                            style={[
+                              styles.reminderOption,
+                              {
+                                backgroundColor:
+                                  localPreferences.jamahReminderMinutes === minutes
+                                    ? colors.primary
+                                    : colors.surface,
+                                borderColor:
+                                  localPreferences.jamahReminderMinutes === minutes
+                                    ? colors.primary
+                                    : colors.text + "20",
+                              },
+                            ]}
+                            onPress={() => handleReminderMinutesChange(minutes)}
+                            disabled={isLoading || isSaving}
+                            activeOpacity={0.7}
+                          >
+                            <ThemedText
+                              style={[
+                                styles.reminderOptionText,
+                                {
+                                  color:
+                                    localPreferences.jamahReminderMinutes === minutes
+                                      ? "#fff"
+                                      : colors.text,
+                                },
+                              ]}
+                            >
+                              {minutes}m
+                            </ThemedText>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </Animated.View>
+                  )}
+                </View>
+              </BlurView>
+            </Animated.View>
+          )}
+
+          {/* Test Notification */}
+          {localPreferences.isEnabled && (
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={[styles.testButton, { borderColor: colors.primary }]}
+                onPress={handleTestNotification}
+                disabled={isLoading || isSaving}
+                activeOpacity={0.8}
+              >
+                <IconSymbol
+                  name="paperplane.fill"
+                  size={20}
+                  color={colors.primary}
+                />
+                <ThemedText
+                  style={[styles.testButtonText, { color: colors.primary }]}
+                >
+                  Send Test Notification
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           )}
-        </ThemedView>
 
-        {/* Test Notification */}
-        {localPreferences.isEnabled && (
-          <TouchableOpacity
-            style={[styles.testButton, { borderColor: colors.primary }]}
-            onPress={handleTestNotification}
-            disabled={isLoading || isSaving}
-          >
-            <IconSymbol
-              name="paperplane.fill"
-              size={20}
-              color={colors.primary}
-            />
-            <ThemedText
-              style={[styles.testButtonText, { color: colors.primary }]}
+          {/* Information Card */}
+          <View style={styles.section}>
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={[
+                styles.infoCard,
+                {
+                  backgroundColor: colors.primary + "10",
+                  borderColor: colors.primary + "20",
+                },
+              ]}
             >
-              Send Test Notification
-            </ThemedText>
-          </TouchableOpacity>
-        )}
-
-        {/* Information Card */}
-        <ThemedView
-          style={[styles.infoCard, { backgroundColor: `${colors.primary}10` }]}
-        >
-          <IconSymbol name="info.circle" size={24} color={colors.primary} />
-          <View style={styles.infoContent}>
-            <ThemedText style={[styles.infoTitle, { color: colors.primary }]}>
-              How It Works
-            </ThemedText>
-            <ThemedText style={[styles.infoText, { color: colors.text }]}>
-              • Notifications are scheduled up to 7 days in advance{"\n"}• They
-              automatically update when prayer times change{"\n"}• You can
-              modify these settings anytime{"\n"}• Notifications respect your
-              device's Do Not Disturb settings
-            </ThemedText>
+              <View
+                style={[
+                  styles.infoIconContainer,
+                  { backgroundColor: colors.primary + "15" },
+                ]}
+              >
+                <IconSymbol name="info.circle.fill" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <ThemedText style={[styles.infoTitle, { color: colors.primary }]}>
+                  How It Works
+                </ThemedText>
+                <ThemedText style={[styles.infoText, { color: colors.text }]}>
+                  • Notifications are scheduled up to 7 days in advance{"\n"}
+                  • They automatically update when prayer times change{"\n"}
+                  • You can modify these settings anytime{"\n"}
+                  • Notifications respect your device's Do Not Disturb settings
+                </ThemedText>
+              </View>
+            </BlurView>
           </View>
-        </ThemedView>
 
-        <View style={styles.bottomSpacing} />
-      </View>
-    </ScrollView>
+          <View style={styles.bottomSpacing} />
+        </Animated.View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -443,159 +620,291 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    padding: 20,
+
+  // Enhanced iOS-style header
+  headerWrapper: {
+    backgroundColor: "transparent",
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
+
   header: {
-    marginBottom: 24,
+    paddingTop: Platform.OS === "ios" ? 60 : StatusBar.currentHeight || 24,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    marginBottom: 8,
+
+  headerEdgeEffect: {
+    height: 1,
   },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
+
+  headerEdgeGradient: {
+    height: 1,
+    opacity: 0.15,
   },
-  permissionCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+
+  headerContent: {
+    gap: 4,
   },
-  permissionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
+
+  headerTitle: {
+    fontSize: 34,
+    fontWeight: "700",
+    letterSpacing: 0.37,
   },
-  permissionContent: {
+
+  headerSubtitle: {
+    fontSize: 15,
+    fontWeight: "400",
+    letterSpacing: -0.4,
+  },
+
+  // Scroll View
+  scrollView: {
     flex: 1,
   },
-  permissionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
+
+  scrollContent: {
+    paddingBottom: Platform.OS === "ios" ? 100 : 80,
   },
-  permissionStatus: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  permissionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  permissionButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  settingCard: {
+
+  // Permission Status Card
+  statusCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 20,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    overflow: "hidden",
   },
-  settingHeader: {
+
+  statusContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    padding: 16,
+    gap: 12,
   },
-  settingIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+
+  statusIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
-  settingContent: {
+
+  statusTextContainer: {
     flex: 1,
   },
-  settingTitle: {
-    fontSize: 18,
+
+  statusTitle: {
+    fontSize: 17,
     fontWeight: "600",
-    marginBottom: 4,
+    letterSpacing: -0.4,
+    marginBottom: 2,
   },
-  settingDescription: {
-    fontSize: 14,
-    lineHeight: 20,
+
+  statusSubtitle: {
+    fontSize: 13,
+    letterSpacing: -0.08,
   },
-  reminderSection: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.1)",
+
+  statusButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 14,
   },
-  reminderTitle: {
-    fontSize: 16,
+
+  statusButtonText: {
+    color: "#fff",
+    fontSize: 15,
     fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+
+  // Sections
+  section: {
+    marginBottom: 35,
+  },
+
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.08,
+    textTransform: "uppercase",
+    marginLeft: 32,
     marginBottom: 8,
   },
-  reminderSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
+
+  sectionCard: {
+    marginHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
   },
-  reminderOptions: {
+
+  // Setting Rows
+  settingRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 60,
+  },
+
+  settingRowActive: {
+    borderBottomWidth: 0,
+  },
+
+  settingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
     gap: 12,
   },
-  reminderOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+
+  settingIcon: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    borderWidth: 2,
-    minWidth: 60,
+    justifyContent: "center",
     alignItems: "center",
   },
-  reminderOptionText: {
-    fontSize: 16,
-    fontWeight: "600",
+
+  settingInfo: {
+    flex: 1,
+    marginRight: 12,
   },
+
+  settingTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+    marginBottom: 2,
+  },
+
+  settingDescription: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+  },
+
+  switch: {
+    transform: Platform.OS === "ios" ? [{ scale: 0.85 }] : [],
+  },
+
+  // Reminder Section
+  reminderSection: {
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(0,0,0,0.02)",
+  },
+
+  reminderTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+
+  reminderSubtitle: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+    marginBottom: 16,
+  },
+
+  reminderScroll: {
+    marginHorizontal: -16,
+  },
+
+  reminderOptions: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+
+  reminderOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    minWidth: 56,
+    alignItems: "center",
+  },
+
+  reminderOptionText: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+
+  // Test Button
   testButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 8,
+    marginHorizontal: 16,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 2,
-    marginBottom: 20,
   },
+
   testButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
+    letterSpacing: -0.4,
   },
+
+  // Info Card
   infoCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 16,
-    padding: 20,
+    gap: 12,
+    marginHorizontal: 16,
+    padding: 16,
     borderRadius: 16,
-    marginBottom: 20,
+    borderWidth: 1,
+    overflow: "hidden",
   },
+
+  infoIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   infoContent: {
     flex: 1,
   },
+
   infoTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
+    letterSpacing: -0.4,
     marginBottom: 8,
   },
+
   infoText: {
     fontSize: 14,
-    lineHeight: 22,
+    letterSpacing: -0.2,
+    lineHeight: 20,
   },
+
   bottomSpacing: {
     height: 40,
   },

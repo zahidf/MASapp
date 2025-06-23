@@ -1,5 +1,8 @@
+import { BlurView } from "expo-blur";
 import React, { useState } from "react";
 import {
+  Animated,
+  Dimensions,
   Modal,
   Platform,
   ScrollView,
@@ -10,6 +13,7 @@ import {
   View,
 } from "react-native";
 
+import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import {
@@ -23,6 +27,8 @@ interface NotificationSetupModalProps {
   onSkip: () => void;
 }
 
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
 export function NotificationSetupModal({
   visible,
   onComplete,
@@ -30,19 +36,53 @@ export function NotificationSetupModal({
 }: NotificationSetupModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-
   const [preferences, setPreferences] = useState<NotificationPreferences>(
     DEFAULT_NOTIFICATION_PREFERENCES
   );
   const [currentStep, setCurrentStep] = useState(1);
+  const [slideAnim] = useState(new Animated.Value(0));
+  const [fadeAnim] = useState(new Animated.Value(0));
 
-  // Use dynamic colors based on color scheme
-  const isDark = colorScheme === "dark";
-  const textColor = isDark ? "#ECEDEE" : "#333333";
-  const subtextColor = isDark ? "#BBBBBB" : "#666666";
-  const backgroundColor = isDark ? "#151718" : "#FFFFFF";
-  const surfaceColor = isDark ? "#2A2A2A" : "#F8F9FA";
-  const primaryColor = isDark ? "#81C784" : "#1B5E20";
+  // Animation values for prayer items
+  const [prayerAnimations] = useState(() =>
+    ["fajr", "zuhr", "asr", "maghrib", "isha"].map(
+      () => new Animated.Value(0)
+    )
+  );
+
+  React.useEffect(() => {
+    if (visible) {
+      // Animate modal entrance
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 1,
+          tension: 65,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Animate prayer items in sequence on step 2
+      if (currentStep === 2) {
+        Animated.stagger(
+          50,
+          prayerAnimations.map((anim) =>
+            Animated.spring(anim, {
+              toValue: 1,
+              tension: 65,
+              friction: 10,
+              useNativeDriver: true,
+            })
+          )
+        ).start();
+      }
+    }
+  }, [visible, currentStep]);
 
   const handleComplete = () => {
     const updatedPreferences = {
@@ -57,7 +97,6 @@ export function NotificationSetupModal({
     onSkip();
   };
 
-  // Define the notification prayers type based on your actual prayers object
   type NotificationPrayerName = keyof NotificationPreferences["prayers"];
 
   const togglePrayerSetting = (
@@ -101,178 +140,323 @@ export function NotificationSetupModal({
     );
   };
 
-  const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
-      {[1, 2].map((step) => (
-        <View
-          key={step}
-          style={[
-            styles.stepDot,
+  const renderStep1 = () => (
+    <Animated.View
+      style={[
+        styles.stepContent,
+        {
+          opacity: fadeAnim,
+          transform: [
             {
-              backgroundColor:
-                step <= currentStep ? primaryColor : isDark ? "#555" : "#ccc",
+              scale: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.9, 1],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      {/* Hero Icon with Liquid Glass effect */}
+      <View style={styles.heroContainer}>
+        <BlurView
+          intensity={100}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={[
+            styles.iconContainer,
+            {
+              backgroundColor: colors.primary + "15",
+              borderColor: colors.primary + "30",
             },
           ]}
-        />
-      ))}
-    </View>
-  );
-
-  const renderStep1 = () => (
-    <View style={styles.stepContent}>
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: isDark ? "#2A2A2A" : "#e8f5e9" },
-        ]}
-      >
-        <Text style={styles.iconText}>🔔</Text>
+        >
+          <IconSymbol name="bell.fill" size={48} color={colors.primary} />
+        </BlurView>
       </View>
 
-      <Text style={[styles.stepTitle, { color: textColor }]}>
-        Stay Connected with Prayer Times
-      </Text>
-
-      <Text style={[styles.stepDescription, { color: subtextColor }]}>
-        Get notified for prayer times and jamah schedules. You can customize
-        notifications for each prayer individually.
-      </Text>
-
-      <View style={styles.benefitsList}>
-        <View style={styles.benefitItem}>
-          <Text style={styles.benefitIcon}>⏰</Text>
-          <Text style={[styles.benefitText, { color: textColor }]}>
-            Never miss a prayer
-          </Text>
-        </View>
-
-        <View style={styles.benefitItem}>
-          <Text style={styles.benefitIcon}>🎯</Text>
-          <Text style={[styles.benefitText, { color: textColor }]}>
-            Customize for each prayer
-          </Text>
-        </View>
-
-        <View style={styles.benefitItem}>
-          <Text style={styles.benefitIcon}>⚙️</Text>
-          <Text style={[styles.benefitText, { color: textColor }]}>
-            Change settings anytime
-          </Text>
-        </View>
+      <View style={styles.textContent}>
+        <Text style={[styles.stepTitle, { color: colors.text }]}>
+          Never Miss a Prayer
+        </Text>
+        <Text style={[styles.stepDescription, { color: colors.text + "B3" }]}>
+          Get timely reminders for prayer times and jamah schedules. Customize
+          notifications for each prayer individually.
+        </Text>
       </View>
-    </View>
+
+      {/* Feature Cards with HIG-compliant styling */}
+      <View style={styles.featureCards}>
+        <BlurView
+          intensity={40}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={[
+            styles.featureCard,
+            {
+              backgroundColor: colors.surface + "95",
+              borderColor:
+                colorScheme === "dark"
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(0,0,0,0.04)",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.featureIconContainer,
+              { backgroundColor: colors.primary + "15" },
+            ]}
+          >
+            <IconSymbol
+              name="bell"
+              size={20}
+              color={colors.primary}
+            />
+          </View>
+          <View style={styles.featureTextContainer}>
+            <Text style={[styles.featureTitle, { color: colors.text }]}>
+              Smart Reminders
+            </Text>
+            <Text
+              style={[styles.featureDescription, { color: colors.text + "80" }]}
+            >
+              Customizable alerts before each prayer
+            </Text>
+          </View>
+        </BlurView>
+
+        <BlurView
+          intensity={40}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={[
+            styles.featureCard,
+            {
+              backgroundColor: colors.surface + "95",
+              borderColor:
+                colorScheme === "dark"
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(0,0,0,0.04)",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.featureIconContainer,
+              { backgroundColor: colors.secondary + "15" },
+            ]}
+          >
+            <IconSymbol
+              name="people"
+              size={20}
+              color={colors.secondary}
+            />
+          </View>
+          <View style={styles.featureTextContainer}>
+            <Text style={[styles.featureTitle, { color: colors.text }]}>
+              Jamah Times
+            </Text>
+            <Text
+              style={[styles.featureDescription, { color: colors.text + "80" }]}
+            >
+              Join the congregation on time
+            </Text>
+          </View>
+        </BlurView>
+      </View>
+    </Animated.View>
   );
 
   const renderStep2 = () => {
-    const prayers: Array<{ key: NotificationPrayerName; name: string }> = [
-      { key: "fajr", name: "Fajr" },
-      { key: "zuhr", name: "Zuhr" },
-      { key: "asr", name: "Asr" },
-      { key: "maghrib", name: "Maghrib" },
-      { key: "isha", name: "Isha" },
+    const prayers: Array<{ key: NotificationPrayerName; name: string; icon: string }> = [
+      { key: "fajr", name: "Fajr", icon: "sunrise" },
+      { key: "zuhr", name: "Zuhr", icon: "sun.max.fill" },
+      { key: "asr", name: "Asr", icon: "sun.min" },
+      { key: "maghrib", name: "Maghrib", icon: "sunset" },
+      { key: "isha", name: "Isha", icon: "moon.stars" },
     ];
 
     return (
-      <View style={styles.stepContent}>
-        <Text style={[styles.stepTitle, { color: textColor }]}>
-          Choose Your Notifications
-        </Text>
+      <Animated.View
+        style={[
+          styles.stepContent,
+          {
+            opacity: fadeAnim,
+          },
+        ]}
+      >
+        <View style={styles.textContent}>
+          <Text style={[styles.stepTitle, { color: colors.text }]}>
+            Choose Your Notifications
+          </Text>
+          <Text style={[styles.stepDescription, { color: colors.text + "B3" }]}>
+            Select which prayers you'd like to be notified for
+          </Text>
+        </View>
 
-        <Text style={[styles.stepDescription, { color: subtextColor }]}>
-          Select which prayers you'd like to be notified for
-        </Text>
-
-        {/* Quick toggles */}
-        <View style={[styles.quickToggles, { backgroundColor: surfaceColor }]}>
+        {/* Quick Actions with iOS-style grouped appearance */}
+        <View style={styles.quickActions}>
           <TouchableOpacity
-            style={styles.quickToggle}
+            style={[
+              styles.quickActionButton,
+              {
+                backgroundColor: colors.primary + "15",
+                borderColor: colors.primary,
+              },
+            ]}
             onPress={() => toggleAllPrayers("beginTime")}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.quickToggleText, { color: primaryColor }]}>
-              Toggle All Begin Times
+            <IconSymbol name="bell" size={16} color={colors.primary} />
+            <Text style={[styles.quickActionText, { color: colors.primary }]}>
+              All Prayer Times
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={styles.quickToggle}
+            style={[
+              styles.quickActionButton,
+              {
+                backgroundColor: colors.secondary + "15",
+                borderColor: colors.secondary,
+              },
+            ]}
             onPress={() => toggleAllPrayers("jamahTime")}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.quickToggleText, { color: primaryColor }]}>
-              Toggle All Jamah Times
+            <IconSymbol name="people" size={16} color={colors.secondary} />
+            <Text style={[styles.quickActionText, { color: colors.secondary }]}>
+              All Jamah Times
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* Prayer List with iOS-style cells */}
         <ScrollView
           style={styles.prayersList}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.prayersListContent}
         >
-          {prayers.map((prayer) => (
-            <View
+          {prayers.map((prayer, index) => (
+            <Animated.View
               key={prayer.key}
-              style={[styles.prayerItem, { backgroundColor: surfaceColor }]}
+              style={[
+                {
+                  opacity: prayerAnimations[index],
+                  transform: [
+                    {
+                      translateY: prayerAnimations[index].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
             >
-              <Text style={[styles.prayerName, { color: textColor }]}>
-                {prayer.name}
-              </Text>
-
-              <View style={styles.prayerToggles}>
-                <View style={styles.toggleItem}>
-                  <Text style={[styles.toggleLabel, { color: subtextColor }]}>
-                    Begin
+              <BlurView
+                intensity={60}
+                tint={colorScheme === "dark" ? "dark" : "light"}
+                style={[
+                  styles.prayerItem,
+                  {
+                    backgroundColor: colors.surface + "95",
+                    borderColor:
+                      colorScheme === "dark"
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(0,0,0,0.04)",
+                  },
+                ]}
+              >
+                <View style={styles.prayerItemLeft}>
+                  <View
+                    style={[
+                      styles.prayerIconContainer,
+                      { backgroundColor: colors.primary + "15" },
+                    ]}
+                  >
+                    <IconSymbol
+                      name={prayer.icon as any}
+                      size={24}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <Text style={[styles.prayerName, { color: colors.text }]}>
+                    {prayer.name}
                   </Text>
-                  <Switch
-                    value={preferences.prayers[prayer.key].beginTime}
-                    onValueChange={() =>
-                      togglePrayerSetting(prayer.key, "beginTime")
-                    }
-                    trackColor={{
-                      false: isDark ? "#555" : "#ccc",
-                      true: primaryColor,
-                    }}
-                    thumbColor={
-                      preferences.prayers[prayer.key].beginTime
-                        ? primaryColor
-                        : "#f4f3f4"
-                    }
-                    style={styles.switch}
-                  />
                 </View>
 
-                <View style={styles.toggleItem}>
-                  <Text style={[styles.toggleLabel, { color: subtextColor }]}>
-                    Jamah
-                  </Text>
-                  <Switch
-                    value={preferences.prayers[prayer.key].jamahTime}
-                    onValueChange={() =>
-                      togglePrayerSetting(prayer.key, "jamahTime")
-                    }
-                    trackColor={{
-                      false: isDark ? "#555" : "#ccc",
-                      true: primaryColor,
-                    }}
-                    thumbColor={
-                      preferences.prayers[prayer.key].jamahTime
-                        ? primaryColor
-                        : "#f4f3f4"
-                    }
-                    style={styles.switch}
-                  />
+                <View style={styles.prayerToggles}>
+                  <View style={styles.toggleItem}>
+                    <Text style={[styles.toggleLabel, { color: colors.text + "80" }]}>
+                      Begin
+                    </Text>
+                    <Switch
+                      value={preferences.prayers[prayer.key].beginTime}
+                      onValueChange={() =>
+                        togglePrayerSetting(prayer.key, "beginTime")
+                      }
+                      trackColor={{
+                        false: colors.text + "20",
+                        true: colors.primary + "60",
+                      }}
+                      thumbColor={
+                        preferences.prayers[prayer.key].beginTime
+                          ? colors.primary
+                          : "#f4f3f4"
+                      }
+                      style={styles.switch}
+                    />
+                  </View>
+
+                  <View style={[styles.toggleDivider, { backgroundColor: colors.text + "10" }]} />
+
+                  <View style={styles.toggleItem}>
+                    <Text style={[styles.toggleLabel, { color: colors.text + "80" }]}>
+                      Jamah
+                    </Text>
+                    <Switch
+                      value={preferences.prayers[prayer.key].jamahTime}
+                      onValueChange={() =>
+                        togglePrayerSetting(prayer.key, "jamahTime")
+                      }
+                      trackColor={{
+                        false: colors.text + "20",
+                        true: colors.primary + "60",
+                      }}
+                      thumbColor={
+                        preferences.prayers[prayer.key].jamahTime
+                          ? colors.primary
+                          : "#f4f3f4"
+                      }
+                      style={styles.switch}
+                    />
+                  </View>
                 </View>
-              </View>
-            </View>
+              </BlurView>
+            </Animated.View>
           ))}
         </ScrollView>
 
         {!hasAnyNotificationEnabled() && (
-          <View style={[styles.warningBox, { backgroundColor: "#FFF3E0" }]}>
-            <Text style={[styles.warningText, { color: "#E65100" }]}>
-              ⚠️ No notifications selected. You won't receive any prayer
-              reminders.
+          <View
+            style={[
+              styles.warningBox,
+              {
+                backgroundColor: colors.error + "15",
+                borderColor: colors.error + "30",
+              },
+            ]}
+          >
+            <IconSymbol
+              name="exclamationmark.triangle"
+              size={16}
+              color={colors.error}
+            />
+            <Text style={[styles.warningText, { color: colors.error }]}>
+              No notifications selected. You won't receive any prayer reminders.
             </Text>
           </View>
         )}
-      </View>
+      </Animated.View>
     );
   };
 
@@ -281,98 +465,201 @@ export function NotificationSetupModal({
   return (
     <Modal
       visible={visible}
-      animationType="fade"
+      animationType="none"
       transparent={true}
       statusBarTranslucent={true}
+      presentationStyle="overFullScreen"
     >
-      <View style={styles.modalOverlay}>
-        <View
-          style={[styles.modalContainer, { backgroundColor: backgroundColor }]}
+      <Animated.View
+        style={[
+          styles.modalOverlay,
+          {
+            opacity: fadeAnim,
+            backgroundColor: "rgba(0,0,0,0.5)",
+          },
+        ]}
+      >
+        <Animated.View
+          style={[
+            styles.modalContainer,
+            {
+              transform: [
+                {
+                  translateY: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [100, 0],
+                  }),
+                },
+                {
+                  scale: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
         >
-          <ScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {renderStepIndicator()}
-
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
-          </ScrollView>
-
-          <View
+          <BlurView
+            intensity={90}
+            tint={colorScheme === "dark" ? "dark" : "light"}
             style={[
-              styles.buttonContainer,
-              { borderTopColor: isDark ? "#333" : "#eee" },
+              styles.modalContent,
+              { backgroundColor: colors.background + "F5" },
             ]}
           >
-            {currentStep > 1 && (
-              <TouchableOpacity
-                style={[
-                  styles.secondaryButton,
-                  { borderColor: isDark ? "#555" : "#ccc" },
-                ]}
-                onPress={() => setCurrentStep(currentStep - 1)}
-              >
-                <Text
-                  style={[styles.secondaryButtonText, { color: textColor }]}
-                >
-                  Back
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.primaryButtons}>
-              {currentStep < 2 ? (
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    { backgroundColor: primaryColor },
-                  ]}
-                  onPress={() => setCurrentStep(2)}
-                >
-                  <Text style={styles.primaryButtonText}>Continue</Text>
-                </TouchableOpacity>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.skipButton,
-                      { borderColor: isDark ? "#555" : "#ccc" },
-                    ]}
-                    onPress={handleSkip}
-                  >
-                    <Text
-                      style={[styles.skipButtonText, { color: subtextColor }]}
-                    >
-                      Skip
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      {
-                        backgroundColor: hasAnyNotificationEnabled()
-                          ? primaryColor
-                          : isDark
-                          ? "#555"
-                          : "#ccc",
-                      },
-                    ]}
-                    onPress={handleComplete}
-                    disabled={!hasAnyNotificationEnabled()}
-                  >
-                    <Text style={styles.primaryButtonText}>
-                      Enable Notifications
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
+            {/* iOS-style handle */}
+            <View style={styles.handleContainer}>
+              <View
+                style={[styles.handle, { backgroundColor: colors.text + "30" }]}
+              />
             </View>
-          </View>
-        </View>
-      </View>
+
+            {/* Progress Indicator */}
+            <View style={styles.progressContainer}>
+              {[1, 2].map((step) => (
+                <View
+                  key={step}
+                  style={[
+                    styles.progressDot,
+                    {
+                      backgroundColor:
+                        step <= currentStep
+                          ? colors.primary
+                          : colors.text + "20",
+                      width: step === currentStep ? 24 : 8,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Content */}
+            <View style={styles.contentContainer}>
+              {currentStep === 1 && renderStep1()}
+              {currentStep === 2 && renderStep2()}
+            </View>
+
+            {/* iOS-style Button Bar */}
+            <BlurView
+              intensity={85}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={[
+                styles.buttonBar,
+                {
+                  borderTopColor: colors.text + "10",
+                },
+              ]}
+            >
+              <View style={styles.buttonContainer}>
+                {currentStep === 1 ? (
+                  <>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.secondaryButton,
+                        { borderColor: colors.text + "20" },
+                      ]}
+                      onPress={handleSkip}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.secondaryButtonText,
+                          { color: colors.text + "80" },
+                        ]}
+                      >
+                        Skip
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.primaryButton,
+                        { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => setCurrentStep(2)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.primaryButtonText}>Continue</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.tertiaryButton,
+                      ]}
+                      onPress={() => setCurrentStep(1)}
+                      activeOpacity={0.7}
+                    >
+                      <IconSymbol
+                        name="chevron.left"
+                        size={20}
+                        color={colors.primary}
+                      />
+                      <Text
+                        style={[styles.tertiaryButtonText, { color: colors.primary }]}
+                      >
+                        Back
+                      </Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.rightButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.button,
+                          styles.secondaryButton,
+                          { borderColor: colors.text + "20" },
+                        ]}
+                        onPress={handleSkip}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.secondaryButtonText,
+                            { color: colors.text + "80" },
+                          ]}
+                        >
+                          Not Now
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.button,
+                          styles.primaryButton,
+                          {
+                            backgroundColor: hasAnyNotificationEnabled()
+                              ? colors.primary
+                              : colors.text + "20",
+                          },
+                        ]}
+                        onPress={handleComplete}
+                        disabled={!hasAnyNotificationEnabled()}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.primaryButtonText,
+                            {
+                              opacity: hasAnyNotificationEnabled() ? 1 : 0.5,
+                            },
+                          ]}
+                        >
+                          Enable
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </View>
+            </BlurView>
+          </BlurView>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -380,207 +667,313 @@ export function NotificationSetupModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
+
   modalContainer: {
     width: "100%",
     maxWidth: 400,
-    height: "80%",
-    minHeight: 500,
-    borderRadius: 24,
+    maxHeight: "85%",
+    borderRadius: 28,
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 20,
-    flexDirection: "column",
   },
-  scrollView: {
+
+  modalContent: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 24,
-    minHeight: 400,
+
+  // iOS-style handle
+  handleContainer: {
+    alignItems: "center",
+    paddingTop: 8,
+    paddingBottom: 4,
   },
-  stepIndicator: {
+
+  handle: {
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+  },
+
+  // Progress Indicator
+  progressContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 32,
-    gap: 8,
+    paddingVertical: 12,
+    gap: 6,
   },
-  stepDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+
+  progressDot: {
+    height: 8,
+    borderRadius: 4,
   },
-  stepContent: {
-    alignItems: "center",
+
+  // Content
+  contentContainer: {
     flex: 1,
-    minHeight: 300,
+    paddingHorizontal: 20,
   },
+
+  stepContent: {
+    flex: 1,
+  },
+
+  // Hero Section
+  heroContainer: {
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 24,
+  },
+
   iconContainer: {
     width: 96,
     height: 96,
     borderRadius: 48,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+  },
+
+  // Text Content
+  textContent: {
+    alignItems: "center",
     marginBottom: 24,
   },
-  iconText: {
-    fontSize: 48,
-  },
+
   stepTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "700",
+    letterSpacing: 0.37,
     textAlign: "center",
-    marginBottom: 16,
-    lineHeight: 30,
+    marginBottom: 8,
   },
+
   stepDescription: {
-    fontSize: 16,
+    fontSize: 17,
+    letterSpacing: -0.4,
     textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-    paddingHorizontal: 8,
+    lineHeight: 24,
+    paddingHorizontal: 20,
   },
-  benefitsList: {
-    width: "100%",
-    paddingHorizontal: 16,
+
+  // Feature Cards
+  featureCards: {
+    gap: 12,
+    marginBottom: 20,
   },
-  benefitItem: {
+
+  featureCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
-    paddingVertical: 8,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
   },
-  benefitIcon: {
-    fontSize: 24,
-    marginRight: 16,
-    width: 32,
-    textAlign: "center",
+
+  featureIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  benefitText: {
-    fontSize: 16,
-    fontWeight: "500",
+
+  featureTextContainer: {
     flex: 1,
-    lineHeight: 20,
   },
-  quickToggles: {
-    width: "100%",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    gap: 8,
-  },
-  quickToggle: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  quickToggleText: {
-    fontSize: 14,
+
+  featureTitle: {
+    fontSize: 17,
     fontWeight: "600",
+    letterSpacing: -0.4,
+    marginBottom: 2,
   },
-  prayersList: {
-    width: "100%",
-    maxHeight: 280,
+
+  featureDescription: {
+    fontSize: 13,
+    letterSpacing: -0.08,
   },
-  prayerItem: {
+
+  // Quick Actions
+  quickActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 20,
+  },
+
+  quickActionButton: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+
+  quickActionText: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+
+  // Prayer List
+  prayersList: {
+    flex: 1,
     marginBottom: 12,
   },
-  prayerName: {
-    fontSize: 16,
-    fontWeight: "600",
+
+  prayersListContent: {
+    gap: 12,
+    paddingBottom: 12,
+  },
+
+  prayerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+
+  prayerItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     flex: 1,
   },
+
+  prayerIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  prayerName: {
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+
   prayerToggles: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 24,
+    gap: 12,
   },
+
   toggleItem: {
     alignItems: "center",
     gap: 4,
   },
+
   toggleLabel: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: -0.08,
+    textTransform: "uppercase",
   },
+
+  toggleDivider: {
+    width: 1,
+    height: 32,
+  },
+
   switch: {
-    transform: Platform.OS === "ios" ? [{ scaleX: 0.8 }, { scaleY: 0.8 }] : [],
+    transform: Platform.OS === "ios" ? [{ scale: 0.8 }] : [],
   },
+
+  // Warning Box
   warningBox: {
-    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
     borderRadius: 12,
-    marginTop: 16,
     borderWidth: 1,
-    borderColor: "#FFB74D",
+    marginTop: 8,
   },
+
   warningText: {
-    fontSize: 14,
+    flex: 1,
+    fontSize: 13,
     fontWeight: "500",
-    textAlign: "center",
+    letterSpacing: -0.08,
     lineHeight: 18,
   },
-  buttonContainer: {
-    flexDirection: "row",
-    padding: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    gap: 12,
-    alignItems: "center",
-  },
-  secondaryButton: {
+
+  // Button Bar - iOS Style
+  buttonBar: {
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    minWidth: 80,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+
+  buttonContainer: {
+    flexDirection: "row",
+    gap: 12,
     alignItems: "center",
   },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  primaryButtons: {
+
+  rightButtons: {
     flex: 1,
     flexDirection: "row",
     gap: 12,
+    justifyContent: "flex-end",
   },
-  skipButton: {
-    flex: 1,
+
+  button: {
     paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingHorizontal: 20,
+    borderRadius: 14,
     alignItems: "center",
-    minHeight: 50,
     justifyContent: "center",
+    minHeight: 50,
   },
-  skipButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
+
   primaryButton: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    minHeight: 50,
-    justifyContent: "center",
+    minWidth: 100,
   },
+
+  secondaryButton: {
+    borderWidth: 1.5,
+    minWidth: 90,
+  },
+
+  tertiaryButton: {
+    flexDirection: "row",
+    gap: 4,
+    paddingHorizontal: 16,
+  },
+
   primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+
+  secondaryButtonText: {
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
+  },
+
+  tertiaryButtonText: {
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
   },
 });
