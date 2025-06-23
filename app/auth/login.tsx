@@ -1,17 +1,21 @@
+import { AppleAuthService } from "@/utils/appleAuth";
+import * as AppleAuthentication from "expo-apple-authentication";
+import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,10 +26,12 @@ const DEV_MODE = __DEV__;
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme();
-  const { login, loginWithGoogle, devLogin, user } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, devLogin, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState(false);
 
   // If user is already authenticated as admin, redirect to admin
   React.useEffect(() => {
@@ -33,6 +39,23 @@ export default function LoginScreen() {
       router.replace("/(tabs)/admin");
     }
   }, [user]);
+
+  // Check Apple Sign-In availability
+  React.useEffect(() => {
+    checkAppleSignInAvailability();
+    
+    // Fade in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const checkAppleSignInAvailability = async () => {
+    const available = await AppleAuthService.isAvailable();
+    setIsAppleSignInAvailable(available);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -56,8 +79,6 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email, password);
-
-      // On successful login, navigate to admin
       router.replace("/(tabs)/admin");
     } catch (error: any) {
       const errorMessage = error.message || "Login failed. Please try again.";
@@ -67,33 +88,27 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleAppleLogin = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
-
-      // On successful login, navigate to admin
+      await loginWithApple();
       router.replace("/(tabs)/admin");
     } catch (error: any) {
-      let errorMessage = "Google login failed. Please try again.";
-
-      // Handle specific error messages
+      let errorMessage = "Apple Sign-In failed. Please try again.";
+      
       if (error.message) {
         if (error.message.includes("cancelled")) {
-          errorMessage = "Google sign-in was cancelled.";
+          errorMessage = "Sign-in was cancelled.";
         } else if (error.message.includes("not available")) {
-          errorMessage =
-            "Google Play Services are not available on this device.";
+          errorMessage = "Apple Sign-In is not available on this device.";
         } else if (error.message.includes("Unauthorised")) {
-          errorMessage = error.message; // Show the full unauthorised message
-        } else if (error.message.includes("not configured")) {
-          errorMessage = "Google authentication is not properly configured.";
+          errorMessage = error.message;
         } else {
           errorMessage = error.message;
         }
       }
-
-      Alert.alert("Google Sign-In Failed", errorMessage);
+      
+      Alert.alert("Sign-In Failed", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -124,266 +139,240 @@ export default function LoginScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ThemedView style={styles.content}>
-        {/* Header with back button */}
-        <View style={styles.headerRow}>
+      {/* iOS-style Navigation Bar */}
+      <BlurView
+        intensity={85}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        style={styles.navigationBar}
+      >
+        <View style={styles.navContent}>
           <TouchableOpacity onPress={handleBackToApp} style={styles.backButton}>
-            <IconSymbol name="chevron.left" size={24} color={colors.text} />
-            <ThemedText style={[styles.backText, { color: colors.text }]}>
-              Back to App
-            </ThemedText>
+            <IconSymbol name="chevron.left" size={24} color={colors.primary} />
+            <Text style={[styles.backText, { color: colors.primary }]}>
+              Prayer Times
+            </Text>
           </TouchableOpacity>
         </View>
+      </BlurView>
 
-        <View style={styles.header}>
-          <View
-            style={[
-              styles.logoContainer,
-              { backgroundColor: `${colors.primary}20` },
-            ]}
-          >
-            <IconSymbol
-              name="gear.circle.fill"
-              size={48}
-              color={colors.primary}
-            />
-          </View>
-
-          <ThemedText
-            type="title"
-            style={[styles.title, { color: colors.text }]}
-          >
-            Admin Login
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: `${colors.text}80` }]}>
-            Sign in to access administrative features
-          </ThemedText>
-
-          {DEV_MODE && (
-            <View style={styles.devBadge}>
-              <ThemedText style={styles.devBadgeText}>
-                🔧 Development Mode
-              </ThemedText>
-            </View>
-          )}
-        </View>
-
-        {/* Admin Access Notice */}
-        <View
-          style={[
-            styles.accessNotice,
-            { backgroundColor: `${colors.primary}10` },
-          ]}
-        >
-          <IconSymbol name="shield" size={24} color={colors.primary} />
-          <View style={styles.accessNoticeContent}>
-            <ThemedText
-              style={[styles.accessNoticeTitle, { color: colors.primary }]}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          {/* Logo and Title Section */}
+          <View style={styles.headerSection}>
+            <View
+              style={[
+                styles.logoContainer,
+                { backgroundColor: colors.primary + "15" },
+              ]}
             >
-              Administrative Access
-            </ThemedText>
-            <ThemedText
-              style={[styles.accessNoticeText, { color: colors.text }]}
-            >
-              {ENV_CONFIG.isDevelopment
-                ? "Development mode allows testing with any credentials."
-                : "Only authorised mosque administrators can access this area."}
-            </ThemedText>
-          </View>
-        </View>
-
-        {DEV_MODE && (
-          <View style={styles.devSection}>
-            <TouchableOpacity
-              style={[styles.devButton, isLoading && styles.buttonDisabled]}
-              onPress={handleDevLogin}
-              disabled={isLoading}
-            >
-              <IconSymbol name="hammer" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>
-                Quick Dev Login (Bypass Auth)
-              </ThemedText>
-            </TouchableOpacity>
-
-            <View style={styles.divider}>
-              <View
-                style={[
-                  styles.dividerLine,
-                  {
-                    backgroundColor: Colors[colorScheme ?? "light"].text + "30",
-                  },
-                ]}
-              />
-              <ThemedText
-                style={[styles.dividerText, { color: `${colors.text}60` }]}
-              >
-                OR USE REGULAR LOGIN
-              </ThemedText>
-              <View
-                style={[
-                  styles.dividerLine,
-                  {
-                    backgroundColor: Colors[colorScheme ?? "light"].text + "30",
-                  },
-                ]}
+              <IconSymbol
+                name="person.badge.key"
+                size={48}
+                color={colors.primary}
               />
             </View>
+
+            <Text style={[styles.title, { color: colors.text }]}>
+              Admin Sign In
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.text + "80" }]}>
+              Access administrative features
+            </Text>
           </View>
-        )}
 
-        <View style={styles.form}>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: colors.text,
-                borderColor: `${colors.text}30`,
-                backgroundColor: colors.surface,
-              },
-            ]}
-            placeholder={
-              ENV_CONFIG.isDevelopment
-                ? "Email (any for testing)"
-                : "Authorised admin email only"
-            }
-            placeholderTextColor={Colors[colorScheme ?? "light"].text + "60"}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            editable={!isLoading}
-          />
-
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: colors.text,
-                borderColor: `${colors.text}30`,
-                backgroundColor: colors.surface,
-              },
-            ]}
-            placeholder="Password"
-            placeholderTextColor={Colors[colorScheme ?? "light"].text + "60"}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!isLoading}
-          />
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              { backgroundColor: colors.primary },
-              isLoading && styles.buttonDisabled,
-            ]}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <View style={styles.loadingRow}>
-                <ThemedText style={styles.buttonText}>Signing in...</ThemedText>
-              </View>
+          {/* Sign In Options Section */}
+          <View style={styles.signInSection}>
+            {/* Apple Sign In Button - Use native button on iOS */}
+            {isAppleSignInAvailable && Platform.OS === "ios" ? (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={
+                  colorScheme === "dark"
+                    ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
+                cornerRadius={14}
+                style={[styles.appleButton, { opacity: isLoading ? 0.6 : 1 }]}
+                onPress={handleAppleLogin}
+              />
             ) : (
-              <View style={styles.buttonRow}>
-                <IconSymbol name="person" size={20} color="#fff" />
-                <ThemedText style={styles.buttonText}>Sign In</ThemedText>
+              DEV_MODE && (
+                <TouchableOpacity
+                  style={[
+                    styles.appleButton,
+                    { 
+                      backgroundColor: colorScheme === "dark" ? "#FFFFFF" : "#000000",
+                      opacity: isLoading ? 0.6 : 1,
+                    },
+                  ]}
+                  onPress={handleAppleLogin}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  <IconSymbol 
+                    name="globe" 
+                    size={20} 
+                    color={colorScheme === "dark" ? "#000000" : "#FFFFFF"} 
+                  />
+                  <Text
+                    style={[
+                      styles.appleButtonText,
+                      { color: colorScheme === "dark" ? "#000000" : "#FFFFFF" },
+                    ]}
+                  >
+                    Sign in with Apple (Dev)
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+
+            {/* Divider */}
+            {(isAppleSignInAvailable || DEV_MODE) && (
+              <View style={styles.dividerContainer}>
+                <View
+                  style={[
+                    styles.dividerLine,
+                    { backgroundColor: colors.text + "20" },
+                  ]}
+                />
+                <Text style={[styles.dividerText, { color: colors.text + "60" }]}>
+                  or
+                </Text>
+                <View
+                  style={[
+                    styles.dividerLine,
+                    { backgroundColor: colors.text + "20" },
+                  ]}
+                />
               </View>
             )}
-          </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View
+            {/* Email Sign In Form */}
+            <View style={styles.formSection}>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.text,
+                      backgroundColor: colors.surface,
+                      borderColor: email ? colors.primary : colors.text + "20",
+                    },
+                  ]}
+                  placeholder="Email"
+                  placeholderTextColor={colors.text + "60"}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  editable={!isLoading}
+                  autoCorrect={false}
+                  textContentType="emailAddress"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.text,
+                      backgroundColor: colors.surface,
+                      borderColor: password ? colors.primary : colors.text + "20",
+                    },
+                  ]}
+                  placeholder="Password"
+                  placeholderTextColor={colors.text + "60"}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  editable={!isLoading}
+                  autoCorrect={false}
+                  textContentType="password"
+                  onSubmitEditing={handleLogin}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.signInButton,
+                  { 
+                    backgroundColor: colors.primary,
+                    opacity: isLoading || !email || !password ? 0.6 : 1,
+                  },
+                ]}
+                onPress={handleLogin}
+                disabled={isLoading || !email || !password}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.signInButtonText}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Dev Mode Quick Access */}
+            {DEV_MODE && (
+              <View style={styles.devSection}>
+                <View style={[styles.devBadge, { backgroundColor: "#FF9800" }]}>
+                  <Text style={styles.devBadgeText}>Development Mode</Text>
+                </View>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.devButton,
+                    { 
+                      borderColor: "#FF9800",
+                      opacity: isLoading ? 0.6 : 1,
+                    },
+                  ]}
+                  onPress={handleDevLogin}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  <IconSymbol name="hammer" size={18} color="#FF9800" />
+                  <Text style={[styles.devButtonText, { color: "#FF9800" }]}>
+                    Quick Dev Access
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Info Section */}
+          <View style={styles.infoSection}>
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
               style={[
-                styles.dividerLine,
-                { backgroundColor: Colors[colorScheme ?? "light"].text + "30" },
+                styles.infoCard,
+                {
+                  backgroundColor: colors.surface + "95",
+                  borderColor:
+                    colorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                },
               ]}
-            />
-            <ThemedText
-              style={[styles.dividerText, { color: `${colors.text}60` }]}
             >
-              OR
-            </ThemedText>
-            <View
-              style={[
-                styles.dividerLine,
-                { backgroundColor: Colors[colorScheme ?? "light"].text + "30" },
-              ]}
-            />
+              <IconSymbol name="info.circle" size={20} color={colors.primary} />
+              <View style={styles.infoContent}>
+                <Text style={[styles.infoTitle, { color: colors.text }]}>
+                  Administrative Access
+                </Text>
+                <Text style={[styles.infoText, { color: colors.text + "80" }]}>
+                  Only authorised mosque administrators can access this section.
+                  {"\n\n"}
+                  Contact: info@masjidabubakr.org.uk
+                </Text>
+              </View>
+            </BlurView>
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.googleButton,
-              { borderColor: colors.primary },
-              isLoading && styles.buttonDisabled,
-            ]}
-            onPress={handleGoogleLogin}
-            disabled={isLoading}
-          >
-            <IconSymbol name="globe" size={20} color={colors.primary} />
-            <ThemedText
-              style={[styles.googleButtonText, { color: colors.primary }]}
-            >
-              Sign in with Google
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Authorised Admin Info */}
-        <View
-          style={[
-            styles.authorisedAdminsSection,
-            { backgroundColor: `${colors.primary}10` },
-          ]}
-        >
-          <ThemedText
-            style={[styles.authorisedAdminsTitle, { color: colors.primary }]}
-          >
-            Authorised Administrators:
-          </ThemedText>
-          {ENV_CONFIG.auth.authorizedAdmins.map((email, index) => (
-            <ThemedText
-              key={index}
-              style={[styles.authorisedAdminEmail, { color: colors.text }]}
-            >
-              • {email}
-            </ThemedText>
-          ))}
-        </View>
-
-        {DEV_MODE && (
-          <View
-            style={[styles.devNote, { backgroundColor: `${colors.primary}10` }]}
-          >
-            <ThemedText style={[styles.devNoteText, { color: colors.text }]}>
-              🔧 Development Mode:
-              {"\n"}• Use "Quick Dev Login" to bypass authentication
-              {"\n"}• Any email with 'admin' or 'dev' gets admin privileges
-              {"\n"}• Authorised admins:{" "}
-              {ENV_CONFIG.auth.authorizedAdmins.join(", ")}
-              {"\n"}• Auto-login on app start if no user exists
-            </ThemedText>
-          </View>
-        )}
-
-        {!ENV_CONFIG.isDevelopment && (
-          <View
-            style={[styles.productionNotice, { backgroundColor: "#FFEBEE" }]}
-          >
-            <IconSymbol
-              name="exclamationmark.triangle"
-              size={20}
-              color="#F44336"
-            />
-            <ThemedText style={styles.productionNoticeText}>
-              🔒 Production Mode: Only pre-authorised email addresses can access
-              admin features.
-              {"\n\n"}Contact info@masjidabubakr.org.uk for access requests.
-            </ThemedText>
-          </View>
-        )}
-      </ThemedView>
+        </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -392,242 +381,215 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "center",
-    maxWidth: 400,
-    alignSelf: "center",
-    width: "100%",
+  
+  // iOS-style Navigation Bar
+  navigationBar: {
+    paddingTop: Platform.OS === "ios" ? 50 : 30,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.1)",
   },
-  headerRow: {
-    position: "absolute",
-    top: Platform.OS === "ios" ? 60 : 40,
-    left: 20,
-    right: 20,
-    zIndex: 1,
+  
+  navContent: {
+    paddingHorizontal: 16,
   },
+  
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    padding: 8,
+    gap: 6,
   },
+  
   backText: {
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
   },
-  header: {
-    alignItems: "center",
-    marginBottom: 30,
-    marginTop: 60,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  devBadge: {
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginTop: 12,
-  },
-  devBadgeText: {
-    fontSize: 14,
-    color: "#1976D2",
-    fontWeight: "600",
-  },
-  accessNotice: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: "#1B5E20",
-  },
-  accessNoticeContent: {
+  
+  // Content
+  scrollView: {
     flex: 1,
   },
-  accessNoticeTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
+  
+  scrollContent: {
+    flexGrow: 1,
   },
-  accessNoticeText: {
-    fontSize: 14,
-    lineHeight: 20,
+  
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 40,
   },
-  devSection: {
+  
+  // Header Section
+  headerSection: {
+    alignItems: "center",
+    marginBottom: 48,
+  },
+  
+  logoContainer: {
+    width: 88,
+    height: 88,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 20,
   },
-  devButton: {
-    backgroundColor: "#FF9800",
+  
+  title: {
+    fontSize: 34,
+    fontWeight: "700",
+    letterSpacing: 0.37,
+    marginBottom: 8,
+  },
+  
+  subtitle: {
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
+    textAlign: "center",
+  },
+  
+  // Sign In Section
+  signInSection: {
+    marginBottom: 32,
+  },
+  
+  // Apple Button - Following Apple HIG
+  appleButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    height: 56,
-    borderRadius: 12,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-  },
-  form: {
-    width: "100%",
-    marginBottom: 20,
-  },
-  input: {
-    height: 56,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    height: 50,
+    borderRadius: 14,
     marginBottom: 16,
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
-  button: {
-    height: 56,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
+  
+  appleButtonText: {
+    fontSize: 17,
     fontWeight: "600",
+    letterSpacing: -0.4,
   },
-  divider: {
+  
+  // Divider
+  dividerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 20,
+    marginVertical: 24,
   },
+  
   dividerLine: {
     flex: 1,
     height: 1,
   },
+  
   dividerText: {
     marginHorizontal: 16,
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "400",
+    letterSpacing: -0.2,
   },
-  googleButton: {
-    backgroundColor: "transparent",
+  
+  // Form Section
+  formSection: {
+    gap: 16,
+  },
+  
+  inputContainer: {
+    marginBottom: 4,
+  },
+  
+  input: {
+    height: 50,
     borderWidth: 1,
-    height: 56,
-    borderRadius: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    fontSize: 17,
+    letterSpacing: -0.4,
+  },
+  
+  signInButton: {
+    height: 50,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginTop: 8,
   },
-  googleButtonText: {
-    fontSize: 16,
+  
+  signInButtonText: {
+    color: "#FFFFFF",
+    fontSize: 17,
     fontWeight: "600",
+    letterSpacing: -0.4,
   },
-  authorisedAdminsSection: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: "#4CAF50",
+  
+  // Dev Section
+  devSection: {
+    marginTop: 32,
+    alignItems: "center",
+    gap: 16,
   },
-  authorisedAdminsTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  authorisedAdminEmail: {
-    fontSize: 13,
-    marginBottom: 4,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-  },
-  devNote: {
-    padding: 16,
+  
+  devBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: "#4CAF50",
-    marginTop: 20,
   },
-  devNoteText: {
-    fontSize: 12,
-    lineHeight: 18,
+  
+  devBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.08,
   },
-  productionNotice: {
+  
+  devButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    borderWidth: 2,
+  },
+  
+  devButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+  
+  // Info Section
+  infoSection: {
+    marginTop: "auto",
+  },
+  
+  infoCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
     padding: 16,
-    borderRadius: 12,
-    marginTop: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: "#F44336",
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
   },
-  productionNoticeText: {
-    fontSize: 12,
-    color: "#C62828",
-    lineHeight: 18,
+  
+  infoContent: {
     flex: 1,
+  },
+  
+  infoTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+  
+  infoText: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+    lineHeight: 18,
   },
 });

@@ -1,14 +1,18 @@
+// contexts/AuthContext.tsx
 import { User } from "@/types/prayer";
+import { AppleAuthService } from "@/utils/appleAuth";
 import { ENV_CONFIG, type AppConfig } from "@/utils/envConfig";
 import { GoogleAuthService } from "@/utils/googleAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, ReactNode, useEffect, useState } from "react";
+import { Platform } from "react-native";
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  loginWithApple: () => Promise<void>;
   logout: () => Promise<void>;
   devLogin: () => Promise<void>; // Development only
   config: AppConfig; // Expose config for debugging
@@ -64,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isProduction: ENV_CONFIG.isProduction,
           debugMode: ENV_CONFIG.debugMode,
           googleConfigStatus: GoogleAuthService.getConfigStatus(),
+          appleConfigStatus: AppleAuthService.getConfigStatus(),
           hasApiConfig: !!ENV_CONFIG.api.baseUrl,
           authorisedAdmins: ENV_CONFIG.auth.authorizedAdmins.length,
         });
@@ -94,6 +99,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!currentGoogleUser) {
               // Google session expired, clear local session
               console.log("Google session expired, clearing local session");
+              await clearUserData();
+            }
+          }
+
+          // If user was signed in with Apple, verify the credential state
+          if (
+            parsedUser.id?.startsWith("apple-") &&
+            Platform.OS === "ios" &&
+            !ENV_CONFIG.isDevelopment
+          ) {
+            const appleUserId = parsedUser.id.replace("apple-", "");
+            const credentialState = await AppleAuthService.getCredentialState(appleUserId);
+            if (credentialState !== 1) { // 1 = Authorized
+              console.log("Apple credential revoked, clearing local session");
               await clearUserData();
             }
           }
@@ -178,7 +197,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("User saved:", {
           email: userData.email,
           isAdmin: userData.isAdmin,
-          authMethod: userData.id.startsWith("google-") ? "Google" : "Email",
+          authMethod: userData.id.startsWith("google-") ? "Google" : 
+                      userData.id.startsWith("apple-") ? "Apple" : "Email",
         });
       }
     } catch (error) {
@@ -259,28 +279,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // TODO: Implement actual API call for production
-      // const response = await fetch(`${ENV_CONFIG.api.baseUrl}/auth/login`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ email, password }),
-      // });
-      //
-      // if (!response.ok) {
-      //   const errorData = await response.json();
-      //   throw new Error(errorData.message || 'Login failed');
-      // }
-      //
-      // const userData = await response.json();
-      //
-      // // Validate API response
-      // if (!isValidUser(userData)) {
-      //   throw new Error('Invalid user data received from server');
-      // }
-      //
-      // await saveUser(userData);
-
       throw new Error("API authentication not yet implemented");
     } catch (error) {
       console.error("Login error:", error);
@@ -357,6 +355,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginWithApple = async () => {
+    try {
+      setIsLoading(true);
+
+      // Check if Apple authentication is available
+      const isAvailable = await AppleAuthService.isAvailable();
+      
+      if (!isAvailable) {
+        if (ENV_CONFIG.isDevelopment) {
+          // Use mock Apple login in development
+          const mockUser = await AppleAuthService.mockSignIn();
+          await saveUser(mockUser);
+          return;
+        } else {
+          throw new Error(
+            "Apple Sign-In is not available on this device. Please ensure you're using an iOS device with iOS 13.0 or later."
+          );
+        }
+      }
+
+      // Perform Apple Sign-In
+      const appleUser = await AppleAuthService.signIn();
+      await saveUser(appleUser);
+
+      console.log("Apple authentication successful:", {
+        email: appleUser.email,
+        name: appleUser.name,
+        isAdmin: appleUser.isAdmin,
+      });
+    } catch (error) {
+      console.error("Apple login error:", error);
+
+      // Re-throw with more user-friendly messages
+      if (error instanceof Error) {
+        if (error.message.includes("cancelled")) {
+          throw new Error("Sign-in was cancelled");
+        }
+      }
+
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const devLogin = async () => {
     if (!ENV_CONFIG.isDevelopment) {
       throw new Error("Development login only available in development mode");
@@ -395,6 +438,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Note: Apple doesn't have a sign-out method, just clear local session
+
       // Clear local session
       await clearUserData();
 
@@ -414,6 +459,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login,
     loginWithGoogle,
+    loginWithApple,
     logout,
     devLogin,
     config: ENV_CONFIG,

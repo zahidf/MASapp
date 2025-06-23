@@ -26,18 +26,13 @@
         "NSLocationWhenInUseUsageDescription": "This app uses location to show directions to the mosque.",
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "Google Auth",
-            "CFBundleURLSchemes": ["$(EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS)"]
-          },
-          {
-            "CFBundleURLName": "Google Auth",
-            "CFBundleURLSchemes": ["$(EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS)"]
+            "CFBundleURLName": "Apple Auth",
+            "CFBundleURLSchemes": ["com.zahidf.masjidabubakr"]
           }
         ],
         "ITSAppUsesNonExemptEncryption": false
       },
       "associatedDomains": [
-        "applinks:masjidabubakr.org.uk",
         "applinks:masjidabubakr.org.uk"
       ],
       "privacyManifests": {
@@ -49,17 +44,10 @@
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
             "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
-          },
-          {
-            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
-          },
-          {
-            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
-            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
           }
         ]
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -140,7 +128,8 @@
         {
           "fonts": ["./assets/fonts/SpaceMono-Regular.ttf"]
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true
