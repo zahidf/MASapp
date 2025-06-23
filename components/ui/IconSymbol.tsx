@@ -22,6 +22,7 @@ type CustomIconName =
   | "person.3"
   | "people"
   | "person"
+  | "person.fill"
   | "person.badge.key"
   | "clock"
   | "clock.badge"
@@ -103,6 +104,7 @@ const ICON_MAPPING: Record<CustomIconName, MaterialIconName> = {
   "person.3": "group",
   people: "group",
   person: "person",
+  "person.fill": "person",
   "person.badge.key": "admin-panel-settings",
 
   // UI Elements

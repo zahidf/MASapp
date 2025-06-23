@@ -1,3 +1,4 @@
+import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import React from "react";
 import {
@@ -7,17 +8,16 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import { CSVUploader } from "@/components/admin/CSVUploader";
 import { YearlyCSVUploader } from "@/components/admin/YearlyCSVUploader";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
-import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
@@ -47,9 +47,9 @@ export default function AdminScreen() {
   const colors = Colors[colorScheme ?? "light"];
   const { logout, devLogin } = useAuth();
   const { refreshData } = usePrayerTimes();
-  const { preferences } = useNotificationContext();
   const [lastUpdate, setLastUpdate] = React.useState<string | null>(null);
   const [fadeAnim] = React.useState(new Animated.Value(0));
+  const [headerAnim] = React.useState(new Animated.Value(0));
 
   // Use auth guard
   const { isAuthenticated, isLoading, user } = useAdminAuthGuard();
@@ -59,11 +59,19 @@ export default function AdminScreen() {
       loadLastUpdate();
 
       // Fade in animation
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(headerAnim, {
+          toValue: 1,
+          tension: 65,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [isAuthenticated]);
 
@@ -101,17 +109,17 @@ export default function AdminScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Logout",
-        style: "default",
+        text: "Sign Out",
+        style: "destructive",
         onPress: async () => {
           try {
             await logout();
             // After logout, the auth guard will redirect to login
           } catch (error) {
-            Alert.alert("Error", "Failed to logout.");
+            Alert.alert("Error", "Failed to sign out.");
           }
         },
       },
@@ -152,70 +160,95 @@ export default function AdminScreen() {
         <StatusBar
           barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
         />
-        <Animated.View
-          style={[styles.accessDeniedContainer, { opacity: fadeAnim }]}
+        
+        {/* iOS-style Header */}
+        <BlurView
+          intensity={85}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={styles.header}
         >
-          <View style={[styles.devBadgeHeader, { backgroundColor: "#FF9800" }]}>
-            <ThemedText style={styles.devModeText}>
-              🔧 Development Mode
-            </ThemedText>
+          <View style={styles.headerContent}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Admin Access Required
+            </Text>
+            <Text style={[styles.headerSubtitle, { color: colors.text + "80" }]}>
+              Sign in to access administrative features
+            </Text>
           </View>
+        </BlurView>
 
-          <View
-            style={[
-              styles.accessDeniedIcon,
-              { backgroundColor: `${colors.primary}20` },
-            ]}
-          >
-            <IconSymbol
-              name="person.badge.key"
-              size={80}
-              color={colors.primary}
-            />
-          </View>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.accessDeniedContainer, { opacity: fadeAnim }]}>
+            {/* Dev Mode Badge */}
+            <View style={styles.devBadgeContainer}>
+              <View style={[styles.devBadge, { backgroundColor: "#FF9800" }]}>
+                <Text style={styles.devBadgeText}>🔧 Development Mode</Text>
+              </View>
+            </View>
 
-          <ThemedText
-            type="title"
-            style={[styles.accessDeniedTitle, { color: colors.text }]}
-          >
-            Admin Access Required
-          </ThemedText>
+            {/* Access Icon */}
+            <View style={[styles.accessIconContainer, { backgroundColor: colors.primary + "15" }]}>
+              <IconSymbol name="person.badge.key" size={64} color={colors.primary} />
+            </View>
 
-          <ThemedText
-            style={[styles.accessDeniedText, { color: `${colors.text}B3` }]}
-          >
-            You need admin privileges to access the admin panel. In development
-            mode, you can bypass this restriction or use the login screen.
-          </ThemedText>
+            <Text style={[styles.accessTitle, { color: colors.text }]}>
+              Authentication Required
+            </Text>
+            
+            <Text style={[styles.accessDescription, { color: colors.text + "60" }]}>
+              You need admin privileges to access this section. In development mode, you can bypass authentication or use the login screen.
+            </Text>
 
-          <View style={styles.devBypass}>
-            <TouchableOpacity
-              style={styles.devBypassButton}
-              onPress={handleDevLoginAsAdmin}
-            >
-              <IconSymbol name="hammer" size={24} color="#fff" />
-              <ThemedText style={styles.devBypassText}>
-                Grant Admin Access (Dev)
-              </ThemedText>
-            </TouchableOpacity>
+            {/* Action Cards */}
+            <View style={styles.actionCards}>
+              <TouchableOpacity
+                style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }]}
+                onPress={handleDevLoginAsAdmin}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIconContainer, { backgroundColor: "#FF9800" + "20" }]}>
+                  <IconSymbol name="hammer" size={24} color="#FF9800" />
+                </View>
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    Grant Admin Access
+                  </Text>
+                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
+                    Development bypass
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.loginButton, { backgroundColor: colors.primary }]}
-              onPress={() => router.push("/auth/login")}
-            >
-              <IconSymbol name="person" size={24} color="#fff" />
-              <ThemedText style={styles.devBypassText}>
-                Go to Login Screen
-              </ThemedText>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }]}
+                onPress={() => router.push("/auth/login")}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIconContainer, { backgroundColor: colors.primary + "15" }]}>
+                  <IconSymbol name="person" size={24} color={colors.primary} />
+                </View>
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    Sign In
+                  </Text>
+                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
+                    Use admin credentials
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+              </TouchableOpacity>
+            </View>
 
-            <ThemedText
-              style={[styles.devBypassNote, { color: `${colors.text}B3` }]}
-            >
-              🔧 Development options - not available in production
-            </ThemedText>
-          </View>
-        </Animated.View>
+            <Text style={[styles.devNote, { color: colors.text + "40" }]}>
+              Development options • Not available in production
+            </Text>
+          </Animated.View>
+        </ScrollView>
       </View>
     );
   }
@@ -227,226 +260,252 @@ export default function AdminScreen() {
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
 
+      {/* Enhanced iOS-style Header with Blur */}
+      <Animated.View
+        style={[
+          styles.headerWrapper,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <BlurView
+          intensity={85}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Admin Panel
+            </Text>
+            <Text style={[styles.headerSubtitle, { color: colors.text + "80" }]}>
+              Manage prayer times and app settings
+            </Text>
+            {__DEV__ && (
+              <View style={styles.headerBadge}>
+                <View style={[styles.devModeBadge, { backgroundColor: "#FF9800" }]}>
+                  <Text style={styles.devModeBadgeText}>DEV MODE</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </BlurView>
+
+        {/* Header edge effect */}
+        <View style={styles.headerEdgeEffect}>
+          <View
+            style={[
+              styles.headerEdgeGradient,
+              {
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "rgba(0,0,0,0.2)"
+                    : "rgba(0,0,0,0.08)",
+              },
+            ]}
+          />
+        </View>
+      </Animated.View>
+
       <ScrollView
-        style={styles.scrollContainer}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Enhanced Header */}
-          <View style={[styles.header, { backgroundColor: colors.primary }]}>
-            <View style={styles.titleRow}>
-              <View style={styles.adminIcon}>
-                <IconSymbol name="gear.circle.fill" size={32} color="#fff" />
+          {/* User Info Card */}
+          <BlurView
+            intensity={60}
+            tint={colorScheme === "dark" ? "dark" : "light"}
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor: colors.surface + "95",
+                borderColor:
+                  colorScheme === "dark"
+                    ? "rgba(255,255,255,0.06)"
+                    : "rgba(0,0,0,0.04)",
+              },
+            ]}
+          >
+            <View style={styles.userHeader}>
+              <View style={[styles.userAvatar, { backgroundColor: colors.primary + "15" }]}>
+                <IconSymbol name="person.fill" size={28} color={colors.primary} />
               </View>
-              <View style={styles.titleContent}>
-                <ThemedText type="title" style={styles.title}>
-                  Admin Panel
-                </ThemedText>
-                {__DEV__ && (
-                  <View style={styles.devBadge}>
-                    <ThemedText style={styles.devBadgeText}>
-                      DEV MODE
-                    </ThemedText>
+              <View style={styles.userInfo}>
+                <Text style={[styles.userName, { color: colors.text }]}>
+                  {user?.name || "Admin"}
+                </Text>
+                <Text style={[styles.userEmail, { color: colors.text + "60" }]}>
+                  {user?.email || "admin@masjidabubakr.org.uk"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Status Items */}
+            <View style={styles.statusItems}>
+              <View style={styles.statusItem}>
+                <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Role</Text>
+                <Text style={[styles.statusValue, { color: colors.text }]}>Administrator</Text>
+              </View>
+              <View style={[styles.statusDivider, { backgroundColor: colors.text + "10" }]} />
+              <View style={styles.statusItem}>
+                <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Last Update</Text>
+                <Text style={[styles.statusValue, { color: colors.text }]}>
+                  {lastUpdate ? new Date(lastUpdate).toLocaleDateString() : "Never"}
+                </Text>
+              </View>
+              <View style={[styles.statusDivider, { backgroundColor: colors.text + "10" }]} />
+              <View style={styles.statusItem}>
+                <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Environment</Text>
+                <Text style={[styles.statusValue, { color: colors.text }]}>
+                  {__DEV__ ? "Development" : "Production"}
+                </Text>
+              </View>
+            </View>
+          </BlurView>
+
+          {/* Prayer Times Management Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
+              PRAYER TIMES MANAGEMENT
+            </Text>
+
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={[
+                styles.sectionCard,
+                {
+                  backgroundColor: colors.surface + "95",
+                  borderColor:
+                    colorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                },
+              ]}
+            >
+              {/* Monthly Upload Card */}
+              <View style={[styles.uploadCard, { borderBottomColor: colors.text + "10" }]}>
+                <View style={styles.uploadHeader}>
+                  <View style={[styles.uploadIconContainer, { backgroundColor: colors.primary + "15" }]}>
+                    <IconSymbol name="calendar" size={24} color={colors.primary} />
                   </View>
-                )}
-              </View>
-            </View>
-            <ThemedText style={styles.subtitle}>
-              Welcome back, {user?.name || "Admin"}
-              {user?.id?.includes("dev") && " (Development)"}
-            </ThemedText>
-          </View>
-
-          {/* System Status Card */}
-          <ThemedView
-            style={[styles.statusCard, { backgroundColor: colors.surface }]}
-          >
-            <View style={styles.statusHeader}>
-              <IconSymbol
-                name="checkmark.circle"
-                size={24}
-                color={colors.primary}
-              />
-              <ThemedText
-                type="subtitle"
-                style={[styles.statusTitle, { color: colors.text }]}
-              >
-                System Status
-              </ThemedText>
-            </View>
-
-            {lastUpdate && (
-              <View style={styles.statusRow}>
-                <ThemedText
-                  style={[styles.statusLabel, { color: `${colors.text}B3` }]}
-                >
-                  Last Updated
-                </ThemedText>
-                <ThemedText
-                  style={[styles.statusValue, { color: colors.text }]}
-                >
-                  {new Date(lastUpdate).toLocaleString()}
-                </ThemedText>
-              </View>
-            )}
-
-            <View style={styles.statusRow}>
-              <ThemedText
-                style={[styles.statusLabel, { color: `${colors.text}B3` }]}
-              >
-                User Role
-              </ThemedText>
-              <ThemedText style={[styles.statusValue, { color: colors.text }]}>
-                {user?.isAdmin ? "Administrator" : "User"}
-              </ThemedText>
-            </View>
-
-            <View style={styles.statusRow}>
-              <ThemedText
-                style={[styles.statusLabel, { color: `${colors.text}B3` }]}
-              >
-                Environment
-              </ThemedText>
-              <ThemedText style={[styles.statusValue, { color: colors.text }]}>
-                {__DEV__ ? "Development" : "Production"}
-              </ThemedText>
-            </View>
-          </ThemedView>
-
-          {/* Prayer Times Management */}
-          <ThemedView
-            style={[styles.section, { backgroundColor: colors.surface }]}
-          >
-            <View style={styles.sectionHeader}>
-              <IconSymbol name="calendar" size={24} color={colors.primary} />
-              <ThemedText
-                type="subtitle"
-                style={[styles.sectionTitle, { color: colors.text }]}
-              >
-                Prayer Times Management
-              </ThemedText>
-            </View>
-
-            <View style={styles.uploaderTabs}>
-              <ThemedText style={[styles.tabsTitle, { color: colors.primary }]}>
-                Upload Options
-              </ThemedText>
-
-              <View
-                style={[
-                  styles.uploaderContainer,
-                  {
-                    backgroundColor:
-                      colorScheme === "dark" ? "#333333" : "#f8f9fa",
-                    borderColor: colorScheme === "dark" ? "#404040" : "#e9ecef",
-                  },
-                ]}
-              >
-                <View style={styles.uploaderHeader}>
-                  <ThemedText
-                    style={[styles.uploaderTitle, { color: colors.text }]}
-                  >
-                    📅 Monthly Upload
-                  </ThemedText>
-                  <View style={styles.uploaderBadge}>
-                    <ThemedText style={styles.uploaderBadgeText}>
-                      RECOMMENDED
-                    </ThemedText>
+                  <View style={styles.uploadInfo}>
+                    <View style={styles.uploadTitleRow}>
+                      <Text style={[styles.uploadTitle, { color: colors.text }]}>
+                        Monthly Upload
+                      </Text>
+                      <View style={[styles.recommendedBadge, { backgroundColor: colors.primary + "20" }]}>
+                        <Text style={[styles.recommendedText, { color: colors.primary }]}>
+                          RECOMMENDED
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.uploadDescription, { color: colors.text + "60" }]}>
+                      Upload prayer times for a specific month
+                    </Text>
                   </View>
                 </View>
-                <ThemedText
-                  style={[
-                    styles.uploaderDescription,
-                    { color: `${colors.text}B3` },
-                  ]}
-                >
-                  Upload prayer times for a specific month. This will merge with
-                  existing data.
-                </ThemedText>
                 <CSVUploader onUploadComplete={loadLastUpdate} />
               </View>
 
-              <View
-                style={[
-                  styles.uploaderContainer,
-                  {
-                    backgroundColor:
-                      colorScheme === "dark" ? "#333333" : "#f8f9fa",
-                    borderColor: colorScheme === "dark" ? "#404040" : "#e9ecef",
-                  },
-                ]}
-              >
-                <View style={styles.uploaderHeader}>
-                  <ThemedText
-                    style={[styles.uploaderTitle, { color: colors.text }]}
-                  >
-                    📆 Yearly Upload
-                  </ThemedText>
-                  <View style={[styles.uploaderBadge, styles.warningBadge]}>
-                    <ThemedText style={styles.uploaderBadgeText}>
-                      ADVANCED
-                    </ThemedText>
+              {/* Yearly Upload Card */}
+              <View style={styles.uploadCard}>
+                <View style={styles.uploadHeader}>
+                  <View style={[styles.uploadIconContainer, { backgroundColor: "#FF9800" + "15" }]}>
+                    <IconSymbol name="calendar" size={24} color="#FF9800" />
+                  </View>
+                  <View style={styles.uploadInfo}>
+                    <View style={styles.uploadTitleRow}>
+                      <Text style={[styles.uploadTitle, { color: colors.text }]}>
+                        Yearly Upload
+                      </Text>
+                      <View style={[styles.warningBadge, { backgroundColor: "#FF9800" + "20" }]}>
+                        <Text style={[styles.warningText, { color: "#FF9800" }]}>
+                          ADVANCED
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.uploadDescription, { color: colors.text + "60" }]}>
+                      Replace ALL existing prayer times with yearly data
+                    </Text>
                   </View>
                 </View>
-                <ThemedText
-                  style={[
-                    styles.uploaderDescription,
-                    { color: `${colors.text}B3` },
-                  ]}
-                >
-                  Upload complete year data. This will replace ALL existing
-                  prayer times.
-                </ThemedText>
                 <YearlyCSVUploader onUploadComplete={loadLastUpdate} />
               </View>
-            </View>
-          </ThemedView>
+            </BlurView>
+          </View>
 
-          {/* Data Management */}
-          <ThemedView
-            style={[styles.section, { backgroundColor: colors.surface }]}
-          >
-            <View style={styles.sectionHeader}>
-              <IconSymbol name="gear" size={24} color={colors.primary} />
-              <ThemedText
-                type="subtitle"
-                style={[styles.sectionTitle, { color: colors.text }]}
-              >
-                Data Management
-              </ThemedText>
-            </View>
+          {/* Actions Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
+              ACTIONS
+            </Text>
 
-            <TouchableOpacity
-              style={styles.dangerButton}
-              onPress={handleClearData}
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={[
+                styles.sectionCard,
+                {
+                  backgroundColor: colors.surface + "95",
+                  borderColor:
+                    colorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                },
+              ]}
             >
-              <IconSymbol name="trash" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>Clear All Data</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
-
-          {/* Account Management */}
-          <ThemedView
-            style={[styles.section, { backgroundColor: colors.surface }]}
-          >
-            <View style={styles.sectionHeader}>
-              <IconSymbol name="person" size={24} color={colors.primary} />
-              <ThemedText
-                type="subtitle"
-                style={[styles.sectionTitle, { color: colors.text }]}
+              {/* Clear Data Button */}
+              <TouchableOpacity
+                style={[styles.actionRow, { borderBottomColor: colors.text + "10" }]}
+                onPress={handleClearData}
+                activeOpacity={0.7}
               >
-                Account
-              </ThemedText>
-            </View>
+                <View style={[styles.actionIcon, { backgroundColor: colors.error + "15" }]}>
+                  <IconSymbol name="trash" size={20} color={colors.error} />
+                </View>
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.error }]}>
+                    Clear All Data
+                  </Text>
+                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
+                    Delete all prayer times and user data
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-            >
-              <IconSymbol name="arrow.right.square" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>Logout</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
+              {/* Sign Out Button */}
+              <TouchableOpacity
+                style={styles.actionRow}
+                onPress={handleLogout}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: colors.text + "10" }]}>
+                  <IconSymbol name="arrow.right.square" size={20} color={colors.text + "60"} />
+                </View>
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    Sign Out
+                  </Text>
+                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
+                    Exit admin panel
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+              </TouchableOpacity>
+            </BlurView>
+          </View>
 
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
@@ -456,11 +515,12 @@ export default function AdminScreen() {
   );
 }
 
-// Styles remain the same as your original file
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+  // Loading
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -469,294 +529,312 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontWeight: "500",
+    letterSpacing: -0.4,
   },
-  scrollContainer: {
-    flex: 1,
+
+  // Enhanced iOS-style header
+  headerWrapper: {
+    backgroundColor: "transparent",
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   header: {
-    padding: 24,
-    paddingTop:
-      Platform.OS === "ios" ? 60 : (StatusBar.currentHeight || 24) + 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 20,
+    paddingTop: Platform.OS === "ios" ? 60 : StatusBar.currentHeight || 24,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginBottom: 8,
+  headerEdgeEffect: {
+    height: 1,
   },
-  adminIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
+  headerEdgeGradient: {
+    height: 1,
+    opacity: 0.15,
   },
-  titleContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  headerContent: {
+    gap: 4,
   },
-  title: {
-    fontSize: 28,
-    color: "#fff",
-    fontWeight: "800",
+  headerTitle: {
+    fontSize: 34,
+    fontWeight: "700",
+    letterSpacing: 0.37,
   },
-  devBadge: {
-    backgroundColor: "#FF9800",
+  headerSubtitle: {
+    fontSize: 15,
+    fontWeight: "400",
+    letterSpacing: -0.4,
+  },
+  headerBadge: {
+    marginTop: 8,
+  },
+  devModeBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  devModeBadgeText: {
+    fontSize: 10,
+    color: "#fff",
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+
+  // Scroll view
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Platform.OS === "ios" ? 100 : 80,
+  },
+
+  // Access Denied View
+  accessDeniedContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+  },
+  devBadgeContainer: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  devBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   devBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#fff",
-    fontWeight: "bold",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "rgba(255,255,255,0.9)",
     fontWeight: "600",
   },
-  statusCard: {
-    margin: 20,
-    marginTop: 0,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statusHeader: {
-    flexDirection: "row",
+  accessIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 28,
+    justifyContent: "center",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
+    alignSelf: "center",
+    marginBottom: 24,
   },
-  statusTitle: {
-    fontSize: 18,
+  accessTitle: {
+    fontSize: 28,
     fontWeight: "700",
+    letterSpacing: 0.37,
+    textAlign: "center",
+    marginBottom: 12,
   },
-  statusRow: {
+  accessDescription: {
+    fontSize: 17,
+    letterSpacing: -0.4,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 32,
+    paddingHorizontal: 20,
+  },
+  actionCards: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionCard: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 12,
   },
-  statusLabel: {
-    fontSize: 14,
-    fontWeight: "500",
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  statusValue: {
-    fontSize: 14,
+  actionContent: {
+    flex: 1,
+  },
+  actionTitle: {
+    fontSize: 17,
     fontWeight: "600",
+    letterSpacing: -0.4,
+    marginBottom: 2,
   },
-  section: {
-    margin: 20,
-    marginTop: 0,
-    borderRadius: 16,
+  actionSubtitle: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+  },
+  devNote: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+
+  // User Info Card
+  infoCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 20,
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: "hidden",
   },
-  sectionHeader: {
+  userHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 14,
     marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  uploaderTabs: {
-    gap: 24,
-  },
-  tabsTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  uploaderContainer: {
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  uploaderHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  userAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
     alignItems: "center",
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+    marginBottom: 2,
+  },
+  userEmail: {
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+  statusItems: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  statusItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statusLabel: {
+    fontSize: 12,
+    letterSpacing: -0.08,
+    marginBottom: 4,
+  },
+  statusValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+  statusDivider: {
+    width: 1,
+    height: 32,
+    opacity: 0.5,
+  },
+
+  // Sections
+  section: {
+    marginBottom: 35,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.08,
+    textTransform: "uppercase",
+    marginLeft: 32,
     marginBottom: 8,
   },
-  uploaderTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+  sectionCard: {
+    marginHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
   },
-  uploaderBadge: {
-    backgroundColor: "#4CAF50",
+
+  // Upload Cards
+  uploadCard: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  uploadHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 16,
+  },
+  uploadIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  uploadInfo: {
+    flex: 1,
+  },
+  uploadTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  uploadTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+  uploadDescription: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+  },
+  recommendedBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  warningBadge: {
-    backgroundColor: "#FF9800",
-  },
-  uploaderBadgeText: {
+  recommendedText: {
     fontSize: 10,
-    color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
-  uploaderDescription: {
-    fontSize: 14,
-    marginBottom: 16,
-    lineHeight: 20,
+  warningBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  dangerButton: {
+  warningText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+
+  // Action Rows
+  actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#d32f2f",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: "#d32f2f",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#666",
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#666",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  accessDeniedContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  devBadgeHeader: {
-    position: "absolute",
-    top: Platform.OS === "ios" ? 60 : (StatusBar.currentHeight || 24) + 20,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    paddingVertical: 8,
-    marginHorizontal: 20,
-    borderRadius: 8,
-  },
-  devModeText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  accessDeniedIcon: {
-    marginBottom: 32,
-    padding: 24,
-    borderRadius: 32,
-  },
-  accessDeniedTitle: {
-    fontSize: 24,
-    marginBottom: 16,
-    textAlign: "center",
-    fontWeight: "800",
-  },
-  accessDeniedText: {
-    fontSize: 16,
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
+    paddingVertical: 12,
     paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 60,
   },
-  devBypass: {
-    marginTop: 40,
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    gap: 16,
+    marginRight: 12,
   },
-  devBypassButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#FF9800",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: "#FF9800",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  loginButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  devBypassText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  devBypassNote: {
-    fontSize: 12,
-    textAlign: "center",
-    fontStyle: "italic",
-    paddingHorizontal: 16,
-  },
+
   bottomSpacing: {
     height: Platform.OS === "ios" ? 100 : 80,
   },
