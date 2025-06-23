@@ -52,6 +52,10 @@ export function NotificationSetupModal({
 
   React.useEffect(() => {
     if (visible) {
+      // Reset animations when modal becomes visible
+      slideAnim.setValue(0);
+      fadeAnim.setValue(0);
+      
       // Animate modal entrance
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -59,11 +63,13 @@ export function NotificationSetupModal({
           tension: 65,
           friction: 10,
           useNativeDriver: true,
+          delay: 100, // Small delay to ensure modal is ready
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 300,
           useNativeDriver: true,
+          delay: 100,
         }),
       ]).start();
 
@@ -460,25 +466,33 @@ export function NotificationSetupModal({
     );
   };
 
-  if (!visible) return null;
+  // Don't render anything if not visible
+  if (!visible) {
+    return null;
+  }
 
   return (
     <Modal
       visible={visible}
-      animationType="none"
+      animationType="slide"
       transparent={true}
       statusBarTranslucent={true}
       presentationStyle="overFullScreen"
+      onRequestClose={onSkip}
     >
       <Animated.View
         style={[
           styles.modalOverlay,
           {
             opacity: fadeAnim,
-            backgroundColor: "rgba(0,0,0,0.5)",
           },
         ]}
       >
+        <TouchableOpacity 
+          style={StyleSheet.absoluteFillObject} 
+          activeOpacity={1} 
+          onPress={onSkip}
+        />
         <Animated.View
           style={[
             styles.modalContainer,
@@ -667,6 +681,7 @@ export function NotificationSetupModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,

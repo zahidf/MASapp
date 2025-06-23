@@ -74,9 +74,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       console.log("NotificationProvider: Initializing...");
 
-      // Small delay only for initialization to prevent race conditions
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
       const savedPreferences = await NotificationService.loadPreferences();
       console.log(
         "NotificationProvider: Loaded preferences:",
@@ -91,10 +88,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         console.log(
           "NotificationProvider: User hasn't been asked, will show setup modal"
         );
-        // Small delay only to ensure UI is ready
-        setTimeout(() => {
-          setShouldShowSetup(true);
-        }, 1000);
+        // Use requestAnimationFrame to ensure UI is ready and avoid blocking
+        requestAnimationFrame(() => {
+          // Additional delay to ensure smooth UI loading
+          setTimeout(() => {
+            setShouldShowSetup(true);
+          }, 2000); // Increased delay to ensure app is fully loaded
+        });
       }
     } catch (error) {
       console.error("Error initializing notifications:", error);
@@ -292,12 +292,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     <NotificationContext.Provider value={contextValue}>
       {children}
 
-      {/* Show notification setup modal */}
-      <NotificationSetupModal
-        visible={shouldShowSetup}
-        onComplete={updatePreferences}
-        onSkip={dismissSetup}
-      />
+      {/* Show notification setup modal - Only render if not loading and ready to show */}
+      {!isLoading && hasInitialized && (
+        <NotificationSetupModal
+          visible={shouldShowSetup}
+          onComplete={updatePreferences}
+          onSkip={dismissSetup}
+        />
+      )}
     </NotificationContext.Provider>
   );
 }
