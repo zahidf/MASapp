@@ -74,12 +74,6 @@ export function NotificationSettingsScreen() {
     const newPreferences = {
       ...localPreferences,
       isEnabled: !localPreferences.isEnabled,
-      prayerBeginTimes: !localPreferences.isEnabled
-        ? localPreferences.prayerBeginTimes
-        : false,
-      jamahTimes: !localPreferences.isEnabled
-        ? localPreferences.jamahTimes
-        : false,
     };
 
     setLocalPreferences(newPreferences);
@@ -87,28 +81,58 @@ export function NotificationSettingsScreen() {
   };
 
   const handleTogglePrayerBeginTimes = async () => {
+    // Toggle all prayer begin times
+    const allEnabled = Object.values(localPreferences.prayers).every(p => p.beginTime);
+    const newState = !allEnabled;
+
     const newPreferences = {
       ...localPreferences,
-      prayerBeginTimes: !localPreferences.prayerBeginTimes,
+      prayers: {
+        fajr: { ...localPreferences.prayers.fajr, beginTime: newState },
+        zuhr: { ...localPreferences.prayers.zuhr, beginTime: newState },
+        asr: { ...localPreferences.prayers.asr, beginTime: newState },
+        maghrib: { ...localPreferences.prayers.maghrib, beginTime: newState },
+        isha: { ...localPreferences.prayers.isha, beginTime: newState },
+      },
     };
+    
     setLocalPreferences(newPreferences);
     await savePreferences(newPreferences);
   };
 
   const handleToggleJamahTimes = async () => {
+    // Toggle all jamah times
+    const allEnabled = Object.values(localPreferences.prayers).every(p => p.jamahTime);
+    const newState = !allEnabled;
+
     const newPreferences = {
       ...localPreferences,
-      jamahTimes: !localPreferences.jamahTimes,
+      prayers: {
+        fajr: { ...localPreferences.prayers.fajr, jamahTime: newState },
+        zuhr: { ...localPreferences.prayers.zuhr, jamahTime: newState },
+        asr: { ...localPreferences.prayers.asr, jamahTime: newState },
+        maghrib: { ...localPreferences.prayers.maghrib, jamahTime: newState },
+        isha: { ...localPreferences.prayers.isha, jamahTime: newState },
+      },
     };
+    
     setLocalPreferences(newPreferences);
     await savePreferences(newPreferences);
   };
 
   const handleReminderMinutesChange = async (minutes: number) => {
+    // Update reminder minutes for all prayers
     const newPreferences = {
       ...localPreferences,
-      jamahReminderMinutes: minutes,
+      prayers: {
+        fajr: { ...localPreferences.prayers.fajr, jamahReminderMinutes: minutes },
+        zuhr: { ...localPreferences.prayers.zuhr, jamahReminderMinutes: minutes },
+        asr: { ...localPreferences.prayers.asr, jamahReminderMinutes: minutes },
+        maghrib: { ...localPreferences.prayers.maghrib, jamahReminderMinutes: minutes },
+        isha: { ...localPreferences.prayers.isha, jamahReminderMinutes: minutes },
+      },
     };
+    
     setLocalPreferences(newPreferences);
     await savePreferences(newPreferences);
   };
@@ -421,7 +445,7 @@ export function NotificationSettingsScreen() {
                     </View>
                   </View>
                   <Switch
-                    value={localPreferences.prayerBeginTimes}
+                    value={Object.values(localPreferences.prayers).every(p => p.beginTime)}
                     onValueChange={handleTogglePrayerBeginTimes}
                     disabled={!localPreferences.isEnabled || isLoading || isSaving}
                     trackColor={{
@@ -429,7 +453,7 @@ export function NotificationSettingsScreen() {
                       true: colors.primary + "60",
                     }}
                     thumbColor={
-                      localPreferences.prayerBeginTimes ? colors.primary : "#f4f3f4"
+                      Object.values(localPreferences.prayers).every(p => p.beginTime) ? colors.primary : "#f4f3f4"
                     }
                     style={styles.switch}
                   />
@@ -440,7 +464,7 @@ export function NotificationSettingsScreen() {
                   <TouchableOpacity
                     style={[
                       styles.settingRow,
-                      localPreferences.jamahTimes && styles.settingRowActive,
+                      Object.values(localPreferences.prayers).some(p => p.jamahTime) && styles.settingRowActive,
                     ]}
                     onPress={handleToggleJamahTimes}
                     activeOpacity={0.7}
@@ -469,7 +493,7 @@ export function NotificationSettingsScreen() {
                       </View>
                     </View>
                     <Switch
-                      value={localPreferences.jamahTimes}
+                      value={Object.values(localPreferences.prayers).every(p => p.jamahTime)}
                       onValueChange={handleToggleJamahTimes}
                       disabled={!localPreferences.isEnabled || isLoading || isSaving}
                       trackColor={{
@@ -477,14 +501,14 @@ export function NotificationSettingsScreen() {
                         true: colors.primary + "60",
                       }}
                       thumbColor={
-                        localPreferences.jamahTimes ? colors.primary : "#f4f3f4"
+                        Object.values(localPreferences.prayers).every(p => p.jamahTime) ? colors.primary : "#f4f3f4"
                       }
                       style={styles.switch}
                     />
                   </TouchableOpacity>
 
                   {/* Reminder Minutes Selection */}
-                  {localPreferences.jamahTimes && localPreferences.isEnabled && (
+                  {localPreferences.isEnabled && Object.values(localPreferences.prayers).some(p => p.jamahTime) && (
                     <Animated.View
                       style={[
                         styles.reminderSection,
@@ -508,41 +532,51 @@ export function NotificationSettingsScreen() {
                         style={styles.reminderScroll}
                         contentContainerStyle={styles.reminderOptions}
                       >
-                        {REMINDER_OPTIONS.map((minutes) => (
-                          <TouchableOpacity
-                            key={minutes}
-                            style={[
-                              styles.reminderOption,
-                              {
-                                backgroundColor:
-                                  localPreferences.jamahReminderMinutes === minutes
-                                    ? colors.primary
-                                    : colors.surface,
-                                borderColor:
-                                  localPreferences.jamahReminderMinutes === minutes
-                                    ? colors.primary
-                                    : colors.text + "20",
-                              },
-                            ]}
-                            onPress={() => handleReminderMinutesChange(minutes)}
-                            disabled={isLoading || isSaving}
-                            activeOpacity={0.7}
-                          >
-                            <ThemedText
+                        {REMINDER_OPTIONS.map((minutes) => {
+                          // Check if all prayers have the same reminder minutes
+                          const allSameMinutes = Object.values(localPreferences.prayers).every(
+                            p => p.jamahReminderMinutes === minutes
+                          );
+                          const firstPrayerMinutes = localPreferences.prayers.fajr.jamahReminderMinutes;
+                          
+                          return (
+                            <TouchableOpacity
+                              key={minutes}
                               style={[
-                                styles.reminderOptionText,
+                                styles.reminderOption,
                                 {
-                                  color:
-                                    localPreferences.jamahReminderMinutes === minutes
-                                      ? "#fff"
-                                      : colors.text,
+                                  backgroundColor:
+                                    allSameMinutes
+                                      ? colors.primary
+                                      : firstPrayerMinutes === minutes && !allSameMinutes
+                                      ? colors.primary + "60"
+                                      : colors.surface,
+                                  borderColor:
+                                    allSameMinutes
+                                      ? colors.primary
+                                      : colors.text + "20",
                                 },
                               ]}
+                              onPress={() => handleReminderMinutesChange(minutes)}
+                              disabled={isLoading || isSaving}
+                              activeOpacity={0.7}
                             >
-                              {minutes}m
-                            </ThemedText>
-                          </TouchableOpacity>
-                        ))}
+                              <ThemedText
+                                style={[
+                                  styles.reminderOptionText,
+                                  {
+                                    color:
+                                      allSameMinutes || (firstPrayerMinutes === minutes && !allSameMinutes)
+                                        ? "#fff"
+                                        : colors.text,
+                                  },
+                                ]}
+                              >
+                                {minutes}m
+                              </ThemedText>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </ScrollView>
                     </Animated.View>
                   )}
