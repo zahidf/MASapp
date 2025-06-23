@@ -62,7 +62,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setupAppStateListener();
   }, []);
 
-  useEffect(() => {
+ 
+ useEffect(() => {
     // Update notifications when prayer times change, but only after initialization
     if (hasInitialized && prayerTimes.length > 0 && preferences.isEnabled) {
       refreshNotifications();
@@ -81,21 +82,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       );
 
       setPreferences(savedPreferences);
-      setHasInitialized(true);
-
-      // Show setup modal if user hasn't been asked yet (only on first-time use)
-      if (!savedPreferences.hasAskedPermission) {
+      
+      // Show setup modal if user hasn't been asked yet and prayer times are loaded
+      if (!savedPreferences.hasAskedPermission && prayerTimes.length > 0) {
         console.log(
-          "NotificationProvider: User hasn't been asked, will show setup modal"
+          "NotificationProvider: User hasn't been asked and prayer times available, will show setup modal"
         );
-        // Use requestAnimationFrame to ensure UI is ready and avoid blocking
-        requestAnimationFrame(() => {
-          // Additional delay to ensure smooth UI loading
-          setTimeout(() => {
-            setShouldShowSetup(true);
-          }, 2000); // Increased delay to ensure app is fully loaded
-        });
+        // Small delay to ensure UI is ready
+        setTimeout(() => {
+          setShouldShowSetup(true);
+        }, 1000);
       }
+      
+      setHasInitialized(true);
     } catch (error) {
       console.error("Error initializing notifications:", error);
       setHasInitialized(true);

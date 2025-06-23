@@ -44,7 +44,6 @@ export function NotificationSetupModal({
   const [currentStep, setCurrentStep] = useState(1);
   const [slideAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [isModalReady, setIsModalReady] = useState(false);
 
   // Animation values for prayer items
   const [prayerAnimations] = useState(() =>
@@ -54,25 +53,13 @@ export function NotificationSetupModal({
   );
 
   React.useEffect(() => {
-    if (visible && !isModalReady) {
-      console.log("NotificationSetupModal: Setting modal ready");
-      // Small delay to ensure modal is mounted
-      setTimeout(() => {
-        setIsModalReady(true);
-      }, 50);
-    } else if (!visible) {
-      console.log("NotificationSetupModal: Resetting modal state");
-      setIsModalReady(false);
+    if (visible) {
+      console.log("NotificationSetupModal: Starting animations");
       // Reset animations
       slideAnim.setValue(0);
       fadeAnim.setValue(0);
       prayerAnimations.forEach(anim => anim.setValue(0));
-    }
-  }, [visible]);
-
-  React.useEffect(() => {
-    if (visible && isModalReady) {
-      console.log("NotificationSetupModal: Starting animations");
+      
       // Animate modal entrance
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -90,7 +77,6 @@ export function NotificationSetupModal({
 
       // Animate prayer items in sequence on step 2
       if (currentStep === 2) {
-        prayerAnimations.forEach(anim => anim.setValue(0));
         Animated.stagger(
           50,
           prayerAnimations.map((anim) =>
@@ -104,7 +90,7 @@ export function NotificationSetupModal({
         ).start();
       }
     }
-  }, [isModalReady, currentStep, visible]);
+  }, [visible, currentStep]);
 
   const handleComplete = () => {
     console.log("NotificationSetupModal: Complete button pressed");
@@ -484,17 +470,16 @@ export function NotificationSetupModal({
     );
   };
 
-  // Don't render modal content until ready
   if (!visible) {
     console.log("NotificationSetupModal: Not visible, returning null");
     return null;
   }
 
-  console.log("NotificationSetupModal: Rendering modal, isModalReady:", isModalReady);
+  console.log("NotificationSetupModal: Rendering modal");
 
   return (
     <Modal
-      visible={visible && isModalReady}
+      visible={visible}
       animationType="none" // We'll handle animation ourselves
       transparent={true}
       statusBarTranslucent={true}
@@ -507,7 +492,7 @@ export function NotificationSetupModal({
           style={[
             styles.modalOverlay,
             {
-              opacity: isModalReady ? fadeAnim : 0,
+              opacity: fadeAnim,
               backgroundColor: "rgba(0,0,0,0.5)",
             },
           ]}
@@ -517,7 +502,6 @@ export function NotificationSetupModal({
               style={[
                 styles.modalContainer,
                 {
-                  opacity: isModalReady ? 1 : 0,
                   transform: [
                     {
                       translateY: slideAnim.interpolate({
