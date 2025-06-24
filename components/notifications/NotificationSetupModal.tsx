@@ -121,13 +121,16 @@ export function NotificationSetupModal({
     setPreferences((prev) => {
       const updated = { ...prev };
       prayers.forEach((prayer) => {
-        updated.prayers[prayer][type] = !allEnabled;
+        updated.prayers[prayer] = {
+          ...updated.prayers[prayer],
+          [type]: !allEnabled,
+        };
       });
       return updated;
     });
   };
 
-  const handleReminderChange = async (minutes: number) => {
+  const handleReminderChange = (minutes: number) => {
     const prayer = selectedPrayer as NotificationPrayerName;
     setPreferences((prev) => ({
       ...prev,

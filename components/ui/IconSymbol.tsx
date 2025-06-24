@@ -101,8 +101,8 @@ const ICON_MAPPING: Record<CustomIconName, MaterialIconName> = {
   "bell.slash": "notifications-off",
 
   // People/Community
-  "person.3": "group",
-  people: "group",
+  "person.3": "access-time",
+  people: "access-time",
   person: "person",
   "person.fill": "person",
   "person.badge.key": "admin-panel-settings",
@@ -195,6 +195,12 @@ export function IconSymbol({
   weight?: SymbolWeight;
 }) {
   const materialIconName = ICON_MAPPING[name];
+
+  // Debug logging for people icon
+  if (name === "people") {
+    console.log("IconSymbol - people icon requested, mapped to:", materialIconName);
+    console.log("Color:", color, "Size:", size);
+  }
 
   if (!materialIconName) {
     console.warn(`No Material Icon mapping found for SF Symbol: ${name}`);
