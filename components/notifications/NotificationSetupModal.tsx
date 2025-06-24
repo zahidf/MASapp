@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Modal,
   Platform,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -41,23 +40,22 @@ export function NotificationSetupModal({
     DEFAULT_NOTIFICATION_PREFERENCES
   );
   const [currentStep, setCurrentStep] = useState(1);
-  const [slideAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const [selectedPrayer, setSelectedPrayer] = useState<string>("fajr");
+  
+  // Use useRef for animation values to prevent recreation
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  
+  // Animation value for prayer content
+  const prayerContentAnim = useRef(new Animated.Value(1)).current;
 
-  // Animation values for prayer items
-  const [prayerAnimations] = useState(() =>
-    ["fajr", "zuhr", "asr", "maghrib", "isha"].map(
-      () => new Animated.Value(0)
-    )
-  );
-
-  React.useEffect(() => {
+  // Handle modal visibility animations
+  useEffect(() => {
     if (visible) {
-      console.log("NotificationSetupModal: Starting animations");
+      console.log("NotificationSetupModal: Starting entrance animations");
       // Reset animations
       slideAnim.setValue(0);
       fadeAnim.setValue(0);
-      prayerAnimations.forEach(anim => anim.setValue(0));
       
       // Animate modal entrance
       Animated.parallel([
@@ -73,23 +71,12 @@ export function NotificationSetupModal({
           useNativeDriver: true,
         }),
       ]).start();
-
-      // Animate prayer items in sequence on step 2
-      if (currentStep === 2) {
-        Animated.stagger(
-          50,
-          prayerAnimations.map((anim) =>
-            Animated.spring(anim, {
-              toValue: 1,
-              tension: 65,
-              friction: 10,
-              useNativeDriver: true,
-            })
-          )
-        ).start();
-      }
+    } else {
+      // Reset animations when modal closes
+      slideAnim.setValue(0);
+      fadeAnim.setValue(0);
     }
-  }, [visible, currentStep]);
+  }, [visible, slideAnim, fadeAnim]);
 
   const handleComplete = () => {
     console.log("NotificationSetupModal: Complete button pressed");
@@ -147,6 +134,25 @@ export function NotificationSetupModal({
     return Object.values(preferences.prayers).some(
       (p) => p.beginTime || p.jamahTime
     );
+  };
+
+  const animatePrayerChange = (newPrayer: string) => {
+    if (newPrayer === selectedPrayer) return;
+    
+    Animated.sequence([
+      Animated.timing(prayerContentAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(prayerContentAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setSelectedPrayer(newPrayer);
+    });
   };
 
   const renderStep1 = () => (
@@ -277,166 +283,225 @@ export function NotificationSetupModal({
       { key: "isha", name: "Isha", icon: "moon.stars" },
     ];
 
+    const currentPrayerData = prayers.find(p => p.key === selectedPrayer)!;
+
     return (
-      <Animated.View
-        style={[
-          styles.stepContent,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
-      >
-        <View style={styles.textContent}>
-          <Text style={[styles.stepTitle, { color: colors.text }]}>
-            Choose Your Notifications
-          </Text>
-          <Text style={[styles.stepDescription, { color: colors.text + "B3" }]}>
-            Select which prayers you'd like to be notified for
-          </Text>
-        </View>
-
-        {/* Quick Actions with iOS-style grouped appearance */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={[
-              styles.quickActionButton,
-              {
-                backgroundColor: colors.primary + "15",
-                borderColor: colors.primary,
-              },
-            ]}
-            onPress={() => toggleAllPrayers("beginTime")}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="bell" size={16} color={colors.primary} />
-            <Text style={[styles.quickActionText, { color: colors.primary }]}>
-              All Prayer Times
+      <View style={styles.step2Wrapper}>
+        {/* Fixed Header */}
+        <View style={styles.step2Header}>
+          <View style={styles.textContent}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>
+              Choose Your Notifications
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.quickActionButton,
-              {
-                backgroundColor: colors.secondary + "15",
-                borderColor: colors.secondary,
-              },
-            ]}
-            onPress={() => toggleAllPrayers("jamahTime")}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="people" size={16} color={colors.secondary} />
-            <Text style={[styles.quickActionText, { color: colors.secondary }]}>
-              All Jamah Times
+            <Text style={[styles.stepDescription, { color: colors.text + "B3" }]}>
+              Select which prayers you'd like to be notified for
             </Text>
-          </TouchableOpacity>
-        </View>
+          </View>
 
-        {/* Prayer List with iOS-style cells */}
-        <ScrollView
-          style={styles.prayersList}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.prayersListContent}
-        >
-          {prayers.map((prayer, index) => (
-            <Animated.View
-              key={prayer.key}
+          {/* Quick Actions with iOS-style grouped appearance */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity
               style={[
+                styles.quickActionButton,
                 {
-                  opacity: prayerAnimations[index],
-                  transform: [
-                    {
-                      translateY: prayerAnimations[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20, 0],
-                      }),
-                    },
-                  ],
+                  backgroundColor: colors.primary + "15",
+                  borderColor: colors.primary,
                 },
               ]}
+              onPress={() => toggleAllPrayers("beginTime")}
+              activeOpacity={0.7}
             >
-              <View
+              <IconSymbol name="bell" size={16} color={colors.primary} />
+              <Text style={[styles.quickActionText, { color: colors.primary }]}>
+                All Prayer Times
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.quickActionButton,
+                {
+                  backgroundColor: colors.secondary + "15",
+                  borderColor: colors.secondary,
+                },
+              ]}
+              onPress={() => toggleAllPrayers("jamahTime")}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="people" size={16} color={colors.secondary} />
+              <Text style={[styles.quickActionText, { color: colors.secondary }]}>
+                All Jamah Times
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Prayer Tabs */}
+        <View style={styles.prayerTabs}>
+          {prayers.map((prayer) => (
+            <TouchableOpacity
+              key={prayer.key}
+              style={[
+                styles.prayerTab,
+                selectedPrayer === prayer.key && styles.prayerTabActive,
+                selectedPrayer === prayer.key && { borderColor: colors.primary },
+              ]}
+              onPress={() => animatePrayerChange(prayer.key)}
+              activeOpacity={0.7}
+            >
+              <IconSymbol
+                name={prayer.icon as any}
+                size={20}
+                color={selectedPrayer === prayer.key ? colors.primary : colors.text + "60"}
+              />
+              <Text
                 style={[
-                  styles.prayerItem,
-                  {
-                    backgroundColor: colors.surface + "95",
-                    borderColor:
-                      colorScheme === "dark"
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(0,0,0,0.04)",
-                  },
+                  styles.prayerTabText,
+                  { color: selectedPrayer === prayer.key ? colors.primary : colors.text + "60" },
                 ]}
               >
-                <View style={styles.prayerItemLeft}>
-                  <View
-                    style={[
-                      styles.prayerIconContainer,
-                      { backgroundColor: colors.primary + "15" },
-                    ]}
-                  >
-                    <IconSymbol
-                      name={prayer.icon as any}
-                      size={24}
-                      color={colors.primary}
-                    />
-                  </View>
-                  <Text style={[styles.prayerName, { color: colors.text }]}>
-                    {prayer.name}
-                  </Text>
-                </View>
-
-                <View style={styles.prayerToggles}>
-                  <View style={styles.toggleItem}>
-                    <Text style={[styles.toggleLabel, { color: colors.text + "80" }]}>
-                      Begin
-                    </Text>
-                    <Switch
-                      value={preferences.prayers[prayer.key].beginTime}
-                      onValueChange={() =>
-                        togglePrayerSetting(prayer.key, "beginTime")
-                      }
-                      trackColor={{
-                        false: colors.text + "20",
-                        true: colors.primary + "60",
-                      }}
-                      thumbColor={
-                        preferences.prayers[prayer.key].beginTime
-                          ? colors.primary
-                          : "#f4f3f4"
-                      }
-                      style={styles.switch}
-                    />
-                  </View>
-
-                  <View style={[styles.toggleDivider, { backgroundColor: colors.text + "10" }]} />
-
-                  <View style={styles.toggleItem}>
-                    <Text style={[styles.toggleLabel, { color: colors.text + "80" }]}>
-                      Jamah
-                    </Text>
-                    <Switch
-                      value={preferences.prayers[prayer.key].jamahTime}
-                      onValueChange={() =>
-                        togglePrayerSetting(prayer.key, "jamahTime")
-                      }
-                      trackColor={{
-                        false: colors.text + "20",
-                        true: colors.primary + "60",
-                      }}
-                      thumbColor={
-                        preferences.prayers[prayer.key].jamahTime
-                          ? colors.primary
-                          : "#f4f3f4"
-                      }
-                      style={styles.switch}
-                    />
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
+                {prayer.name}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
+        {/* Selected Prayer Content */}
+        <Animated.View
+          style={[
+            styles.prayerContent,
+            {
+              opacity: prayerContentAnim,
+              transform: [
+                {
+                  scale: prayerContentAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.95, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.selectedPrayerCard,
+              {
+                backgroundColor: colors.surface + "95",
+                borderColor:
+                  colorScheme === "dark"
+                    ? "rgba(255,255,255,0.06)"
+                    : "rgba(0,0,0,0.04)",
+              },
+            ]}
+          >
+            <View style={styles.selectedPrayerHeader}>
+              <View
+                style={[
+                  styles.selectedPrayerIcon,
+                  { backgroundColor: colors.primary + "15" },
+                ]}
+              >
+                <IconSymbol
+                  name={currentPrayerData.icon as any}
+                  size={32}
+                  color={colors.primary}
+                />
+              </View>
+              <Text style={[styles.selectedPrayerName, { color: colors.text }]}>
+                {currentPrayerData.name} Prayer
+              </Text>
+            </View>
+
+            <View style={styles.notificationOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.notificationOption,
+                  preferences.prayers[selectedPrayer as NotificationPrayerName].beginTime && {
+                    backgroundColor: colors.primary + "10",
+                    borderColor: colors.primary + "30",
+                  },
+                ]}
+                onPress={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "beginTime")}
+                activeOpacity={0.7}
+              >
+                <View style={styles.notificationOptionContent}>
+                  <IconSymbol
+                    name="bell"
+                    size={22}
+                    color={preferences.prayers[selectedPrayer as NotificationPrayerName].beginTime ? colors.primary : colors.text + "60"}
+                  />
+                  <View style={styles.notificationOptionText}>
+                    <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
+                      Prayer Time
+                    </Text>
+                    <Text style={[styles.notificationOptionDescription, { color: colors.text + "80" }]}>
+                      Notify when prayer begins
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={preferences.prayers[selectedPrayer as NotificationPrayerName].beginTime}
+                  onValueChange={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "beginTime")}
+                  trackColor={{
+                    false: colors.text + "20",
+                    true: colors.primary + "60",
+                  }}
+                  thumbColor={
+                    preferences.prayers[selectedPrayer as NotificationPrayerName].beginTime
+                      ? colors.primary
+                      : "#f4f3f4"
+                  }
+                  style={styles.switch}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.notificationOption,
+                  preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime && {
+                    backgroundColor: colors.secondary + "10",
+                    borderColor: colors.secondary + "30",
+                  },
+                ]}
+                onPress={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "jamahTime")}
+                activeOpacity={0.7}
+              >
+                <View style={styles.notificationOptionContent}>
+                  <IconSymbol
+                    name="people"
+                    size={22}
+                    color={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime ? colors.secondary : colors.text + "60"}
+                  />
+                  <View style={styles.notificationOptionText}>
+                    <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
+                      Jamah Time
+                    </Text>
+                    <Text style={[styles.notificationOptionDescription, { color: colors.text + "80" }]}>
+                      Notify for jamaah
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime}
+                  onValueChange={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "jamahTime")}
+                  trackColor={{
+                    false: colors.text + "20",
+                    true: colors.secondary + "60",
+                  }}
+                  thumbColor={
+                    preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime
+                      ? colors.secondary
+                      : "#f4f3f4"
+                  }
+                  style={styles.switch}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Warning Box - Fixed at bottom */}
         {!hasAnyNotificationEnabled() && (
           <View
             style={[
@@ -457,7 +522,7 @@ export function NotificationSetupModal({
             </Text>
           </View>
         )}
-      </Animated.View>
+      </View>
     );
   };
 
@@ -678,8 +743,8 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: "100%",
     maxWidth: 400,
-    height: "80%",
-    maxHeight: 700,
+    height: "85%",
+    maxHeight: 720,
     borderRadius: 28,
     overflow: "hidden",
     shadowColor: "#000",
@@ -724,6 +789,13 @@ const styles = StyleSheet.create({
 
   stepContent: {
     flex: 1,
+  },
+
+  // Step 2 wrapper to handle layout properly
+  step2Wrapper: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
   },
 
   // Hero Section
@@ -803,6 +875,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.08,
   },
 
+  // Step 2 Header
+  step2Header: {
+    marginBottom: 16,
+  },
+
   // Quick Actions
   quickActions: {
     flexDirection: "row",
@@ -827,68 +904,102 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
 
-  // Prayer List
-  prayersList: {
-    flex: 1,
-    marginBottom: 12,
-  },
-
-  prayersListContent: {
-    gap: 12,
-    paddingBottom: 12,
-  },
-
-  prayerItem: {
+  // Prayer Tabs
+  prayerTabs: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
+    marginBottom: 20,
+    gap: 8,
   },
 
-  prayerItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  prayerTab: {
     flex: 1,
-  },
-
-  prayerIconContainer: {
-    width: 40,
-    height: 40,
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
   },
 
-  prayerName: {
-    fontSize: 17,
-    fontWeight: "600",
-    letterSpacing: -0.4,
+  prayerTabActive: {
+    borderWidth: 1.5,
   },
 
-  prayerToggles: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  toggleItem: {
-    alignItems: "center",
-    gap: 4,
-  },
-
-  toggleLabel: {
+  prayerTabText: {
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: -0.08,
-    textTransform: "uppercase",
+    marginTop: 4,
   },
 
-  toggleDivider: {
-    width: 1,
-    height: 32,
+  // Prayer Content
+  prayerContent: {
+    flex: 1,
+  },
+
+  selectedPrayerCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+
+  selectedPrayerHeader: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  selectedPrayerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  selectedPrayerName: {
+    fontSize: 20,
+    fontWeight: "600",
+    letterSpacing: 0.35,
+  },
+
+  notificationOptions: {
+    gap: 10,
+  },
+
+  notificationOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+
+  notificationOptionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+
+  notificationOptionText: {
+    flex: 1,
+  },
+
+  notificationOptionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: -0.3,
+    marginBottom: 1,
+  },
+
+  notificationOptionDescription: {
+    fontSize: 12,
+    letterSpacing: -0.08,
+    lineHeight: 16,
   },
 
   switch: {
@@ -904,6 +1015,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginTop: 8,
+    marginBottom: 8,
   },
 
   warningText: {
