@@ -45,7 +45,7 @@ export default function TodayScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { prayerTimes, refreshData, isLoading } = usePrayerTimes();
-  const { preferences, updatePreferences, checkPermissionStatus } =
+  const { preferences, updatePreferences, checkPermissionStatus, showSetupModal } =
     useNotificationContext();
   const [viewMode, setViewMode] = useState<ViewMode>("daily");
   const [todaysPrayers, setTodaysPrayers] = useState<PrayerTime | null>(null);
@@ -962,6 +962,21 @@ export default function TodayScreen() {
           </Animated.View>
         )}
       </ScrollView>
+           {/* Test Modal Button - Development Only */}
+      {__DEV__ && (
+        <TouchableOpacity
+          style={[
+            styles.devTestButton,
+            { backgroundColor: colors.primary },
+          ]}
+          onPress={() => {
+            console.log("Test button pressed, showing setup modal");
+            showSetupModal();
+          }}
+        >
+          <Text style={styles.devTestButtonText}>Test Notification Setup</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -1374,5 +1389,24 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
     letterSpacing: -0.4,
+  },
+    // Dev Test Button
+  devTestButton: {
+    position: "absolute",
+    bottom: Platform.OS === "ios" ? 110 : 90,
+    right: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  devTestButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

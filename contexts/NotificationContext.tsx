@@ -26,6 +26,7 @@ interface NotificationContextType {
   refreshNotifications: () => Promise<void>;
   checkPermissionStatus: () => Promise<boolean>;
   dismissSetup: () => void;
+  showSetupModal: () => void; // Add manual trigger
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -40,6 +41,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [shouldShowSetup, setShouldShowSetup] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [hasCheckedForModal, setHasCheckedForModal] = useState(false);
 
   const validPrayers: NotificationPrayerName[] = [
     "fajr",
@@ -62,13 +64,40 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setupAppStateListener();
   }, []);
 
- 
- useEffect(() => {
+  // Check if we should show modal when prayer times are loaded
+  useEffect(() => {
+    console.log(
+      "NotificationProvider: Check modal conditions - prayerTimes:",
+      prayerTimes.length,
+      "hasAskedPermission:",
+      preferences.hasAskedPermission,
+      "hasCheckedForModal:",
+      hasCheckedForModal,
+      "hasInitialized:",
+      hasInitialized
+    );
+
+    if (
+      prayerTimes.length > 0 &&
+      !preferences.hasAskedPermission &&
+      !hasCheckedForModal &&
+      hasInitialized
+    ) {
+      console.log("NotificationProvider: All conditions met, showing modal");
+      setHasCheckedForModal(true);
+      // Delay to ensure smooth UI
+      setTimeout(() => {
+        setShouldShowSetup(true);
+      }, 1000);
+    }
+  }, [prayerTimes.length, preferences.hasAskedPermission, hasInitialized, hasCheckedForModal]);
+
+  useEffect(() => {
     // Update notifications when prayer times change, but only after initialization
     if (hasInitialized && prayerTimes.length > 0 && preferences.isEnabled) {
       refreshNotifications();
     }
-  }, [prayerTimes, preferences, hasInitialized]);
+  }, [prayerTimes, preferences.isEnabled, hasInitialized]);
 
   const initializeNotifications = async () => {
     try {
@@ -82,18 +111,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       );
 
       setPreferences(savedPreferences);
-      
-      // Show setup modal if user hasn't been asked yet and prayer times are loaded
-      if (!savedPreferences.hasAskedPermission && prayerTimes.length > 0) {
-        console.log(
-          "NotificationProvider: User hasn't been asked and prayer times available, will show setup modal"
-        );
-        // Small delay to ensure UI is ready
-        setTimeout(() => {
-          setShouldShowSetup(true);
-        }, 1000);
-      }
-      
       setHasInitialized(true);
     } catch (error) {
       console.error("Error initializing notifications:", error);
@@ -209,6 +226,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const showSetupModal = () => {
+    console.log("NotificationProvider: Manual show setup modal");
+    setShouldShowSetup(true);
+  };
+
   const refreshNotifications = async () => {
     try {
       if (preferences.isEnabled && prayerTimes.length > 0) {
@@ -285,20 +307,24 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     refreshNotifications,
     checkPermissionStatus,
     dismissSetup,
+    showSetupModal,
   };
+
+  console.log(
+    "NotificationProvider: Render - shouldShowSetup:",
+    shouldShowSetup
+  );
 
   return (
     <NotificationContext.Provider value={contextValue}>
       {children}
 
-      {/* Show notification setup modal - Only render if not loading and ready to show */}
-      {!isLoading && hasInitialized && (
-        <NotificationSetupModal
-          visible={shouldShowSetup}
-          onComplete={updatePreferences}
-          onSkip={dismissSetup}
-        />
-      )}
+      {/* Show notification setup modal */}
+      <NotificationSetupModal
+        visible={shouldShowSetup}
+        onComplete={updatePreferences}
+        onSkip={dismissSetup}
+      />
     </NotificationContext.Provider>
   );
 }
