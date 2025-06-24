@@ -45,9 +45,6 @@ export function NotificationSetupModal({
   // Use useRef for animation values to prevent recreation
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
-  // Animation value for prayer content
-  const prayerContentAnim = useRef(new Animated.Value(1)).current;
 
   // Handle modal visibility animations
   useEffect(() => {
@@ -153,20 +150,8 @@ export function NotificationSetupModal({
   const animatePrayerChange = (newPrayer: string) => {
     if (newPrayer === selectedPrayer) return;
     
-    Animated.sequence([
-      Animated.timing(prayerContentAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(prayerContentAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setSelectedPrayer(newPrayer);
-    });
+    // Instant change - no animation
+    setSelectedPrayer(newPrayer);
   };
 
   const renderStep1 = () => (
@@ -382,22 +367,7 @@ export function NotificationSetupModal({
         </View>
 
         {/* Selected Prayer Content - Compact Design */}
-        <Animated.View
-          style={[
-            styles.prayerContent,
-            {
-              opacity: prayerContentAnim,
-              transform: [
-                {
-                  scale: prayerContentAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.95, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
+        <View style={styles.prayerContent}>
           <View
             style={[
               styles.selectedPrayerCard,
@@ -588,7 +558,7 @@ export function NotificationSetupModal({
               </View>
             </View>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Warning Box - Positioned at bottom of content area */}
         {!hasAnyNotificationEnabled() && (
