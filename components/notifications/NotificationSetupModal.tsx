@@ -446,11 +446,16 @@ export function NotificationSetupModal({
                 activeOpacity={0.7}
               >
                 <View style={styles.notificationOptionContent}>
-                  <IconSymbol
-                    name="bell"
-                    size={20}
-                    color={preferences.prayers[selectedPrayer as NotificationPrayerName].beginTime ? colors.primary : colors.text + "60"}
-                  />
+                  <View style={[
+                    styles.notificationOptionIcon,
+                    { backgroundColor: colors.primary + "15" }
+                  ]}>
+                    <IconSymbol
+                      name="bell"
+                      size={18}
+                      color={preferences.prayers[selectedPrayer as NotificationPrayerName].beginTime ? colors.primary : colors.text + "60"}
+                    />
+                  </View>
                   <View style={styles.notificationOptionText}>
                     <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
                       Prayer Time
@@ -476,7 +481,7 @@ export function NotificationSetupModal({
                 />
               </TouchableOpacity>
 
-              {/* Jamah Time Toggle with Reminder Options */}
+              {/* Jamah Time Toggle */}
               <View>
                 <TouchableOpacity
                   style={[
@@ -493,11 +498,16 @@ export function NotificationSetupModal({
                   activeOpacity={0.7}
                 >
                   <View style={styles.notificationOptionContent}>
-                    <IconSymbol
-                      name="people"
-                      size={20}
-                      color={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime ? colors.secondary : colors.text + "60"}
-                    />
+                    <View style={[
+                      styles.notificationOptionIcon,
+                      { backgroundColor: colors.secondary + "15" }
+                    ]}>
+                      <IconSymbol
+                        name="people"
+                        size={18}
+                        color={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime ? colors.secondary : colors.text + "60"}
+                      />
+                    </View>
                     <View style={styles.notificationOptionText}>
                       <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
                         Jamah Time
@@ -1073,6 +1083,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     flex: 1,
+  },
+
+  notificationOptionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   notificationOptionText: {
