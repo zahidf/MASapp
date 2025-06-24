@@ -1,4 +1,3 @@
-import { BlurView } from "expo-blur";
 import React, { useState } from "react";
 import {
   Animated,
@@ -169,9 +168,7 @@ export function NotificationSetupModal({
     >
       {/* Hero Icon with Liquid Glass effect */}
       <View style={styles.heroContainer}>
-        <BlurView
-          intensity={100}
-          tint={colorScheme === "dark" ? "dark" : "light"}
+        <View
           style={[
             styles.iconContainer,
             {
@@ -181,7 +178,7 @@ export function NotificationSetupModal({
           ]}
         >
           <IconSymbol name="bell.fill" size={48} color={colors.primary} />
-        </BlurView>
+        </View>
       </View>
 
       <View style={styles.textContent}>
@@ -196,9 +193,7 @@ export function NotificationSetupModal({
 
       {/* Feature Cards with HIG-compliant styling */}
       <View style={styles.featureCards}>
-        <BlurView
-          intensity={40}
-          tint={colorScheme === "dark" ? "dark" : "light"}
+        <View
           style={[
             styles.featureCard,
             {
@@ -232,11 +227,9 @@ export function NotificationSetupModal({
               Customizable alerts before each prayer
             </Text>
           </View>
-        </BlurView>
+        </View>
 
-        <BlurView
-          intensity={40}
-          tint={colorScheme === "dark" ? "dark" : "light"}
+        <View
           style={[
             styles.featureCard,
             {
@@ -270,7 +263,7 @@ export function NotificationSetupModal({
               Join the congregation on time
             </Text>
           </View>
-        </BlurView>
+        </View>
       </View>
     </Animated.View>
   );
@@ -362,9 +355,7 @@ export function NotificationSetupModal({
                 },
               ]}
             >
-              <BlurView
-                intensity={60}
-                tint={colorScheme === "dark" ? "dark" : "light"}
+              <View
                 style={[
                   styles.prayerItem,
                   {
@@ -441,7 +432,7 @@ export function NotificationSetupModal({
                     />
                   </View>
                 </View>
-              </BlurView>
+              </View>
             </Animated.View>
           ))}
         </ScrollView>
@@ -497,7 +488,7 @@ export function NotificationSetupModal({
             },
           ]}
         >
-          <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+          <TouchableWithoutFeedback>
             <Animated.View
               style={[
                 styles.modalContainer,
@@ -519,12 +510,10 @@ export function NotificationSetupModal({
                 },
               ]}
             >
-              <BlurView
-                intensity={90}
-                tint={colorScheme === "dark" ? "dark" : "light"}
+              <View
                 style={[
                   styles.modalContent,
-                  { backgroundColor: colors.background + "F5" },
+                  { backgroundColor: colors.background },
                 ]}
               >
                 {/* iOS-style handle */}
@@ -560,13 +549,12 @@ export function NotificationSetupModal({
                 </View>
 
                 {/* iOS-style Button Bar */}
-                <BlurView
-                  intensity={85}
-                  tint={colorScheme === "dark" ? "dark" : "light"}
+                <View
                   style={[
                     styles.buttonBar,
                     {
                       borderTopColor: colors.text + "10",
+                      backgroundColor: colors.background + "F5",
                     },
                   ]}
                 >
@@ -675,8 +663,8 @@ export function NotificationSetupModal({
                       </>
                     )}
                   </View>
-                </BlurView>
-              </BlurView>
+                </View>
+              </View>
             </Animated.View>
           </TouchableWithoutFeedback>
         </Animated.View>
@@ -699,6 +687,7 @@ const styles = StyleSheet.create({
     maxHeight: "85%",
     borderRadius: 28,
     overflow: "hidden",
+    backgroundColor: "white", // Add default background
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -708,6 +697,9 @@ const styles = StyleSheet.create({
 
   modalContent: {
     flex: 1,
+    backgroundColor: "white", // Add default background color
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
 
   // iOS-style handle
@@ -935,11 +927,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Button Bar - iOS Style
+  // iOS-style Button Bar
   buttonBar: {
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderTopWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255,255,255,0.95)", // Add background
   },
 
   buttonContainer: {
