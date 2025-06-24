@@ -130,6 +130,20 @@ export function NotificationSetupModal({
     });
   };
 
+  const handleReminderChange = async (minutes: number) => {
+    const prayer = selectedPrayer as NotificationPrayerName;
+    setPreferences((prev) => ({
+      ...prev,
+      prayers: {
+        ...prev.prayers,
+        [prayer]: {
+          ...prev.prayers[prayer],
+          jamahReminderMinutes: minutes,
+        },
+      },
+    }));
+  };
+
   const hasAnyNotificationEnabled = () => {
     return Object.values(preferences.prayers).some(
       (p) => p.beginTime || p.jamahTime
@@ -284,6 +298,7 @@ export function NotificationSetupModal({
     ];
 
     const currentPrayerData = prayers.find(p => p.key === selectedPrayer)!;
+    const reminderOptions = [5, 10, 15, 20, 30];
 
     return (
       <View style={styles.step2Wrapper}>
@@ -351,7 +366,7 @@ export function NotificationSetupModal({
             >
               <IconSymbol
                 name={prayer.icon as any}
-                size={20}
+                size={18}
                 color={selectedPrayer === prayer.key ? colors.primary : colors.text + "60"}
               />
               <Text
@@ -366,7 +381,7 @@ export function NotificationSetupModal({
           ))}
         </View>
 
-        {/* Selected Prayer Content */}
+        {/* Selected Prayer Content - Compact Design */}
         <Animated.View
           style={[
             styles.prayerContent,
@@ -395,25 +410,30 @@ export function NotificationSetupModal({
               },
             ]}
           >
+            {/* Compact Header */}
             <View style={styles.selectedPrayerHeader}>
-              <View
-                style={[
-                  styles.selectedPrayerIcon,
-                  { backgroundColor: colors.primary + "15" },
-                ]}
-              >
-                <IconSymbol
-                  name={currentPrayerData.icon as any}
-                  size={32}
-                  color={colors.primary}
-                />
+              <View style={styles.prayerHeaderLeft}>
+                <View
+                  style={[
+                    styles.selectedPrayerIcon,
+                    { backgroundColor: colors.primary + "15" },
+                  ]}
+                >
+                  <IconSymbol
+                    name={currentPrayerData.icon as any}
+                    size={24}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={[styles.selectedPrayerName, { color: colors.text }]}>
+                  {currentPrayerData.name}
+                </Text>
               </View>
-              <Text style={[styles.selectedPrayerName, { color: colors.text }]}>
-                {currentPrayerData.name} Prayer
-              </Text>
             </View>
 
+            {/* Notification Options - Compact */}
             <View style={styles.notificationOptions}>
+              {/* Prayer Begin Time Toggle */}
               <TouchableOpacity
                 style={[
                   styles.notificationOption,
@@ -428,7 +448,7 @@ export function NotificationSetupModal({
                 <View style={styles.notificationOptionContent}>
                   <IconSymbol
                     name="bell"
-                    size={22}
+                    size={20}
                     color={preferences.prayers[selectedPrayer as NotificationPrayerName].beginTime ? colors.primary : colors.text + "60"}
                   />
                   <View style={styles.notificationOptionText}>
@@ -436,7 +456,7 @@ export function NotificationSetupModal({
                       Prayer Time
                     </Text>
                     <Text style={[styles.notificationOptionDescription, { color: colors.text + "80" }]}>
-                      Notify when prayer begins
+                      When prayer begins
                     </Text>
                   </View>
                 </View>
@@ -456,59 +476,119 @@ export function NotificationSetupModal({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.notificationOption,
-                  preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime && {
-                    backgroundColor: colors.secondary + "10",
-                    borderColor: colors.secondary + "30",
-                  },
-                ]}
-                onPress={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "jamahTime")}
-                activeOpacity={0.7}
-              >
-                <View style={styles.notificationOptionContent}>
-                  <IconSymbol
-                    name="people"
-                    size={22}
-                    color={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime ? colors.secondary : colors.text + "60"}
-                  />
-                  <View style={styles.notificationOptionText}>
-                    <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
-                      Jamah Time
-                    </Text>
-                    <Text style={[styles.notificationOptionDescription, { color: colors.text + "80" }]}>
-                      Notify for jamaah
-                    </Text>
+              {/* Jamah Time Toggle with Reminder Options */}
+              <View>
+                <TouchableOpacity
+                  style={[
+                    styles.notificationOption,
+                    preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime && {
+                      backgroundColor: colors.secondary + "10",
+                      borderColor: colors.secondary + "30",
+                      borderBottomWidth: 0,
+                      borderBottomLeftRadius: 0,
+                      borderBottomRightRadius: 0,
+                    },
+                  ]}
+                  onPress={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "jamahTime")}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.notificationOptionContent}>
+                    <IconSymbol
+                      name="people"
+                      size={20}
+                      color={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime ? colors.secondary : colors.text + "60"}
+                    />
+                    <View style={styles.notificationOptionText}>
+                      <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
+                        Jamah Time
+                      </Text>
+                      <Text style={[styles.notificationOptionDescription, { color: colors.text + "80" }]}>
+                        For congregation
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <Switch
-                  value={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime}
-                  onValueChange={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "jamahTime")}
-                  trackColor={{
-                    false: colors.text + "20",
-                    true: colors.secondary + "60",
-                  }}
-                  thumbColor={
-                    preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime
-                      ? colors.secondary
-                      : "#f4f3f4"
-                  }
-                  style={styles.switch}
-                />
-              </TouchableOpacity>
+                  <Switch
+                    value={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime}
+                    onValueChange={() => togglePrayerSetting(selectedPrayer as NotificationPrayerName, "jamahTime")}
+                    trackColor={{
+                      false: colors.text + "20",
+                      true: colors.secondary + "60",
+                    }}
+                    thumbColor={
+                      preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime
+                        ? colors.secondary
+                        : "#f4f3f4"
+                    }
+                    style={styles.switch}
+                  />
+                </TouchableOpacity>
+
+                {/* Reminder Options - Integrated Below */}
+                {preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime && (
+                  <View
+                    style={[
+                      styles.reminderSection,
+                      {
+                        backgroundColor: colors.secondary + "10",
+                        borderColor: colors.secondary + "30",
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.reminderLabel, { color: colors.text + "80" }]}>
+                      Remind me before jamah:
+                    </Text>
+                    <View style={styles.reminderOptions}>
+                      {reminderOptions.map((minutes) => (
+                        <TouchableOpacity
+                          key={minutes}
+                          style={[
+                            styles.reminderOption,
+                            {
+                              backgroundColor:
+                                preferences.prayers[selectedPrayer as NotificationPrayerName].jamahReminderMinutes === minutes
+                                  ? colors.secondary
+                                  : colors.surface,
+                              borderColor:
+                                preferences.prayers[selectedPrayer as NotificationPrayerName].jamahReminderMinutes === minutes
+                                  ? colors.secondary
+                                  : colors.text + "20",
+                            },
+                          ]}
+                          onPress={() => handleReminderChange(minutes)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.reminderOptionText,
+                              {
+                                color:
+                                  preferences.prayers[selectedPrayer as NotificationPrayerName].jamahReminderMinutes === minutes
+                                    ? "#fff"
+                                    : colors.text,
+                              },
+                            ]}
+                          >
+                            {minutes}m
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </Animated.View>
 
-        {/* Warning Box - Fixed at bottom */}
+        {/* Warning Box - Positioned at bottom of content area */}
         {!hasAnyNotificationEnabled() && (
-          <View
+          <Animated.View
             style={[
               styles.warningBox,
               {
                 backgroundColor: colors.error + "15",
                 borderColor: colors.error + "30",
+                opacity: fadeAnim,
               },
             ]}
           >
@@ -520,7 +600,7 @@ export function NotificationSetupModal({
             <Text style={[styles.warningText, { color: colors.error }]}>
               No notifications selected. You won't receive any prayer reminders.
             </Text>
-          </View>
+          </Animated.View>
         )}
       </View>
     );
@@ -884,7 +964,7 @@ const styles = StyleSheet.create({
   quickActions: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 16,
   },
 
   quickActionButton: {
@@ -893,31 +973,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 14,
     borderWidth: 1.5,
   },
 
   quickActionText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     letterSpacing: -0.2,
   },
 
-  // Prayer Tabs
+  // Prayer Tabs - Made more compact
   prayerTabs: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
-    gap: 8,
+    marginBottom: 16,
+    gap: 6,
   },
 
   prayerTab: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 4,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "transparent",
   },
@@ -927,10 +1007,10 @@ const styles = StyleSheet.create({
   },
 
   prayerTabText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
     letterSpacing: -0.08,
-    marginTop: 4,
+    marginTop: 3,
   },
 
   // Prayer Content
@@ -941,38 +1021,48 @@ const styles = StyleSheet.create({
   selectedPrayerCard: {
     borderRadius: 16,
     borderWidth: 1,
-    padding: 16,
+    overflow: "hidden",
   },
 
+  // Compact header design
   selectedPrayerHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    padding: 12,
+    paddingBottom: 0,
+  },
+
+  prayerHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
 
   selectedPrayerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
   },
 
   selectedPrayerName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
     letterSpacing: 0.35,
   },
 
   notificationOptions: {
-    gap: 10,
+    padding: 12,
+    paddingTop: 8,
+    gap: 8,
   },
 
   notificationOption: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 14,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "transparent",
@@ -981,7 +1071,7 @@ const styles = StyleSheet.create({
   notificationOptionContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
 
@@ -990,28 +1080,67 @@ const styles = StyleSheet.create({
   },
 
   notificationOptionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     letterSpacing: -0.3,
     marginBottom: 1,
   },
 
   notificationOptionDescription: {
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: -0.08,
-    lineHeight: 16,
+    lineHeight: 14,
   },
 
   switch: {
-    transform: Platform.OS === "ios" ? [{ scale: 0.8 }] : [],
+    transform: Platform.OS === "ios" ? [{ scale: 0.75 }] : [{ scale: 0.85 }],
   },
 
-  // Warning Box
+  // Reminder Section - Integrated design
+  reminderSection: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+
+  reminderLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    letterSpacing: -0.08,
+    marginBottom: 8,
+  },
+
+  reminderOptions: {
+    flexDirection: "row",
+    gap: 6,
+  },
+
+  reminderOption: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    minWidth: 42,
+    alignItems: "center",
+  },
+
+  reminderOptionText: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+
+  // Warning Box - Better positioned
   warningBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    padding: 12,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 1,
     marginTop: 8,
@@ -1020,10 +1149,10 @@ const styles = StyleSheet.create({
 
   warningText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "500",
     letterSpacing: -0.08,
-    lineHeight: 18,
+    lineHeight: 16,
   },
 
   // iOS-style Button Bar
