@@ -1,3 +1,4 @@
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { BlurView } from "expo-blur";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -19,6 +20,7 @@ import {
   View,
 } from "react-native";
 import { SvgXml } from "react-native-svg";
+
 
 import { PrayerTimeCard } from "@/components/prayer/PrayerTimeCard";
 import { IconSymbol } from "@/components/ui/IconSymbol";
@@ -848,11 +850,7 @@ export default function TodayScreen() {
                             { backgroundColor: colors.secondary + "15" },
                           ]}
                         >
-                          <IconSymbol
-                            name="people"
-                            size={20}
-                            color={colors.secondary}
-                          />
+                          <FontAwesome6 name="people-group" size={20} color={colors.secondary} />
                         </View>
                         <View style={styles.toggleInfo}>
                           <Text

@@ -1,7 +1,8 @@
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { SymbolWeight } from "expo-symbols";
 import { ComponentProps } from "react";
-import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
+import { OpaqueColorValue, Text, View, type StyleProp, type TextStyle } from "react-native";
 
 // Define our custom icon names that we use in the app
 type CustomIconName =
@@ -101,8 +102,8 @@ const ICON_MAPPING: Record<CustomIconName, MaterialIconName> = {
   "bell.slash": "notifications-off",
 
   // People/Community
-  "person.3": "access-time",
-  people: "access-time",
+  "person.3": "people",
+  people: "people", // Using the valid "people" Material Icon
   person: "person",
   "person.fill": "person",
   "person.badge.key": "admin-panel-settings",
@@ -194,24 +195,29 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  const materialIconName = ICON_MAPPING[name];
-
-  // Debug logging for people icon
-  if (name === "people") {
-    console.log("IconSymbol - people icon requested, mapped to:", materialIconName);
-    console.log("Color:", color, "Size:", size);
+  // Special handling for people/jamah icon using FontAwesome6
+  if (name === "people" || name === "person.3") {
+    return (
+      <FontAwesome6
+        name="people-group"
+        size={size}
+        color={color}
+        style={style}
+      />
+    );
   }
+
+  const materialIconName = ICON_MAPPING[name];
 
   if (!materialIconName) {
     console.warn(`No Material Icon mapping found for SF Symbol: ${name}`);
-    // Fallback to a generic icon
+    // Fallback to a question mark
     return (
-      <MaterialIcons
-        color={color}
-        size={size}
-        name="help-outline"
-        style={style}
-      />
+      <View style={[{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }, style as any]}>
+        <Text style={{ fontSize: size * 0.8, color: color as string }}>
+          ?
+        </Text>
+      </View>
     );
   }
 

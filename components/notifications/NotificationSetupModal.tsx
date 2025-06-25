@@ -1,3 +1,4 @@
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -11,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+
 
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
@@ -255,11 +257,8 @@ export function NotificationSetupModal({
               { backgroundColor: colors.secondary + "15" },
             ]}
           >
-            <IconSymbol
-              name="people"
-              size={20}
-              color={colors.secondary}
-            />
+            <FontAwesome6 name="people-group" size={24} color={colors.primary} />
+
           </View>
           <View style={styles.featureTextContainer}>
             <Text style={[styles.featureTitle, { color: colors.text }]}>
@@ -331,7 +330,7 @@ export function NotificationSetupModal({
               onPress={() => toggleAllPrayers("jamahTime")}
               activeOpacity={0.7}
             >
-              <IconSymbol name="people" size={16} color={colors.secondary} />
+              <FontAwesome6 name="people-group" size={16} color={colors.secondary} />
               <Text style={[styles.quickActionText, { color: colors.secondary }]}>
                 All Jamah Times
               </Text>
@@ -475,11 +474,7 @@ export function NotificationSetupModal({
                       styles.notificationOptionIcon,
                       { backgroundColor: colors.secondary + "15" }
                     ]}>
-                      <IconSymbol
-                        name="people"
-                        size={18}
-                        color={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime ? colors.secondary : colors.text + "60"}
-                      />
+                      <FontAwesome6 name="people-group" size={18} color={preferences.prayers[selectedPrayer as NotificationPrayerName].jamahTime ? colors.secondary : colors.text + "60"} />
                     </View>
                     <View style={styles.notificationOptionText}>
                       <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
