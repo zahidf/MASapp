@@ -32,6 +32,7 @@ interface PrayerTimeCardProps {
   isNext?: boolean;
   pulseAnim?: Animated.Value;
   getCountdownToNext?: () => string;
+  hideNotificationToggle?: boolean;
 }
 
 export function PrayerTimeCard({
@@ -42,6 +43,7 @@ export function PrayerTimeCard({
   isNext = false,
   pulseAnim,
   getCountdownToNext,
+  hideNotificationToggle = false,
 }: PrayerTimeCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -224,8 +226,8 @@ export function PrayerTimeCard({
                 )}
               </View>
 
-              {/* Notification Toggle - Only show for prayers (not sunrise) */}
-              {prayerKey && (
+              {/* Notification Toggle - Only show for prayers (not sunrise) and when not hidden */}
+              {prayerKey && !hideNotificationToggle && (
                 <TouchableOpacity
                   style={[
                     styles.notificationButton,

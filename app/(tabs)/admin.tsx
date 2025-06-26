@@ -17,12 +17,17 @@ import {
 import { ThemedText } from "@/components/ThemedText";
 import { CSVUploader } from "@/components/admin/CSVUploader";
 import { YearlyCSVUploader } from "@/components/admin/YearlyCSVUploader";
+import { QuickUpdate } from "@/components/admin/QuickUpdateExpo";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
-import { clearAllData, getLastUpdateTime } from "@/utils/storage";
+import { clearAllData, getLastUpdateTime, loadPrayerTimes } from "@/utils/storage";
+import { generateCSVContent, generateMonthlyCSVContent } from "@/utils/csvParser";
+import { getMonthName } from "@/utils/dateHelpers";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 // Custom hook for admin authentication guard
 function useAdminAuthGuard() {
@@ -166,6 +171,76 @@ export default function AdminScreen() {
         },
       },
     ]);
+  };
+
+  const handleDownloadYearlyCSV = async () => {
+    try {
+      const prayerTimes = await loadPrayerTimes();
+      if (!prayerTimes || prayerTimes.length === 0) {
+        Alert.alert("No Data", "No prayer times data available to download.");
+        return;
+      }
+
+      const csvContent = generateCSVContent(prayerTimes);
+      const fileName = `prayer_times_yearly_${new Date().getFullYear()}.csv`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "text/csv",
+          dialogTitle: "Download Yearly Prayer Times CSV",
+        });
+      } else {
+        Alert.alert("Success", "File saved to: " + fileUri);
+      }
+    } catch (error) {
+      console.error("Error downloading yearly CSV:", error);
+      Alert.alert("Error", "Failed to download yearly CSV file.");
+    }
+  };
+
+  const handleDownloadMonthlyCSV = async () => {
+    try {
+      const prayerTimes = await loadPrayerTimes();
+      if (!prayerTimes || prayerTimes.length === 0) {
+        Alert.alert("No Data", "No prayer times data available to download.");
+        return;
+      }
+
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-based
+      const currentYear = currentDate.getFullYear();
+
+      const csvContent = generateMonthlyCSVContent(prayerTimes, currentYear, currentMonth);
+      
+      if (!csvContent) {
+        Alert.alert("No Data", `No prayer times data available for ${getMonthName(currentMonth - 1)} ${currentYear}.`);
+        return;
+      }
+
+      const fileName = `prayer_times_${getMonthName(currentMonth - 1)}_${currentYear}.csv`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "text/csv",
+          dialogTitle: `Download ${getMonthName(currentMonth - 1)} Prayer Times CSV`,
+        });
+      } else {
+        Alert.alert("Success", "File saved to: " + fileUri);
+      }
+    } catch (error) {
+      console.error("Error downloading monthly CSV:", error);
+      Alert.alert("Error", "Failed to download monthly CSV file.");
+    }
   };
 
   const handleDevLoginAsAdmin = async () => {
@@ -501,6 +576,114 @@ export default function AdminScreen() {
                 </View>
                 <YearlyCSVUploader onUploadComplete={loadLastUpdate} />
               </View>
+            </BlurView>
+          </View>
+
+          {/* Quick Update Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
+              QUICK UPDATE
+            </Text>
+
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={[
+                styles.sectionCard,
+                {
+                  backgroundColor: colors.surface + "95",
+                  borderColor:
+                    colorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                },
+              ]}
+            >
+              <View style={styles.quickUpdateContainer}>
+                <View style={styles.quickUpdateHeader}>
+                  <View style={[styles.quickUpdateIconContainer, { backgroundColor: colors.primary + "15" }]}>
+                    <IconSymbol name="bolt" size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.quickUpdateInfo}>
+                    <View style={styles.quickUpdateTitleRow}>
+                      <Text style={[styles.quickUpdateTitle, { color: colors.text }]}>
+                        Quick Time Adjustment
+                      </Text>
+                      <View style={[styles.instantBadge, { backgroundColor: colors.primary + "20" }]}>
+                        <Text style={[styles.instantText, { color: colors.primary }]}>
+                          INSTANT
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.quickUpdateDescription, { color: colors.text + "60" }]}>
+                      Update prayer times for any date directly
+                    </Text>
+                  </View>
+                </View>
+                <QuickUpdate onUploadComplete={loadLastUpdate} />
+              </View>
+            </BlurView>
+          </View>
+
+          {/* Download Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
+              DOWNLOAD DATA
+            </Text>
+
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={[
+                styles.sectionCard,
+                {
+                  backgroundColor: colors.surface + "95",
+                  borderColor:
+                    colorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                },
+              ]}
+            >
+              {/* Download Current Month CSV */}
+              <TouchableOpacity
+                style={[styles.actionRow, { borderBottomColor: colors.text + "10" }]}
+                onPress={handleDownloadMonthlyCSV}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: colors.primary + "15" }]}>
+                  <IconSymbol name="square.and.arrow.down" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    Download Current Month CSV
+                  </Text>
+                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
+                    Export {getMonthName(new Date().getMonth())} {new Date().getFullYear()} prayer times
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+              </TouchableOpacity>
+
+              {/* Download Yearly CSV */}
+              <TouchableOpacity
+                style={styles.actionRow}
+                onPress={handleDownloadYearlyCSV}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: colors.primary + "15" }]}>
+                  <IconSymbol name="doc.on.doc" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    Download Full Year CSV
+                  </Text>
+                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
+                    Export all available prayer times data
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+              </TouchableOpacity>
             </BlurView>
           </View>
 
@@ -916,5 +1099,52 @@ const styles = StyleSheet.create({
 
   bottomSpacing: {
     height: Platform.OS === "ios" ? 100 : 80,
+  },
+
+  // Quick Update Styles
+  quickUpdateContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  quickUpdateHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 16,
+  },
+  quickUpdateIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quickUpdateInfo: {
+    flex: 1,
+  },
+  quickUpdateTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  quickUpdateTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+  quickUpdateDescription: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+  },
+  instantBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  instantText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 });

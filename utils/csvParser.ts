@@ -424,3 +424,69 @@ export const generateCSVContent = (data: PrayerTime[]): string => {
 
   return csvLines.join("\n");
 };
+
+export const generateMonthlyCSVContent = (data: PrayerTime[], year: number, month: number): string => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return "";
+  }
+
+  // Filter data for the specific month
+  const monthStr = String(month).padStart(2, "0");
+  const yearStr = String(year);
+  const monthlyData = data.filter((row) => {
+    if (!row.d_date) return false;
+    const [rowYear, rowMonth] = row.d_date.split("-");
+    return rowYear === yearStr && rowMonth === monthStr;
+  });
+
+  if (monthlyData.length === 0) {
+    return "";
+  }
+
+  // Monthly CSV headers (without d_date, using day instead)
+  const headers = [
+    "day",
+    "fajr_begins",
+    "fajr_jamah",
+    "sunrise",
+    "zuhr_begins",
+    "zuhr_jamah",
+    "asr_mithl_1",
+    "asr_mithl_2",
+    "asr_jamah",
+    "maghrib_begins",
+    "maghrib_jamah",
+    "isha_begins",
+    "isha_jamah",
+  ];
+
+  const csvLines = [headers.join(",")];
+
+  monthlyData.forEach((row) => {
+    if (!row || typeof row !== "object") {
+      return;
+    }
+
+    // Extract day from date
+    const day = row.d_date.split("-")[2];
+    
+    const values = [
+      day,
+      row.fajr_begins || "",
+      row.fajr_jamah || "",
+      row.sunrise || "",
+      row.zuhr_begins || "",
+      row.zuhr_jamah || "",
+      row.asr_mithl_1 || "",
+      row.asr_mithl_2 || "",
+      row.asr_jamah || "",
+      row.maghrib_begins || "",
+      row.maghrib_jamah || "",
+      row.isha_begins || "",
+      row.isha_jamah || "",
+    ];
+    csvLines.push(values.join(","));
+  });
+
+  return csvLines.join("\n");
+};

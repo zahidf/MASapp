@@ -1,19 +1,24 @@
+import { BlurView } from "expo-blur";
+import React, { useState } from "react";
+import {
+  Animated,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  Share,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
 import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { PrayerTime } from "@/types/prayer";
-import { extractPrayersFromTime } from "@/utils/dateHelpers";
-import React from "react";
-import {
-  SafeAreaView,
-  ScrollView,
-  Share,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { getCurrentPrayerAndNext } from "@/utils/dateHelpers";
 import { PrayerTimeCard } from "./PrayerTimeCard";
 
 interface DayDetailProps {
@@ -25,7 +30,56 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const date = new Date(prayerTime.d_date);
-  const prayers = extractPrayersFromTime(prayerTime);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [headerAnim] = useState(new Animated.Value(0));
+  const [pulseAnim] = useState(new Animated.Value(1));
+
+  // Check if the selected date is today
+  const today = new Date();
+  const isToday = 
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
+
+  // Get current and next prayer only if it's today
+  const { current: currentPrayer, next: nextPrayer } = isToday 
+    ? getCurrentPrayerAndNext(prayerTime)
+    : { current: null, next: null };
+
+  React.useEffect(() => {
+    // Animate entrance
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerAnim, {
+        toValue: 1,
+        tension: 65,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Start pulse animation for active prayer only if it's today
+    if (isToday) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.02,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, []);
 
   const handleShare = async () => {
     const dateStr = date.toLocaleDateString("en-US", {
@@ -36,6 +90,17 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
     });
 
     let message = `Masjid Abubakr Siddique Prayer Times\n${dateStr}\n\n`;
+    
+    // Add prayer times in order
+    const prayers = [
+      { name: "Fajr", begins: prayerTime.fajr_begins, jamah: prayerTime.fajr_jamah },
+      { name: "Sunrise", begins: prayerTime.sunrise, jamah: "" },
+      { name: "Zuhr", begins: prayerTime.zuhr_begins, jamah: prayerTime.zuhr_jamah },
+      { name: "Asr", begins: prayerTime.asr_mithl_1, jamah: prayerTime.asr_jamah },
+      { name: "Maghrib", begins: prayerTime.maghrib_begins, jamah: prayerTime.maghrib_jamah },
+      { name: "Isha", begins: prayerTime.isha_begins, jamah: prayerTime.isha_jamah },
+    ];
+
     prayers.forEach((prayer) => {
       if (prayer.jamah) {
         message += `${prayer.name}: ${prayer.begins} (Jamah: ${prayer.jamah})\n`;
@@ -54,95 +119,256 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
     }
   };
 
+  // Function to get countdown to next prayer
+  const getCountdownToNext = (): string => {
+    // Only show countdown for today
+    if (!isToday || !nextPrayer) return "";
+
+    const prayerTimes = {
+      fajr: prayerTime.fajr_begins,
+      sunrise: prayerTime.sunrise,
+      zuhr: prayerTime.zuhr_begins,
+      asr: prayerTime.asr_mithl_1,
+      maghrib: prayerTime.maghrib_begins,
+      isha: prayerTime.isha_begins,
+    };
+
+    const nextPrayerTime = prayerTimes[nextPrayer];
+    if (!nextPrayerTime) return "";
+
+    const now = new Date();
+    const [hours, minutes] = nextPrayerTime.split(":");
+    const nextTime = new Date();
+    nextTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    if (nextTime < now) {
+      nextTime.setDate(nextTime.getDate() + 1);
+    }
+
+    const diff = nextTime.getTime() - now.getTime();
+
+    if (diff <= 0) return "Now";
+
+    const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hoursLeft > 0) {
+      return `${hoursLeft}h ${minutesLeft}m`;
+    } else {
+      return `${minutesLeft}m`;
+    }
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <ThemedView
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+      />
+
+      {/* Enhanced iOS-style Navigation Header */}
+      <Animated.View
         style={[
-          styles.header,
+          styles.headerWrapper,
           {
-            borderBottomColor: colorScheme === "dark" ? "#404040" : "#e0e0e0",
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
           },
         ]}
       >
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <IconSymbol name="xmark" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <BlurView
+          intensity={85}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <IconSymbol name="xmark" size={24} color={colors.text + "80"} />
+            </TouchableOpacity>
 
-        <View style={styles.titleContainer}>
-          <ThemedText
-            type="title"
-            style={[styles.title, { color: colors.text }]}
-          >
-            {date.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-          </ThemedText>
-          <ThemedText style={[styles.year, { color: `${colors.text}B3` }]}>
-            {date.getFullYear()}
-          </ThemedText>
-        </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                {date.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </Text>
+              <Text style={[styles.headerSubtitle, { color: colors.text + "60" }]}>
+                {date.getFullYear()}
+              </Text>
+            </View>
 
-        <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-          <IconSymbol
-            name="square.and.arrow.up"
-            size={24}
-            color={colors.text}
-          />
-        </TouchableOpacity>
-      </ThemedView>
+            <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+              <IconSymbol
+                name="square.and.arrow.up"
+                size={24}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        </BlurView>
 
-      <ScrollView style={styles.content}>
-        <ThemedView style={styles.prayersList}>
-          {prayers.map((prayer, index) => (
-            <PrayerTimeCard key={index} prayer={prayer} />
-          ))}
-        </ThemedView>
-
-        {prayerTime.is_ramadan === 1 && (
-          <ThemedView
+        {/* Header edge effect */}
+        <View style={styles.headerEdgeEffect}>
+          <View
             style={[
-              styles.ramadanBadge,
+              styles.headerEdgeGradient,
               {
-                backgroundColor: colorScheme === "dark" ? "#B8860B" : "#F9A825",
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "rgba(0,0,0,0.2)"
+                    : "rgba(0,0,0,0.08)",
               },
             ]}
-          >
-            <ThemedText
+          />
+        </View>
+      </Animated.View>
+
+      {/* Main Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Ramadan Badge */}
+          {prayerTime.is_ramadan === 1 && (
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
               style={[
-                styles.ramadanText,
+                styles.ramadanBadge,
                 {
-                  color: colorScheme === "dark" ? "#FFFFFF" : "#FFFFFF",
+                  backgroundColor:
+                    colorScheme === "dark" ? "#B8860B15" : "#F9A82515",
+                  borderColor:
+                    colorScheme === "dark" ? "#B8860B30" : "#F9A82530",
                 },
               ]}
             >
-              🌙 Ramadan
-            </ThemedText>
-          </ThemedView>
-        )}
+              <Text style={styles.ramadanIcon}>🌙</Text>
+              <ThemedText
+                style={[
+                  styles.ramadanText,
+                  {
+                    color: colorScheme === "dark" ? "#FFD700" : "#F9A825",
+                  },
+                ]}
+              >
+                Ramadan Mubarak
+              </ThemedText>
+            </BlurView>
+          )}
 
-        {prayerTime.hijri_date && prayerTime.hijri_date !== "0" && (
-          <ThemedView
-            style={[
-              styles.hijriDate,
-              {
-                backgroundColor: colors.surface,
-              },
-            ]}
-          >
-            <ThemedText
-              style={[styles.hijriLabel, { color: `${colors.text}B3` }]}
+          {/* Prayer Times List */}
+          <View style={styles.prayersList}>
+            <PrayerTimeCard
+              name="Fajr"
+              time={prayerTime.fajr_begins}
+              jamah={prayerTime.fajr_jamah}
+              isActive={currentPrayer === "fajr"}
+              isNext={nextPrayer === "fajr"}
+              pulseAnim={pulseAnim}
+              getCountdownToNext={getCountdownToNext}
+              hideNotificationToggle={true}
+            />
+            <PrayerTimeCard
+              name="Sunrise"
+              time={prayerTime.sunrise}
+              isActive={currentPrayer === "sunrise"}
+              isNext={nextPrayer === "sunrise"}
+              pulseAnim={pulseAnim}
+              getCountdownToNext={getCountdownToNext}
+              hideNotificationToggle={true}
+            />
+            <PrayerTimeCard
+              name="Zuhr"
+              time={prayerTime.zuhr_begins}
+              jamah={prayerTime.zuhr_jamah}
+              isActive={currentPrayer === "zuhr"}
+              isNext={nextPrayer === "zuhr"}
+              pulseAnim={pulseAnim}
+              getCountdownToNext={getCountdownToNext}
+              hideNotificationToggle={true}
+            />
+            <PrayerTimeCard
+              name="Asr"
+              time={prayerTime.asr_mithl_1}
+              jamah={prayerTime.asr_jamah}
+              isActive={currentPrayer === "asr"}
+              isNext={nextPrayer === "asr"}
+              pulseAnim={pulseAnim}
+              getCountdownToNext={getCountdownToNext}
+              hideNotificationToggle={true}
+            />
+            <PrayerTimeCard
+              name="Maghrib"
+              time={prayerTime.maghrib_begins}
+              jamah={prayerTime.maghrib_jamah}
+              isActive={currentPrayer === "maghrib"}
+              isNext={nextPrayer === "maghrib"}
+              pulseAnim={pulseAnim}
+              getCountdownToNext={getCountdownToNext}
+              hideNotificationToggle={true}
+            />
+            <PrayerTimeCard
+              name="Isha"
+              time={prayerTime.isha_begins}
+              jamah={prayerTime.isha_jamah}
+              isActive={currentPrayer === "isha"}
+              isNext={nextPrayer === "isha"}
+              pulseAnim={pulseAnim}
+              getCountdownToNext={getCountdownToNext}
+              hideNotificationToggle={true}
+            />
+          </View>
+
+          {/* Hijri Date Card */}
+          {prayerTime.hijri_date && prayerTime.hijri_date !== "0" && (
+            <BlurView
+              intensity={60}
+              tint={colorScheme === "dark" ? "dark" : "light"}
+              style={[
+                styles.hijriCard,
+                {
+                  backgroundColor: colors.surface + "95",
+                  borderColor:
+                    colorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                },
+              ]}
             >
-              Hijri Date
-            </ThemedText>
-            <ThemedText style={[styles.hijriText, { color: colors.text }]}>
-              {prayerTime.hijri_date}
-            </ThemedText>
-          </ThemedView>
-        )}
+              <View
+                style={[
+                  styles.hijriIconContainer,
+                  { backgroundColor: colors.primary + "15" },
+                ]}
+              >
+                <IconSymbol name="calendar" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.hijriContent}>
+                <ThemedText
+                  style={[styles.hijriLabel, { color: colors.text + "60" }]}
+                >
+                  Hijri Date
+                </ThemedText>
+                <ThemedText style={[styles.hijriText, { color: colors.text }]}>
+                  {prayerTime.hijri_date}
+                </ThemedText>
+              </View>
+            </BlurView>
+          )}
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -152,60 +378,189 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+  // Enhanced iOS-style header
+  headerWrapper: {
+    backgroundColor: "transparent",
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+
   header: {
+    paddingTop: Platform.OS === "ios" ? 10 : StatusBar.currentHeight || 24,
+    paddingBottom: 16,
+  },
+
+  headerEdgeEffect: {
+    height: 1,
+  },
+
+  headerEdgeGradient: {
+    height: 1,
+    opacity: 0.15,
+  },
+
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 20,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
   },
+
   closeButton: {
-    padding: 8,
-  },
-  shareButton: {
-    padding: 8,
-  },
-  titleContainer: {
-    flex: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
     alignItems: "center",
   },
-  title: {
+
+  shareButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.03)",
+  },
+
+  headerTextContainer: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+
+  headerTitle: {
     fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: -0.4,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+
+  headerSubtitle: {
+    fontSize: 15,
+    fontWeight: "400",
+    letterSpacing: -0.2,
     textAlign: "center",
   },
-  year: {
-    fontSize: 16,
-  },
-  content: {
+
+  // Scroll View
+  scrollView: {
     flex: 1,
   },
-  prayersList: {
-    padding: 20,
+
+  scrollContent: {
+    paddingTop: 16,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
   },
+
+  // Ramadan Badge
   ramadanBadge: {
-    margin: 20,
-    marginTop: 0,
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
   },
+
+  ramadanIcon: {
+    fontSize: 20,
+  },
+
   ramadanText: {
     fontSize: 16,
     fontWeight: "600",
+    letterSpacing: -0.3,
   },
-  hijriDate: {
-    margin: 20,
-    marginTop: 0,
+
+  // Prayers List
+  prayersList: {
+    paddingHorizontal: 16,
+    gap: 16,
+    marginBottom: 20,
+  },
+
+  // Hijri Date Card
+  hijriCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+
+  hijriIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
   },
-  hijriLabel: {
-    fontSize: 14,
-    marginBottom: 4,
+
+  hijriContent: {
+    flex: 1,
   },
+
+  hijriLabel: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+    marginBottom: 2,
+  },
+
   hijriText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+
+  // Info Card
+  infoCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  infoContent: {
+    flex: 1,
+  },
+
+  infoText: {
+    fontSize: 14,
+    letterSpacing: -0.2,
+    lineHeight: 20,
   },
 });
