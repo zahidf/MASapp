@@ -22,7 +22,7 @@ import {
 import { SvgXml } from "react-native-svg";
 
 
-import { PrayerTimeCard } from "@/components/prayer/PrayerTimeCard";
+import { PrayerTimesDisplay } from "@/components/prayer/PrayerTimesDisplay";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
@@ -665,61 +665,13 @@ export default function TodayScreen() {
                 {/* Prayer Cards */}
                 <View style={styles.prayersList}>
                   {todaysPrayers ? (
-                    <>
-                      <PrayerTimeCard
-                        name="Fajr"
-                        time={todaysPrayers.fajr_begins}
-                        jamah={todaysPrayers.fajr_jamah}
-                        isActive={currentPrayer === "fajr"}
-                        isNext={nextPrayer === "fajr"}
-                        pulseAnim={pulseAnim}
-                        getCountdownToNext={getCountdownToNext}
-                      />
-                      <PrayerTimeCard
-                        name="Sunrise"
-                        time={todaysPrayers.sunrise}
-                        isActive={currentPrayer === "sunrise"}
-                        isNext={nextPrayer === "sunrise"}
-                        pulseAnim={pulseAnim}
-                        getCountdownToNext={getCountdownToNext}
-                      />
-                      <PrayerTimeCard
-                        name="Zuhr"
-                        time={todaysPrayers.zuhr_begins}
-                        jamah={todaysPrayers.zuhr_jamah}
-                        isActive={currentPrayer === "zuhr"}
-                        isNext={nextPrayer === "zuhr"}
-                        pulseAnim={pulseAnim}
-                        getCountdownToNext={getCountdownToNext}
-                      />
-                      <PrayerTimeCard
-                        name="Asr"
-                        time={todaysPrayers.asr_mithl_1}
-                        jamah={todaysPrayers.asr_jamah}
-                        isActive={currentPrayer === "asr"}
-                        isNext={nextPrayer === "asr"}
-                        pulseAnim={pulseAnim}
-                        getCountdownToNext={getCountdownToNext}
-                      />
-                      <PrayerTimeCard
-                        name="Maghrib"
-                        time={todaysPrayers.maghrib_begins}
-                        jamah={todaysPrayers.maghrib_jamah}
-                        isActive={currentPrayer === "maghrib"}
-                        isNext={nextPrayer === "maghrib"}
-                        pulseAnim={pulseAnim}
-                        getCountdownToNext={getCountdownToNext}
-                      />
-                      <PrayerTimeCard
-                        name="Isha"
-                        time={todaysPrayers.isha_begins}
-                        jamah={todaysPrayers.isha_jamah}
-                        isActive={currentPrayer === "isha"}
-                        isNext={nextPrayer === "isha"}
-                        pulseAnim={pulseAnim}
-                        getCountdownToNext={getCountdownToNext}
-                      />
-                    </>
+                    <PrayerTimesDisplay
+                      prayerTime={todaysPrayers}
+                      currentPrayer={currentPrayer}
+                      nextPrayer={nextPrayer}
+                      pulseAnim={pulseAnim}
+                      getCountdownToNext={getCountdownToNext}
+                    />
                   ) : (
                     <View style={styles.noDataSection}>
                       <Text style={styles.noDataIcon}>📅</Text>

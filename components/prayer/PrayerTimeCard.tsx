@@ -20,6 +20,7 @@ import {
   PrayerNotificationSettings,
 } from "@/types/notification";
 import { BlurView } from "expo-blur";
+import { SunriseCard } from "./SunriseCard";
 
 // Define the notification prayer type based on your actual prayers object
 type NotificationPrayerName = keyof NotificationPreferences["prayers"];
@@ -33,6 +34,7 @@ interface PrayerTimeCardProps {
   pulseAnim?: Animated.Value;
   getCountdownToNext?: () => string;
   hideNotificationToggle?: boolean;
+  isSunrise?: boolean;
 }
 
 export function PrayerTimeCard({
@@ -44,6 +46,7 @@ export function PrayerTimeCard({
   pulseAnim,
   getCountdownToNext,
   hideNotificationToggle = false,
+  isSunrise = false,
 }: PrayerTimeCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -119,6 +122,19 @@ export function PrayerTimeCard({
       setShowNotificationSheet(true);
     }
   };
+
+  // Return compact SunriseCard for sunrise
+  if (isSunrise) {
+    return (
+      <SunriseCard
+        time={time}
+        isActive={isActive}
+        isNext={isNext}
+        pulseAnim={pulseAnim}
+        getCountdownToNext={getCountdownToNext}
+      />
+    );
+  }
 
   const cardOpacity = isActive ? 1 : isNext ? 0.98 : 0.95;
   const cardScale = isActive && pulseAnim ? pulseAnim : 1;

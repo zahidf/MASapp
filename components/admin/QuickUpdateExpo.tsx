@@ -43,9 +43,13 @@ function DatePickerModal({
   colors,
 }: DatePickerModalProps) {
   const [slideAnim] = useState(new Animated.Value(0));
-  const [selectedYear, setSelectedYear] = useState(value.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(value.getMonth());
-  const [selectedDay, setSelectedDay] = useState(value.getDate());
+  
+  // Ensure value is a valid Date object
+  const safeValue = value && value instanceof Date && !isNaN(value.getTime()) ? value : new Date();
+  
+  const [selectedYear, setSelectedYear] = useState(safeValue.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(safeValue.getMonth());
+  const [selectedDay, setSelectedDay] = useState(safeValue.getDate());
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -58,9 +62,10 @@ function DatePickerModal({
 
   useEffect(() => {
     if (visible) {
-      setSelectedYear(value.getFullYear());
-      setSelectedMonth(value.getMonth());
-      setSelectedDay(value.getDate());
+      const safeValue = value && value instanceof Date && !isNaN(value.getTime()) ? value : new Date();
+      setSelectedYear(safeValue.getFullYear());
+      setSelectedMonth(safeValue.getMonth());
+      setSelectedDay(safeValue.getDate());
       Animated.spring(slideAnim, {
         toValue: 1,
         tension: 65,
@@ -253,15 +258,20 @@ function TimePickerModal({
   colors,
 }: TimePickerModalProps) {
   const [slideAnim] = useState(new Animated.Value(0));
-  const [hours, setHours] = useState(value.getHours() % 12 || 12);
-  const [minutes, setMinutes] = useState(value.getMinutes());
-  const [isAM, setIsAM] = useState(value.getHours() < 12);
+  
+  // Ensure value is a valid Date object
+  const safeValue = value && value instanceof Date && !isNaN(value.getTime()) ? value : new Date();
+  
+  const [hours, setHours] = useState(safeValue.getHours() % 12 || 12);
+  const [minutes, setMinutes] = useState(safeValue.getMinutes());
+  const [isAM, setIsAM] = useState(safeValue.getHours() < 12);
 
   useEffect(() => {
     if (visible) {
-      setHours(value.getHours() % 12 || 12);
-      setMinutes(value.getMinutes());
-      setIsAM(value.getHours() < 12);
+      const safeValue = value && value instanceof Date && !isNaN(value.getTime()) ? value : new Date();
+      setHours(safeValue.getHours() % 12 || 12);
+      setMinutes(safeValue.getMinutes());
+      setIsAM(safeValue.getHours() < 12);
       Animated.spring(slideAnim, {
         toValue: 1,
         tension: 65,
@@ -443,6 +453,7 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
     fajr_begins: new Date(),
     fajr_jamah: new Date(),
     sunrise: new Date(),
+    sunrise_begins: new Date(), // Added for consistency with the prayer key pattern
     zuhr_begins: new Date(),
     zuhr_jamah: new Date(),
     asr_begins: new Date(),
@@ -473,19 +484,34 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
       // Convert time strings to Date objects
       const newValues: any = {};
       Object.keys(prayerTimeValues).forEach((key) => {
-        const timeStr = (existingTime as any)[key];
+        // Handle special case for sunrise_begins which maps to sunrise in the data
+        const dataKey = key === 'sunrise_begins' ? 'sunrise' : key;
+        const timeStr = (existingTime as any)[dataKey];
         if (timeStr) {
           const [hours, minutes] = timeStr.split(":").map(Number);
           const date = new Date();
           date.setHours(hours, minutes, 0, 0);
           newValues[key] = date;
+        } else {
+          // If no time string exists, use current date as default
+          newValues[key] = new Date();
         }
       });
+      // Ensure sunrise and sunrise_begins are synced
+      if (newValues.sunrise && !newValues.sunrise_begins) {
+        newValues.sunrise_begins = newValues.sunrise;
+      } else if (newValues.sunrise_begins && !newValues.sunrise) {
+        newValues.sunrise = newValues.sunrise_begins;
+      }
       setPrayerTimeValues(newValues);
     }
   }, [selectedDate, prayerTimes]);
 
   const formatTime = (date: Date): string => {
+    // Ensure date is a valid Date object
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      return "12:00 AM"; // Default time if invalid
+    }
     const hours = date.getHours();
     const minutes = date.getMinutes();
     const ampm = hours >= 12 ? "PM" : "AM";
@@ -494,6 +520,10 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
   };
 
   const formatTimeForStorage = (date: Date): string => {
+    // Ensure date is a valid Date object
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      return "00:00"; // Default time if invalid
+    }
     return `${date.getHours().toString().padStart(2, "0")}:${date
       .getMinutes()
       .toString()
@@ -530,7 +560,7 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
         d_date: dateStr,
         fajr_begins: formatTimeForStorage(prayerTimeValues.fajr_begins),
         fajr_jamah: formatTimeForStorage(prayerTimeValues.fajr_jamah),
-        sunrise: formatTimeForStorage(prayerTimeValues.sunrise),
+        sunrise: formatTimeForStorage(prayerTimeValues.sunrise_begins || prayerTimeValues.sunrise),
         zuhr_begins: formatTimeForStorage(prayerTimeValues.zuhr_begins),
         zuhr_jamah: formatTimeForStorage(prayerTimeValues.zuhr_jamah),
         asr_mithl_1: formatTimeForStorage(prayerTimeValues.asr_begins),

@@ -15,11 +15,12 @@ import {
 
 import { ThemedText } from "@/components/ThemedText";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { PrayerTimeCard } from "./PrayerTimeCard";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { PrayerTime } from "@/types/prayer";
 import { getCurrentPrayerAndNext } from "@/utils/dateHelpers";
-import { PrayerTimeCard } from "./PrayerTimeCard";
+import { PrayerTimesDisplay } from "./PrayerTimesDisplay";
 
 interface DayDetailProps {
   prayerTime: PrayerTime;
@@ -271,61 +272,10 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
 
           {/* Prayer Times List */}
           <View style={styles.prayersList}>
-            <PrayerTimeCard
-              name="Fajr"
-              time={prayerTime.fajr_begins}
-              jamah={prayerTime.fajr_jamah}
-              isActive={currentPrayer === "fajr"}
-              isNext={nextPrayer === "fajr"}
-              pulseAnim={pulseAnim}
-              getCountdownToNext={getCountdownToNext}
-              hideNotificationToggle={true}
-            />
-            <PrayerTimeCard
-              name="Sunrise"
-              time={prayerTime.sunrise}
-              isActive={currentPrayer === "sunrise"}
-              isNext={nextPrayer === "sunrise"}
-              pulseAnim={pulseAnim}
-              getCountdownToNext={getCountdownToNext}
-              hideNotificationToggle={true}
-            />
-            <PrayerTimeCard
-              name="Zuhr"
-              time={prayerTime.zuhr_begins}
-              jamah={prayerTime.zuhr_jamah}
-              isActive={currentPrayer === "zuhr"}
-              isNext={nextPrayer === "zuhr"}
-              pulseAnim={pulseAnim}
-              getCountdownToNext={getCountdownToNext}
-              hideNotificationToggle={true}
-            />
-            <PrayerTimeCard
-              name="Asr"
-              time={prayerTime.asr_mithl_1}
-              jamah={prayerTime.asr_jamah}
-              isActive={currentPrayer === "asr"}
-              isNext={nextPrayer === "asr"}
-              pulseAnim={pulseAnim}
-              getCountdownToNext={getCountdownToNext}
-              hideNotificationToggle={true}
-            />
-            <PrayerTimeCard
-              name="Maghrib"
-              time={prayerTime.maghrib_begins}
-              jamah={prayerTime.maghrib_jamah}
-              isActive={currentPrayer === "maghrib"}
-              isNext={nextPrayer === "maghrib"}
-              pulseAnim={pulseAnim}
-              getCountdownToNext={getCountdownToNext}
-              hideNotificationToggle={true}
-            />
-            <PrayerTimeCard
-              name="Isha"
-              time={prayerTime.isha_begins}
-              jamah={prayerTime.isha_jamah}
-              isActive={currentPrayer === "isha"}
-              isNext={nextPrayer === "isha"}
+            <PrayerTimesDisplay
+              prayerTime={prayerTime}
+              currentPrayer={currentPrayer}
+              nextPrayer={nextPrayer}
               pulseAnim={pulseAnim}
               getCountdownToNext={getCountdownToNext}
               hideNotificationToggle={true}
@@ -492,7 +442,6 @@ const styles = StyleSheet.create({
   // Prayers List
   prayersList: {
     paddingHorizontal: 16,
-    gap: 16,
     marginBottom: 20,
   },
 
