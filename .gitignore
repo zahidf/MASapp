@@ -92,3 +92,5 @@ mixpanel-config.json
 
 # Sentry config
 .sentryclirc
+
+docs/*

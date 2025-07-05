@@ -12,6 +12,7 @@ import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { mergeMonthlyIntoYearly, parseMonthlyCSV } from "@/utils/csvParser";
 import { getMonthName } from "@/utils/dateHelpers";
 import { savePrayerTimes } from "@/utils/storage";
+import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 
 interface CSVUploaderProps {
   onUploadComplete?: () => void;
@@ -110,8 +111,11 @@ export function CSVUploader({ onUploadComplete }: CSVUploaderProps) {
         selectedMonth + 1
       );
 
-      // Save to storage
+      // Save to local storage (as backup)
       await savePrayerTimes(updatedData);
+
+      // Save to Firebase
+      await firebasePrayerTimesService.setPrayerTimes(updatedData);
 
       // Refresh the app data
       await refreshData();
@@ -120,14 +124,14 @@ export function CSVUploader({ onUploadComplete }: CSVUploaderProps) {
         "Success",
         `Prayer times for ${getMonthName(
           selectedMonth
-        )} ${selectedYear} have been updated.`
+        )} ${selectedYear} have been updated and synced to all devices.`
       );
 
       setSelectedFile(null);
       onUploadComplete?.();
     } catch (error) {
       console.error("Error saving data:", error);
-      Alert.alert("Error", "Failed to save updated prayer times");
+      Alert.alert("Error", "Failed to save updated prayer times. Please check your internet connection and try again.");
     }
   };
 

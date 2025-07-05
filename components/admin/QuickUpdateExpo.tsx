@@ -20,6 +20,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { PrayerTime } from "@/types/prayer";
 import { savePrayerTimes } from "@/utils/storage";
+import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 
 interface QuickUpdateProps {
   onUpdateComplete?: () => void;
@@ -594,8 +595,12 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
         }
       }
 
-      // Save to storage
+      // Save to local storage (as backup)
       await savePrayerTimes(updatedPrayerTimes);
+      
+      // Save to Firebase
+      await firebasePrayerTimesService.setPrayerTimes(updatedPrayerTimes);
+      
       await refreshData();
 
       Alert.alert(
@@ -605,7 +610,7 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
           year: "numeric",
           month: "long",
           day: "numeric",
-        })} have been updated.`
+        })} have been updated and synced to all devices.`
       );
 
       onUpdateComplete?.();

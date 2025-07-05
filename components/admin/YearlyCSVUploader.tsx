@@ -11,6 +11,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { parseYearlyCSV, validateYearlyData } from "@/utils/csvParser";
 import { savePrayerTimes } from "@/utils/storage";
+import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 
 interface YearlyCSVUploaderProps {
   onUploadComplete?: () => void;
@@ -158,22 +159,25 @@ export function YearlyCSVUploader({
       // Parse the yearly CSV
       const yearlyData = parseYearlyCSV(content);
 
-      // Save to storage (this replaces all existing data)
+      // Save to local storage (as backup)
       await savePrayerTimes(yearlyData);
+
+      // Save to Firebase (this replaces all existing data)
+      await firebasePrayerTimesService.setPrayerTimes(yearlyData);
 
       // Refresh the app data
       await refreshData();
 
       Alert.alert(
         "Success",
-        `Yearly prayer times have been uploaded successfully!\n\n• ${yearlyData.length} days imported\n• Data year: ${selectedYear}`
+        `Yearly prayer times have been uploaded successfully and synced to all devices!\n\n• ${yearlyData.length} days imported\n• Data year: ${selectedYear}`
       );
 
       clearSelection();
       onUploadComplete?.();
     } catch (error) {
       console.error("Error processing CSV:", error);
-      Alert.alert("Error", "Failed to process and save yearly prayer times");
+      Alert.alert("Error", "Failed to process and save yearly prayer times. Please check your internet connection and try again.");
     } finally {
       setIsUploading(false);
     }
