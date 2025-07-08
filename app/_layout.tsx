@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import {
   DarkTheme,
   DefaultTheme,
@@ -10,7 +9,6 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import "react-native-reanimated";
 
-import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { PrayerTimesProvider } from "@/contexts/PrayerTimesContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -24,15 +22,14 @@ export default function RootLayout() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
-    // Load initial prayer times data
     loadPrayerTimes()
       .then(() => {
-        console.log("Prayer times loaded successfully in root layout");
+        console.log("Prayer times loaded successfully");
         setIsDataLoaded(true);
       })
       .catch((error) => {
-        console.error("Failed to load prayer times in root layout:", error);
-        setIsDataLoaded(true); // Continue with error
+        console.error("Failed to load prayer times:", error);
+        setIsDataLoaded(true);
       });
   }, []);
 
@@ -41,27 +38,18 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <PrayerTimesProvider>
-        <NotificationProvider>
-          <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="auth"
-                options={{
-                  presentation: "modal",
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen name="+not-found" options={{ headerShown: true }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </NotificationProvider>
-      </PrayerTimesProvider>
-    </AuthProvider>
+    <PrayerTimesProvider>
+      <NotificationProvider>
+        <ThemeProvider
+          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+        >
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </NotificationProvider>
+    </PrayerTimesProvider>
   );
 }

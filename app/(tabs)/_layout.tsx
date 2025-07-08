@@ -6,13 +6,10 @@ import { HapticTab } from "@/components/HapticTab";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { Colors } from "@/constants/Colors";
-import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { user, config } = useAuth();
-  const isDev = config.isDevelopment;
 
   return (
     <Tabs
@@ -24,7 +21,6 @@ export default function TabLayout() {
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
             position: "absolute",
             backgroundColor: "transparent",
             borderTopWidth: 0,
@@ -92,30 +88,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Show admin tab only for admin users */}
-      {user?.isAdmin && (
-        <Tabs.Screen
-          name="admin"
-          options={{
-            title: "Admin",
-            tabBarIcon: ({ color, focused }) => (
-              <IconSymbol
-                size={28}
-                name={focused ? "gear.circle.fill" : "gear.circle"}
-                color={color}
-              />
-            ),
-            tabBarBadge: isDev ? "DEV" : undefined,
-            tabBarBadgeStyle: {
-              backgroundColor: "#FF9800",
-              color: "#fff",
-              fontSize: 10,
-              minWidth: 20,
-              height: 16,
-            },
-          }}
-        />
-      )}
     </Tabs>
   );
 }
