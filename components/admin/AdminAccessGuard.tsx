@@ -11,6 +11,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { ENV_CONFIG } from "@/utils/envConfig";
 
@@ -24,6 +25,7 @@ export function AdminAccessGuard({
   fallback,
 }: AdminAccessGuardProps) {
   const { user } = useAuth();
+  const { logout } = useAuthContext();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const [fadeAnim] = React.useState(new Animated.Value(0));
@@ -41,11 +43,7 @@ export function AdminAccessGuard({
     user?.email &&
     ENV_CONFIG.auth.authorizedAdmins.includes(user.email.toLowerCase());
 
-  // Allow development bypass
-  const isDevelopmentBypass =
-    ENV_CONFIG.isDevelopment && ENV_CONFIG.auth.devSettings.bypassAuth;
-
-  if (isAuthorisedAdmin || isDevelopmentBypass) {
+  if (isAuthorisedAdmin) {
     return <>{children}</>;
   }
 
@@ -58,13 +56,6 @@ export function AdminAccessGuard({
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        {ENV_CONFIG.isDevelopment && (
-          <View style={styles.devBadge}>
-            <ThemedText style={styles.devBadgeText}>
-              🔧 Development Mode
-            </ThemedText>
-          </View>
-        )}
 
         <View
           style={[
@@ -92,26 +83,6 @@ export function AdminAccessGuard({
           )}
         </ThemedText>
 
-        {ENV_CONFIG.isDevelopment && (
-          <View style={styles.devInfo}>
-            <ThemedText
-              style={[styles.devInfoTitle, { color: colors.primary }]}
-            >
-              🔧 Development Info:
-            </ThemedText>
-            <ThemedText
-              style={[styles.devInfoText, { color: `${colors.text}80` }]}
-            >
-              Authorised admins: {ENV_CONFIG.auth.authorizedAdmins.join(", ")}
-              {"\n"}
-              Current user: {user?.email || "Not signed in"}
-              {"\n"}
-              Is authorised: {isAuthorisedAdmin ? "Yes" : "No"}
-              {"\n"}
-              Dev bypass: {isDevelopmentBypass ? "Enabled" : "Disabled"}
-            </ThemedText>
-          </View>
-        )}
 
         <View style={styles.actions}>
           {!user && (
@@ -167,9 +138,12 @@ export function AdminAccessGuard({
                   {
                     text: "Sign Out",
                     style: "destructive",
-                    onPress: () => {
-                      // Handle sign out
-                      // This would typically use the auth context
+                    onPress: async () => {
+                      try {
+                        await logout();
+                      } catch (error) {
+                        console.error("Sign out error:", error);
+                      }
                     },
                   },
                 ]

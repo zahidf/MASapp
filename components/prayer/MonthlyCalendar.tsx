@@ -68,7 +68,7 @@ export function MonthlyCalendar({
                 styles.dayContent,
                 isToday && [
                   styles.todayContent,
-                  { backgroundColor: colors.primary },
+                  { backgroundColor: colors.tint },
                 ],
                 isRamadan &&
                   !isToday && [
@@ -105,7 +105,7 @@ export function MonthlyCalendar({
                 <View
                   style={[
                     styles.dataIndicator,
-                    { backgroundColor: colors.primary },
+                    { backgroundColor: colors.tint },
                   ]}
                 />
               )}

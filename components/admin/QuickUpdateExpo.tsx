@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Platform,
-  Modal,
-  Animated,
-  Text,
-  Switch,
-} from "react-native";
-import { BlurView } from "expo-blur";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
+import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 import { PrayerTime } from "@/types/prayer";
 import { savePrayerTimes } from "@/utils/storage";
-import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
+import { BlurView } from "expo-blur";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface QuickUpdateProps {
   onUpdateComplete?: () => void;
@@ -51,6 +51,8 @@ function DatePickerModal({
   const [selectedYear, setSelectedYear] = useState(safeValue.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(safeValue.getMonth());
   const [selectedDay, setSelectedDay] = useState(safeValue.getDate());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -60,6 +62,10 @@ function DatePickerModal({
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
+
+  // Generate year range (current year ± 10 years)
+  const currentYear = new Date().getFullYear();
+  const yearRange = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   useEffect(() => {
     if (visible) {
@@ -98,7 +104,7 @@ function DatePickerModal({
           key={i}
           style={[
             styles.dayButton,
-            selectedDay === i && { backgroundColor: colors.primary },
+            selectedDay === i && { backgroundColor: colors.tint },
             { borderColor: colors.text + "20" }
           ]}
           onPress={() => setSelectedDay(i)}
@@ -114,6 +120,96 @@ function DatePickerModal({
     }
     
     return days;
+  };
+
+  const renderMonthPicker = () => {
+    return (
+      <View style={styles.monthPickerContainer}>
+        <View style={styles.monthPickerHeader}>
+          <Text style={[styles.monthPickerTitle, { color: colors.text }]}>Select Month</Text>
+          <TouchableOpacity
+            onPress={() => setShowMonthPicker(false)}
+            style={[styles.closeButton, { backgroundColor: colors.surface }]}
+          >
+            <IconSymbol name="xmark" size={16} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.monthGrid}>
+          {months.map((month, index) => (
+            <TouchableOpacity
+              key={month}
+              style={[
+                styles.monthItem,
+                selectedMonth === index && { backgroundColor: colors.tint },
+                { borderColor: colors.text + "20" }
+              ]}
+              onPress={() => {
+                setSelectedMonth(index);
+                setShowMonthPicker(false);
+                // Adjust day if needed
+                const daysInNewMonth = getDaysInMonth(selectedYear, index);
+                if (selectedDay > daysInNewMonth) {
+                  setSelectedDay(daysInNewMonth);
+                }
+              }}
+            >
+              <Text style={[
+                styles.monthItemText,
+                { color: selectedMonth === index ? "#fff" : colors.text }
+              ]}>
+                {month.slice(0, 3)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderYearPicker = () => {
+    return (
+      <View style={styles.yearPickerContainer}>
+        <View style={styles.yearPickerHeader}>
+          <Text style={[styles.yearPickerTitle, { color: colors.text }]}>Select Year</Text>
+          <TouchableOpacity
+            onPress={() => setShowYearPicker(false)}
+            style={[styles.closeButton, { backgroundColor: colors.surface }]}
+          >
+            <IconSymbol name="xmark" size={16} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.yearScrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.yearList}>
+            {yearRange.map((year) => (
+              <TouchableOpacity
+                key={year}
+                style={[
+                  styles.yearItem,
+                  selectedYear === year && { backgroundColor: colors.tint },
+                  { borderColor: colors.text + "10" }
+                ]}
+                onPress={() => {
+                  setSelectedYear(year);
+                  setShowYearPicker(false);
+                  // Adjust day if needed
+                  const daysInNewMonth = getDaysInMonth(year, selectedMonth);
+                  if (selectedDay > daysInNewMonth) {
+                    setSelectedDay(daysInNewMonth);
+                  }
+                }}
+              >
+                <Text style={[
+                  styles.yearItemText,
+                  { color: selectedYear === year ? "#fff" : colors.text }
+                ]}>
+                  {year}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+    );
   };
 
   if (!visible) return null;
@@ -158,7 +254,7 @@ function DatePickerModal({
 
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={onClose} style={styles.modalButton}>
-              <ThemedText style={[styles.modalButtonText, { color: colors.primary }]}>
+              <ThemedText style={[styles.modalButtonText, { color: colors.tint }]}>
                 Cancel
               </ThemedText>
             </TouchableOpacity>
@@ -168,7 +264,7 @@ function DatePickerModal({
             </ThemedText>
             
             <TouchableOpacity onPress={handleDone} style={styles.modalButton}>
-              <ThemedText style={[styles.modalButtonText, { color: colors.primary, fontWeight: "600" }]}>
+              <ThemedText style={[styles.modalButtonText, { color: colors.tint, fontWeight: "600" }]}>
                 Done
               </ThemedText>
             </TouchableOpacity>
@@ -177,62 +273,84 @@ function DatePickerModal({
           {/* Month and Year Selectors */}
           <View style={styles.monthYearRow}>
             <TouchableOpacity
-              style={[styles.monthYearButton, { backgroundColor: colors.surface }]}
-              onPress={() => setSelectedMonth(selectedMonth === 0 ? 11 : selectedMonth - 1)}
+              style={[styles.monthYearSelectButton, { backgroundColor: colors.surface }]}
+              onPress={() => setShowMonthPicker(true)}
             >
-              <IconSymbol name="chevron.left" size={20} color={colors.text} />
-            </TouchableOpacity>
-            
-            <View style={styles.monthYearText}>
               <Text style={[styles.monthText, { color: colors.text }]}>
                 {months[selectedMonth]}
               </Text>
-              <Text style={[styles.yearText, { color: colors.text + "80" }]}>
-                {selectedYear}
-              </Text>
-            </View>
+              <IconSymbol name="chevron.down" size={16} color={colors.text + "60"} />
+            </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.monthYearButton, { backgroundColor: colors.surface }]}
-              onPress={() => setSelectedMonth(selectedMonth === 11 ? 0 : selectedMonth + 1)}
+              style={[styles.monthYearSelectButton, { backgroundColor: colors.surface }]}
+              onPress={() => setShowYearPicker(true)}
             >
-              <IconSymbol name="chevron.right" size={20} color={colors.text} />
+              <Text style={[styles.yearSelectText, { color: colors.text }]}>
+                {selectedYear}
+              </Text>
+              <IconSymbol name="chevron.down" size={16} color={colors.text + "60"} />
             </TouchableOpacity>
           </View>
 
-          {/* Year Adjustment */}
-          <View style={styles.yearAdjustRow}>
-            <TouchableOpacity
-              style={[styles.yearButton, { backgroundColor: colors.surface }]}
-              onPress={() => setSelectedYear(selectedYear - 1)}
-            >
-              <Text style={[styles.yearButtonText, { color: colors.text }]}>
-                {selectedYear - 1}
-              </Text>
-            </TouchableOpacity>
-            
-            <View style={[styles.currentYearBox, { backgroundColor: colors.primary + "15" }]}>
-              <Text style={[styles.currentYearText, { color: colors.primary }]}>
-                {selectedYear}
-              </Text>
-            </View>
-            
-            <TouchableOpacity
-              style={[styles.yearButton, { backgroundColor: colors.surface }]}
-              onPress={() => setSelectedYear(selectedYear + 1)}
-            >
-              <Text style={[styles.yearButtonText, { color: colors.text }]}>
-                {selectedYear + 1}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Days Grid or Pickers */}
+          {showMonthPicker ? (
+            renderMonthPicker()
+          ) : showYearPicker ? (
+            renderYearPicker()
+          ) : (
+            <>
+              {/* Quick Navigation */}
+              <View style={styles.quickNavRow}>
+                <TouchableOpacity
+                  style={[styles.navButton, { backgroundColor: colors.surface }]}
+                  onPress={() => {
+                    if (selectedMonth === 0) {
+                      setSelectedMonth(11);
+                      setSelectedYear(selectedYear - 1);
+                    } else {
+                      setSelectedMonth(selectedMonth - 1);
+                    }
+                  }}
+                >
+                  <IconSymbol name="chevron.left" size={20} color={colors.text} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.todayButton, { backgroundColor: colors.tint + "15" }]}
+                  onPress={() => {
+                    const today = new Date();
+                    setSelectedYear(today.getFullYear());
+                    setSelectedMonth(today.getMonth());
+                    setSelectedDay(today.getDate());
+                  }}
+                >
+                  <Text style={[styles.todayButtonText, { color: colors.tint }]}>Today</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.navButton, { backgroundColor: colors.surface }]}
+                  onPress={() => {
+                    if (selectedMonth === 11) {
+                      setSelectedMonth(0);
+                      setSelectedYear(selectedYear + 1);
+                    } else {
+                      setSelectedMonth(selectedMonth + 1);
+                    }
+                  }}
+                >
+                  <IconSymbol name="chevron.right" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
 
-          {/* Days Grid */}
-          <ScrollView style={styles.daysContainer}>
-            <View style={styles.daysGrid}>
-              {renderDays()}
-            </View>
-          </ScrollView>
+              {/* Days Grid */}
+              <ScrollView style={styles.daysContainer}>
+                <View style={styles.daysGrid}>
+                  {renderDays()}
+                </View>
+              </ScrollView>
+            </>
+          )}
         </Animated.View>
       </TouchableOpacity>
     </Modal>
@@ -359,7 +477,7 @@ function TimePickerModal({
 
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={onClose} style={styles.modalButton}>
-              <ThemedText style={[styles.modalButtonText, { color: colors.primary }]}>
+              <ThemedText style={[styles.modalButtonText, { color: colors.tint }]}>
                 Cancel
               </ThemedText>
             </TouchableOpacity>
@@ -369,7 +487,7 @@ function TimePickerModal({
             </ThemedText>
             
             <TouchableOpacity onPress={handleDone} style={styles.modalButton}>
-              <ThemedText style={[styles.modalButtonText, { color: colors.primary, fontWeight: "600" }]}>
+              <ThemedText style={[styles.modalButtonText, { color: colors.tint, fontWeight: "600" }]}>
                 Done
               </ThemedText>
             </TouchableOpacity>
@@ -411,7 +529,7 @@ function TimePickerModal({
               <TouchableOpacity
                 style={[
                   styles.amPmButton,
-                  isAM && { backgroundColor: colors.primary },
+                  isAM && { backgroundColor: colors.tint },
                 ]}
                 onPress={() => setIsAM(true)}
               >
@@ -422,7 +540,7 @@ function TimePickerModal({
               <TouchableOpacity
                 style={[
                   styles.amPmButton,
-                  !isAM && { backgroundColor: colors.primary },
+                  !isAM && { backgroundColor: colors.tint },
                 ]}
                 onPress={() => setIsAM(false)}
               >
@@ -649,8 +767,8 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
           onPress={() => setShowDatePicker(true)}
           activeOpacity={0.7}
         >
-          <View style={[styles.dateIconContainer, { backgroundColor: colors.primary + "15" }]}>
-            <IconSymbol name="calendar" size={20} color={colors.primary} />
+          <View style={[styles.dateIconContainer, { backgroundColor: colors.tint + "15" }]}>
+            <IconSymbol name="calendar" size={20} color={colors.tint} />
           </View>
           <ThemedText style={[styles.dateText, { color: colors.text }]}>
             {selectedDate.toLocaleDateString("en-US", {
@@ -692,8 +810,8 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
               activeOpacity={0.7}
             >
               <View style={styles.prayerInfo}>
-                <View style={[styles.prayerIconContainer, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name={prayer.icon as any} size={22} color={colors.primary} />
+                <View style={[styles.prayerIconContainer, { backgroundColor: colors.tint + "15" }]}>
+                  <IconSymbol name={prayer.icon as any} size={22} color={colors.tint} />
                 </View>
                 <ThemedText style={[styles.prayerName, { color: colors.text }]}>
                   {prayer.name}
@@ -722,7 +840,7 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
                       {formatTime((prayerTimeValues as any)[`${prayer.key}_begins`] || new Date())}
                     </ThemedText>
                   </View>
-                  <IconSymbol name="clock" size={20} color={colors.primary} />
+                  <IconSymbol name="clock" size={20} color={colors.tint} />
                 </TouchableOpacity>
 
                 {/* Jamah Time */}
@@ -741,7 +859,7 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
                           {formatTime((prayerTimeValues as any)[`${prayer.key}_jamah`] || new Date())}
                         </ThemedText>
                       </View>
-                      <IconSymbol name="clock.fill" size={20} color={colors.primary} />
+                      <IconSymbol name="clock.fill" size={20} color={colors.tint} />
                     </TouchableOpacity>
 
                     {/* Auto Jamah Toggle */}
@@ -767,9 +885,9 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
                         }}
                         trackColor={{
                           false: colors.text + "20",
-                          true: colors.primary + "60",
+                          true: colors.tint + "60",
                         }}
-                        thumbColor={(autoJamah as any)[prayer.key] ? colors.primary : "#f4f3f4"}
+                        thumbColor={(autoJamah as any)[prayer.key] ? colors.tint : "#f4f3f4"}
                       />
                     </View>
                   </>
@@ -786,7 +904,7 @@ export function QuickUpdate({ onUpdateComplete }: QuickUpdateProps) {
           style={[
             styles.saveButton,
             {
-              backgroundColor: colors.primary,
+              backgroundColor: colors.tint,
               opacity: isUpdating ? 0.7 : 1,
             },
           ]}
@@ -1117,53 +1235,125 @@ const styles = StyleSheet.create({
   monthYearRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
+    gap: 12,
   },
-  monthYearButton: {
-    padding: 12,
-    borderRadius: 10,
-  },
-  monthYearText: {
+  monthYearSelectButton: {
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+    minWidth: 140,
+    justifyContent: "center",
   },
   monthText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
     letterSpacing: -0.4,
   },
-  yearText: {
-    fontSize: 15,
-    letterSpacing: -0.2,
-    marginTop: 2,
+  yearSelectText: {
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: -0.4,
   },
-  yearAdjustRow: {
+  quickNavRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 16,
     gap: 12,
   },
-  yearButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  navButton: {
+    padding: 12,
+    borderRadius: 10,
   },
-  yearButtonText: {
-    fontSize: 15,
-    letterSpacing: -0.2,
-  },
-  currentYearBox: {
-    paddingHorizontal: 20,
+  todayButton: {
+    paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 10,
   },
-  currentYearText: {
+  todayButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: -0.3,
+  },
+  monthPickerContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  monthPickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  monthPickerTitle: {
     fontSize: 18,
     fontWeight: "600",
     letterSpacing: -0.4,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  monthGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  monthItem: {
+    width: "30%",
+    paddingVertical: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  monthItemText: {
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.3,
+  },
+  yearPickerContainer: {
+    paddingHorizontal: 20,
+    maxHeight: 400,
+  },
+  yearPickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  yearPickerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+  yearScrollView: {
+    maxHeight: 300,
+  },
+  yearList: {
+    gap: 8,
+  },
+  yearItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+  },
+  yearItemText: {
+    fontSize: 17,
+    fontWeight: "500",
+    letterSpacing: -0.3,
   },
   daysContainer: {
     maxHeight: 300,

@@ -1,6 +1,7 @@
 // contexts/AuthContext.tsx
 import { User } from "@/types/prayer";
-import { AppleAuthService } from "@/utils/appleAuth";
+import { FirebaseAppleAuthService } from "@/utils/firebaseAppleAuth";
+import { debugLogger } from "@/utils/debugLogger";
 import { ENV_CONFIG, type AppConfig } from "@/utils/envConfig";
 import { GoogleAuthService } from "@/utils/googleAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,7 +15,6 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithApple: () => Promise<void>;
   logout: () => Promise<void>;
-  devLogin: () => Promise<void>; // Development only
   config: AppConfig; // Expose config for debugging
 }
 
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isProduction: ENV_CONFIG.isProduction,
           debugMode: ENV_CONFIG.debugMode,
           googleConfigStatus: GoogleAuthService.getConfigStatus(),
-          appleConfigStatus: AppleAuthService.getConfigStatus(),
+          appleConfigStatus: FirebaseAppleAuthService.getConfigStatus(),
           hasApiConfig: !!ENV_CONFIG.api.baseUrl,
           authorisedAdmins: ENV_CONFIG.auth.authorizedAdmins.length,
         });
@@ -103,16 +103,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          // If user was signed in with Apple, verify the credential state
+          // If user was signed in with Apple via Firebase, verify the session
           if (
-            parsedUser.id?.startsWith("apple-") &&
+            parsedUser.id &&
             Platform.OS === "ios" &&
             !ENV_CONFIG.isDevelopment
           ) {
-            const appleUserId = parsedUser.id.replace("apple-", "");
-            const credentialState = await AppleAuthService.getCredentialState(appleUserId);
-            if (credentialState !== 1) { // 1 = Authorized
-              console.log("Apple credential revoked, clearing local session");
+            const verifiedUser = await FirebaseAppleAuthService.verifyUser(parsedUser.id);
+            if (!verifiedUser) {
+              console.log("Apple/Firebase session verification failed, clearing local session");
               await clearUserData();
             }
           }
@@ -121,18 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.warn("Invalid user data found, clearing...");
           await clearUserData();
         }
-      } else if (
-        ENV_CONFIG.isDevelopment &&
-        ENV_CONFIG.auth.devSettings.bypassAuth
-      ) {
-        // Auto-login in development mode if no user data exists
-        const devUser: User = {
-          id: "dev-admin",
-          email: ENV_CONFIG.auth.devSettings.adminEmail,
-          name: "Dev Admin",
-          isAdmin: true,
-        };
-        await saveUser(devUser);
       }
     } catch (error) {
       console.error("Error loading user:", error);
@@ -198,7 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: userData.email,
           isAdmin: userData.isAdmin,
           authMethod: userData.id.startsWith("google-") ? "Google" : 
-                      userData.id.startsWith("apple-") ? "Apple" : "Email",
+                      userData.id.startsWith("firebase-apple-") ? "Apple (Dev)" : 
+                      "Apple (Firebase)",
         });
       }
     } catch (error) {
@@ -219,39 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-
-      if (ENV_CONFIG.isDevelopment) {
-        // Development mode login
-        if (
-          email === ENV_CONFIG.auth.devSettings.testAdminEmail &&
-          password === ENV_CONFIG.auth.devSettings.testAdminPassword
-        ) {
-          const mockUser: User = {
-            id: "test-admin",
-            email: ENV_CONFIG.auth.devSettings.testAdminEmail,
-            name: "Test Admin",
-            isAdmin: true,
-          };
-          await saveUser(mockUser);
-          return;
-        }
-
-        // Any email/password combo works in dev mode, but check admin authorisation
-        const isAuthorisedAdmin =
-          ENV_CONFIG.auth.authorizedAdmins.includes(email.toLowerCase()) ||
-          email.toLowerCase().includes("admin") ||
-          email.toLowerCase().includes("dev");
-
-        const mockUser: User = {
-          id: "dev-" + Date.now().toString(),
-          email,
-          name: email.split("@")[0],
-          isAdmin: isAuthorisedAdmin,
-        };
-
-        await saveUser(mockUser);
-        return;
-      }
 
       // Production login logic
       if (!ENV_CONFIG.api.baseUrl) {
@@ -356,40 +311,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithApple = async () => {
+    debugLogger.info('AUTH_CONTEXT', 'Starting Apple login flow', {
+      environment: ENV_CONFIG.appEnv,
+      isDevelopment: ENV_CONFIG.isDevelopment
+    });
+
     try {
       setIsLoading(true);
 
       // Check if Apple authentication is available
-      const isAvailable = await AppleAuthService.isAvailable();
+      debugLogger.debug('AUTH_CONTEXT', 'Checking Firebase Apple Sign-In availability');
+      const isAvailable = await FirebaseAppleAuthService.isAvailable();
+      
+      debugLogger.info('AUTH_CONTEXT', 'Firebase Apple Sign-In availability result', {
+        isAvailable,
+        platform: Platform.OS,
+        isConfigured: FirebaseAppleAuthService.isConfigured()
+      });
       
       if (!isAvailable) {
-        if (ENV_CONFIG.isDevelopment) {
-          // Use mock Apple login in development
-          const mockUser = await AppleAuthService.mockSignIn();
-          await saveUser(mockUser);
-          return;
-        } else {
-          throw new Error(
-            "Apple Sign-In is not available on this device. Please ensure you're using an iOS device with iOS 13.0 or later."
-          );
-        }
+        const errorMsg = "Apple Sign-In is not available on this device. Please ensure you're using an iOS device with iOS 13.0 or later.";
+        debugLogger.error('AUTH_CONTEXT', 'Firebase Apple Sign-In not available', new Error(errorMsg));
+        throw new Error(errorMsg);
       }
 
-      // Perform Apple Sign-In
-      const appleUser = await AppleAuthService.signIn();
+      debugLogger.info('AUTH_CONTEXT', 'Initiating Firebase Apple Sign-In');
+      // Perform Apple Sign-In via Firebase
+      const appleUser = await FirebaseAppleAuthService.signIn();
+      
+      debugLogger.info('AUTH_CONTEXT', 'Apple Sign-In completed, saving user', {
+        userId: appleUser.id,
+        email: appleUser.email,
+        isAdmin: appleUser.isAdmin
+      });
+      
       await saveUser(appleUser);
 
-      console.log("Apple authentication successful:", {
+      debugLogger.info('AUTH_CONTEXT', 'Apple authentication successful', {
         email: appleUser.email,
         name: appleUser.name,
         isAdmin: appleUser.isAdmin,
       });
     } catch (error) {
-      console.error("Apple login error:", error);
+      debugLogger.error('AUTH_CONTEXT', 'Apple login error', error, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorCode: (error as any)?.code
+      });
 
       // Re-throw with more user-friendly messages
       if (error instanceof Error) {
         if (error.message.includes("cancelled")) {
+          debugLogger.info('AUTH_CONTEXT', 'Apple Sign-In cancelled by user');
           throw new Error("Sign-in was cancelled");
         }
       }
@@ -397,32 +369,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     } finally {
       setIsLoading(false);
+      debugLogger.debug('AUTH_CONTEXT', 'Apple login flow completed');
     }
   };
 
-  const devLogin = async () => {
-    if (!ENV_CONFIG.isDevelopment) {
-      throw new Error("Development login only available in development mode");
-    }
-
-    try {
-      setIsLoading(true);
-
-      const devUser: User = {
-        id: "dev-bypass-" + Date.now(),
-        email: ENV_CONFIG.auth.devSettings.adminEmail,
-        name: "Dev Bypass User",
-        isAdmin: true,
-      };
-
-      await saveUser(devUser);
-    } catch (error) {
-      console.error("Dev login error:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const logout = async () => {
     try {
@@ -438,7 +388,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Note: Apple doesn't have a sign-out method, just clear local session
+      // If user was signed in with Apple via Firebase, sign out from Firebase
+      if (user?.id && Platform.OS === "ios") {
+        try {
+          await FirebaseAppleAuthService.signOut();
+        } catch (appleSignOutError) {
+          console.warn("Firebase Apple sign-out failed:", appleSignOutError);
+        }
+      }
 
       // Clear local session
       await clearUserData();
@@ -461,7 +418,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginWithGoogle,
     loginWithApple,
     logout,
-    devLogin,
     config: ENV_CONFIG,
   };
 

@@ -1,4 +1,4 @@
-import { AppleAuthService } from "@/utils/appleAuth";
+import { FirebaseAppleAuthService } from "@/utils/firebaseAppleAuth";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { BlurView } from "expo-blur";
 import { router } from "expo-router";
@@ -22,13 +22,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { ENV_CONFIG } from "@/utils/envConfig";
 
-const DEV_MODE = __DEV__;
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme();
-  const { login, loginWithGoogle, loginWithApple, devLogin, user } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { loginWithApple, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState(false);
@@ -53,40 +50,10 @@ export default function LoginScreen() {
   }, []);
 
   const checkAppleSignInAvailability = async () => {
-    const available = await AppleAuthService.isAvailable();
+    const available = await FirebaseAppleAuthService.isAvailable();
     setIsAppleSignInAvailable(available);
   };
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password");
-      return;
-    }
-
-    // Check if email is authorised for admin access (in production)
-    if (
-      !ENV_CONFIG.isDevelopment &&
-      !ENV_CONFIG.auth.authorizedAdmins.includes(email.toLowerCase())
-    ) {
-      Alert.alert(
-        "Unauthorised Access",
-        "This email address is not authorised for administrative access.\n\nOnly authorised mosque administrators can access the admin panel.\n\nContact: info@masjidabubakr.org.uk",
-        [{ text: "OK" }]
-      );
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await login(email, password);
-      router.replace("/(tabs)/admin");
-    } catch (error: any) {
-      const errorMessage = error.message || "Login failed. Please try again.";
-      Alert.alert("Login Failed", errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleAppleLogin = async () => {
     setIsLoading(true);
@@ -114,22 +81,9 @@ export default function LoginScreen() {
     }
   };
 
-  const handleDevLogin = async () => {
-    if (!DEV_MODE) return;
-
-    setIsLoading(true);
-    try {
-      await devLogin();
-      router.replace("/(tabs)/admin");
-    } catch (error) {
-      Alert.alert("Error", "Dev login failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleBackToApp = () => {
-    router.back();
+    router.replace("/(tabs)");
   };
 
   const colors = Colors[colorScheme ?? "light"];
@@ -200,146 +154,9 @@ export default function LoginScreen() {
                 style={[styles.appleButton, { opacity: isLoading ? 0.6 : 1 }]}
                 onPress={handleAppleLogin}
               />
-            ) : (
-              DEV_MODE && (
-                <TouchableOpacity
-                  style={[
-                    styles.appleButton,
-                    { 
-                      backgroundColor: colorScheme === "dark" ? "#FFFFFF" : "#000000",
-                      opacity: isLoading ? 0.6 : 1,
-                    },
-                  ]}
-                  onPress={handleAppleLogin}
-                  disabled={isLoading}
-                  activeOpacity={0.8}
-                >
-                  <IconSymbol 
-                    name="globe" 
-                    size={20} 
-                    color={colorScheme === "dark" ? "#000000" : "#FFFFFF"} 
-                  />
-                  <Text
-                    style={[
-                      styles.appleButtonText,
-                      { color: colorScheme === "dark" ? "#000000" : "#FFFFFF" },
-                    ]}
-                  >
-                    Sign in with Apple (Dev)
-                  </Text>
-                </TouchableOpacity>
-              )
-            )}
+            ) : null}
 
-            {/* Divider */}
-            {(isAppleSignInAvailable || DEV_MODE) && (
-              <View style={styles.dividerContainer}>
-                <View
-                  style={[
-                    styles.dividerLine,
-                    { backgroundColor: colors.text + "20" },
-                  ]}
-                />
-                <Text style={[styles.dividerText, { color: colors.text + "60" }]}>
-                  or
-                </Text>
-                <View
-                  style={[
-                    styles.dividerLine,
-                    { backgroundColor: colors.text + "20" },
-                  ]}
-                />
-              </View>
-            )}
 
-            {/* Email Sign In Form */}
-            <View style={styles.formSection}>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      color: colors.text,
-                      backgroundColor: colors.surface,
-                      borderColor: email ? colors.primary : colors.text + "20",
-                    },
-                  ]}
-                  placeholder="Email"
-                  placeholderTextColor={colors.text + "60"}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  editable={!isLoading}
-                  autoCorrect={false}
-                  textContentType="emailAddress"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      color: colors.text,
-                      backgroundColor: colors.surface,
-                      borderColor: password ? colors.primary : colors.text + "20",
-                    },
-                  ]}
-                  placeholder="Password"
-                  placeholderTextColor={colors.text + "60"}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  editable={!isLoading}
-                  autoCorrect={false}
-                  textContentType="password"
-                  onSubmitEditing={handleLogin}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.signInButton,
-                  { 
-                    backgroundColor: colors.primary,
-                    opacity: isLoading || !email || !password ? 0.6 : 1,
-                  },
-                ]}
-                onPress={handleLogin}
-                disabled={isLoading || !email || !password}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.signInButtonText}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Dev Mode Quick Access */}
-            {DEV_MODE && (
-              <View style={styles.devSection}>
-                <View style={[styles.devBadge, { backgroundColor: "#FF9800" }]}>
-                  <Text style={styles.devBadgeText}>Development Mode</Text>
-                </View>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.devButton,
-                    { 
-                      borderColor: "#FF9800",
-                      opacity: isLoading ? 0.6 : 1,
-                    },
-                  ]}
-                  onPress={handleDevLogin}
-                  disabled={isLoading}
-                  activeOpacity={0.8}
-                >
-                  <IconSymbol name="hammer" size={18} color="#FF9800" />
-                  <Text style={[styles.devButtonText, { color: "#FF9800" }]}>
-                    Quick Dev Access
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
 
           {/* Info Section */}

@@ -490,3 +490,6 @@ export const generateMonthlyCSVContent = (data: PrayerTime[], year: number, mont
 
   return csvLines.join("\n");
 };
+
+// Alias for compatibility with migration scripts
+export const parsePrayerTimesFromCSV = parseYearlyCSV;

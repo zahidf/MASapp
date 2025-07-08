@@ -11,7 +11,8 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { user } = useAuth();
+  const { user, config } = useAuth();
+  const isDev = config.isDevelopment;
 
   return (
     <Tabs
@@ -66,6 +67,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="qibla"
+        options={{
+          title: "Qibla",
+          tabBarIcon: ({ color, focused }) => (
+            <IconSymbol
+              size={28}
+              name={focused ? "location.fill" : "location"}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="explore"
         options={{
           title: "More",
@@ -78,8 +92,8 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Always show admin tab in development mode or for admin users */}
-      {(__DEV__ || user?.isAdmin) && (
+      {/* Show admin tab only for admin users */}
+      {user?.isAdmin && (
         <Tabs.Screen
           name="admin"
           options={{
@@ -91,7 +105,7 @@ export default function TabLayout() {
                 color={color}
               />
             ),
-            tabBarBadge: __DEV__ ? "DEV" : undefined,
+            tabBarBadge: isDev ? "DEV" : undefined,
             tabBarBadgeStyle: {
               backgroundColor: "#FF9800",
               color: "#fff",

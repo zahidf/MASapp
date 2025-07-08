@@ -1,7 +1,7 @@
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import React, { useState } from "react";
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity, View, Modal, ScrollView, Animated, Text } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -26,16 +26,16 @@ export function YearlyCSVUploader({
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [showYearPicker, setShowYearPicker] = useState(false);
   const [previewData, setPreviewData] = useState<{
     totalRows: number;
     dateRange: string;
     sampleDates: string[];
   } | null>(null);
 
-  const years = [2023, 2024, 2025, 2026, 2027].map((year) => ({
-    value: year,
-    label: year.toString(),
-  }));
+  // Generate year range (current year ± 10 years)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   const handleFilePick = async () => {
     try {
@@ -196,32 +196,16 @@ export function YearlyCSVUploader({
         >
           Target Year
         </ThemedText>
-        <View style={styles.yearPickerContainer}>
-          {years.map((year) => (
-            <TouchableOpacity
-              key={year.value}
-              style={[
-                styles.yearOption,
-                {
-                  backgroundColor:
-                    selectedYear === year.value
-                      ? colors.primary
-                      : `${colors.text}10`,
-                },
-              ]}
-              onPress={() => setSelectedYear(year.value)}
-            >
-              <ThemedText
-                style={[
-                  styles.optionText,
-                  { color: selectedYear === year.value ? "#fff" : colors.text },
-                ]}
-              >
-                {year.label}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          style={[styles.yearSelectorButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+          onPress={() => setShowYearPicker(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.yearSelectorText, { color: colors.text }]}>
+            {selectedYear}
+          </Text>
+          <IconSymbol name="chevron.down" size={16} color={colors.secondaryText} />
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity
@@ -392,6 +376,61 @@ export function YearlyCSVUploader({
           backup current data before proceeding.
         </ThemedText>
       </ThemedView>
+
+      {/* Year Picker Modal */}
+      <Modal
+        visible={showYearPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowYearPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowYearPicker(false)}
+        >
+          <Animated.View
+            style={[
+              styles.pickerModal,
+              { backgroundColor: colors.background }
+            ]}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.pickerHeader}>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>Select Year</Text>
+              <TouchableOpacity
+                onPress={() => setShowYearPicker(false)}
+                style={[styles.closeButton, { backgroundColor: colors.surface }]}
+              >
+                <IconSymbol name="xmark" size={16} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.yearList} showsVerticalScrollIndicator={false}>
+              {years.map((year) => (
+                <TouchableOpacity
+                  key={year}
+                  style={[
+                    styles.yearItem,
+                    selectedYear === year && { backgroundColor: colors.tint },
+                    { borderColor: colors.separator }
+                  ]}
+                  onPress={() => {
+                    setSelectedYear(year);
+                    setShowYearPicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.yearItemText,
+                    { color: selectedYear === year ? "#fff" : colors.text }
+                  ]}>
+                    {year}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
     </ThemedView>
   );
 }
@@ -407,17 +446,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  yearPickerContainer: {
+  yearSelectorButton: {
     flexDirection: "row",
-    gap: 8,
-  },
-  yearOption: {
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  optionText: {
-    fontSize: 14,
+  yearSelectorText: {
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.3,
   },
   uploadButton: {
     flexDirection: "row",
@@ -495,5 +536,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pickerModal: {
+    width: "90%",
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: "60%",
+  },
+  pickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  yearList: {
+    maxHeight: 300,
+  },
+  yearItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  yearItemText: {
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.3,
   },
 });

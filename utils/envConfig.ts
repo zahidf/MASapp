@@ -82,24 +82,12 @@ const parseCoordinates = (
 
 // Get authorized admin emails
 const getAuthorizedAdmins = (): string[] => {
-  const appEnv = (process.env.EXPO_PUBLIC_APP_ENV as string) || "development";
-  const isDevelopment = __DEV__ || appEnv === "development";
-
-  // Production authorized admins
+  // Only production authorized admins (no development admins)
   const productionAdmins = [
-    "zahidfaqiri786@gmail.com", // Zahid Faqiri - Main Admin
+    "zahidfaqiri786@outlook.com", // Zahid Faqiri - Main Admin
   ];
 
-  // Development additional admins (only in dev mode)
-  const devAdmins = isDevelopment
-    ? [
-        "dev@admin.local",
-        "admin@test.local",
-        process.env.EXPO_PUBLIC_DEV_ADMIN_EMAIL || "dev@admin.local",
-      ]
-    : [];
-
-  return [...productionAdmins, ...devAdmins];
+  return productionAdmins;
 };
 
 // Create the configuration object

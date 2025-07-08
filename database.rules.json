@@ -1,0 +1,71 @@
+{
+  "rules": {
+    "prayerTimes": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email == 'zahidfaqiri786@outlook.com' || auth.token.admin === true)",
+      "$date": {
+        ".validate": "newData.hasChildren(['d_date', 'fajr_begins', 'fajr_iqamah', 'sunrise', 'zuhr_begins', 'zuhr_iqamah', 'asr_begins', 'asr_iqamah', 'maghrib_begins', 'maghrib_iqamah', 'isha_begins', 'isha_iqamah'])",
+        "d_date": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
+        },
+        "fajr_begins": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "fajr_iqamah": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "sunrise": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "zuhr_begins": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "zuhr_iqamah": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "asr_begins": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "asr_iqamah": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "maghrib_begins": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "maghrib_iqamah": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "isha_begins": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "isha_iqamah": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "preferences": {
+          ".validate": true
+        },
+        "notificationSettings": {
+          ".validate": true
+        }
+      }
+    },
+    "adminUsers": {
+      ".read": "auth != null && (auth.token.email == 'admin@masjid.com' || auth.token.admin === true)",
+      ".write": false,
+      "$email": {
+        ".validate": "newData.isBoolean()"
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}

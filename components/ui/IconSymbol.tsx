@@ -11,6 +11,8 @@ type CustomIconName =
   | "chevron.left.forwardslash.chevron.right"
   | "chevron.right"
   | "chevron.left"
+  | "chevron.up"
+  | "chevron.down"
   | "sunrise"
   | "sunset"
   | "moon.stars"
@@ -48,6 +50,8 @@ type CustomIconName =
   | "arrow.right.square"
   | "doc.text"
   | "doc.text.fill"
+  | "doc.on.doc"
+  | "doc.text.magnifyingglass"
   | "folder"
   | "folder.fill"
   | "envelope"
@@ -73,7 +77,18 @@ type CustomIconName =
   | "cellular"
   | "ellipsis.circle"
   | "ellipsis.circle.fill"
-  | "shield";
+  | "shield"
+  | "lock.fill"
+  | "calendar.badge.exclamationmark"
+  | "clock.badge.checkmark"
+  | "chart.line.uptrend.xyaxis"
+  | "bell.badge"
+  | "arrow.trianglehead.clockwise"
+  | "doc.badge.plus"
+  | "clock.fill"
+  | "magnifyingglass"
+  | "compass"
+  | "compass.fill";
 
 type MaterialIconName = ComponentProps<typeof MaterialIcons>["name"];
 
@@ -87,6 +102,8 @@ const ICON_MAPPING: Record<CustomIconName, MaterialIconName> = {
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "chevron.left": "chevron-left",
+  "chevron.up": "expand-less",
+  "chevron.down": "expand-more",
 
   // Prayer/Mosque related
   sunrise: "wb-sunny",
@@ -136,6 +153,8 @@ const ICON_MAPPING: Record<CustomIconName, MaterialIconName> = {
   // Documents/Files
   "doc.text": "description",
   "doc.text.fill": "description",
+  "doc.on.doc": "content-copy",
+  "doc.text.magnifyingglass": "find-in-page",
   folder: "folder",
   "folder.fill": "folder",
 
@@ -176,6 +195,19 @@ const ICON_MAPPING: Record<CustomIconName, MaterialIconName> = {
   "ellipsis.circle": "more-horiz",
   "ellipsis.circle.fill": "more-horiz",
   shield: "security",
+  
+  // Admin icons
+  "lock.fill": "lock",
+  "calendar.badge.exclamationmark": "calendar-today",
+  "clock.badge.checkmark": "schedule",
+  "chart.line.uptrend.xyaxis": "analytics",
+  "bell.badge": "notification-important",
+  "arrow.trianglehead.clockwise": "sync",
+  "doc.badge.plus": "note-add",
+  "clock.fill": "access-time",
+  magnifyingglass: "search",
+  compass: "explore",
+  "compass.fill": "explore",
 };
 
 /**

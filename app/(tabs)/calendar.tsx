@@ -282,7 +282,7 @@ export default function CalendarScreen() {
               <IconSymbol
                 name="chevron.left"
                 size={24}
-                color={colors.primary}
+                color={colors.tint}
               />
             </TouchableOpacity>
 
@@ -303,7 +303,7 @@ export default function CalendarScreen() {
               <IconSymbol
                 name="chevron.right"
                 size={24}
-                color={colors.primary}
+                color={colors.tint}
               />
             </TouchableOpacity>
           </BlurView>
@@ -316,8 +316,8 @@ export default function CalendarScreen() {
               style={[
                 styles.todayInfoCard,
                 {
-                  backgroundColor: colors.primary + "15",
-                  borderColor: colors.primary + "30",
+                  backgroundColor: colors.tint + "15",
+                  borderColor: colors.tint + "30",
                 },
               ]}
             >
@@ -325,17 +325,17 @@ export default function CalendarScreen() {
                 <View
                   style={[
                     styles.todayIconContainer,
-                    { backgroundColor: colors.primary + "20" },
+                    { backgroundColor: colors.tint + "20" },
                   ]}
                 >
                   <IconSymbol
                     name="calendar"
                     size={20}
-                    color={colors.primary}
+                    color={colors.tint}
                   />
                 </View>
                 <Text
-                  style={[styles.todayInfoTitle, { color: colors.primary }]}
+                  style={[styles.todayInfoTitle, { color: colors.tint }]}
                 >
                   Today's Prayer Times
                 </Text>
@@ -375,13 +375,13 @@ export default function CalendarScreen() {
                 <View
                   style={[
                     styles.noDataIconContainer,
-                    { backgroundColor: colors.primary + "15" },
+                    { backgroundColor: colors.tint + "15" },
                   ]}
                 >
                   <IconSymbol
                     name="calendar"
                     size={48}
-                    color={colors.primary}
+                    color={colors.tint}
                   />
                 </View>
                 <Text style={[styles.noDataTitle, { color: colors.text }]}>
@@ -396,7 +396,7 @@ export default function CalendarScreen() {
                 <TouchableOpacity
                   style={[
                     styles.refreshButton,
-                    { backgroundColor: colors.primary },
+                    { backgroundColor: colors.tint },
                   ]}
                   onPress={refreshData}
                   disabled={isLoading}
@@ -447,13 +447,13 @@ export default function CalendarScreen() {
                   <View
                     style={[
                       styles.actionIconContainer,
-                      { backgroundColor: colors.primary + "15" },
+                      { backgroundColor: colors.tint + "15" },
                     ]}
                   >
                     <IconSymbol
                       name="square.and.arrow.down"
                       size={20}
-                      color={colors.primary}
+                      color={colors.tint}
                     />
                   </View>
                   <View style={styles.actionTextContainer}>
@@ -544,7 +544,7 @@ export default function CalendarScreen() {
                 <View
                   style={[
                     styles.legendDot,
-                    { backgroundColor: colors.primary },
+                    { backgroundColor: colors.tint },
                   ]}
                 />
                 <Text
@@ -576,9 +576,9 @@ export default function CalendarScreen() {
                   style={[
                     styles.legendDot,
                     {
-                      backgroundColor: colors.primary + "20",
+                      backgroundColor: colors.tint + "20",
                       borderWidth: 1,
-                      borderColor: colors.primary,
+                      borderColor: colors.tint,
                     },
                   ]}
                 />
@@ -653,11 +653,11 @@ export default function CalendarScreen() {
                     {
                       backgroundColor:
                         exportType === "day"
-                          ? colors.primary + "15"
+                          ? colors.tint + "15"
                           : "transparent",
                       borderColor:
                         exportType === "day"
-                          ? colors.primary
+                          ? colors.tint
                           : colors.text + "20",
                     },
                   ]}
@@ -670,7 +670,7 @@ export default function CalendarScreen() {
                       size={24}
                       color={
                         exportType === "day"
-                          ? colors.primary
+                          ? colors.tint
                           : colors.text + "60"
                       }
                     />
@@ -694,7 +694,7 @@ export default function CalendarScreen() {
                     <IconSymbol
                       name="checkmark"
                       size={20}
-                      color={colors.primary}
+                      color={colors.tint}
                     />
                   )}
                 </TouchableOpacity>
@@ -706,11 +706,11 @@ export default function CalendarScreen() {
                   {
                     backgroundColor:
                       exportType === "month"
-                        ? colors.primary + "15"
+                        ? colors.tint + "15"
                         : "transparent",
                     borderColor:
                       exportType === "month"
-                        ? colors.primary
+                        ? colors.tint
                         : colors.text + "20",
                   },
                 ]}
@@ -723,7 +723,7 @@ export default function CalendarScreen() {
                     size={24}
                     color={
                       exportType === "month"
-                        ? colors.primary
+                        ? colors.tint
                         : colors.text + "60"
                     }
                   />
@@ -747,7 +747,7 @@ export default function CalendarScreen() {
                   <IconSymbol
                     name="checkmark"
                     size={20}
-                    color={colors.primary}
+                    color={colors.tint}
                   />
                 )}
               </TouchableOpacity>
@@ -758,11 +758,11 @@ export default function CalendarScreen() {
                   {
                     backgroundColor:
                       exportType === "year"
-                        ? colors.primary + "15"
+                        ? colors.tint + "15"
                         : "transparent",
                     borderColor:
                       exportType === "year"
-                        ? colors.primary
+                        ? colors.tint
                         : colors.text + "20",
                   },
                 ]}
@@ -775,7 +775,7 @@ export default function CalendarScreen() {
                     size={24}
                     color={
                       exportType === "year"
-                        ? colors.primary
+                        ? colors.tint
                         : colors.text + "60"
                     }
                   />
@@ -799,7 +799,7 @@ export default function CalendarScreen() {
                   <IconSymbol
                     name="checkmark"
                     size={20}
-                    color={colors.primary}
+                    color={colors.tint}
                   />
                 )}
               </TouchableOpacity>
@@ -808,7 +808,7 @@ export default function CalendarScreen() {
             <TouchableOpacity
               style={[
                 styles.exportConfirmButton,
-                { backgroundColor: colors.primary },
+                { backgroundColor: colors.tint },
                 isExporting && styles.exportingButton,
               ]}
               onPress={handleExport}

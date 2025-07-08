@@ -159,14 +159,14 @@ export function PrayerTimeCard({
             isNext && styles.nextPrayerCard,
             {
               backgroundColor: isActive
-                ? colors.primary + "20"
+                ? colors.tint + "20"
                 : isNext
-                ? colors.primary + "12"
+                ? colors.tint + "12"
                 : colors.surface + "95",
               borderColor: isActive
-                ? colors.primary
+                ? colors.tint
                 : isNext
-                ? colors.primary + "60"
+                ? colors.tint + "60"
                 : colorScheme === "dark"
                 ? "rgba(255,255,255,0.08)"
                 : "rgba(0,0,0,0.06)",
@@ -181,9 +181,9 @@ export function PrayerTimeCard({
                   styles.prayerIconContainer,
                   {
                     backgroundColor: isActive
-                      ? colors.primary + "25"
+                      ? colors.tint + "25"
                       : isNext
-                      ? colors.primary + "15"
+                      ? colors.tint + "15"
                       : colorScheme === "dark"
                       ? "rgba(255,255,255,0.08)"
                       : "rgba(0,0,0,0.05)",
@@ -195,9 +195,9 @@ export function PrayerTimeCard({
                   size={22}
                   color={
                     isActive
-                      ? colors.primary
+                      ? colors.tint
                       : isNext
-                      ? colors.primary
+                      ? colors.tint
                       : colors.text + "85"
                   }
                 />
@@ -208,7 +208,7 @@ export function PrayerTimeCard({
                   style={[
                     styles.prayerName,
                     {
-                      color: isActive ? colors.primary : colors.text,
+                      color: isActive ? colors.tint : colors.text,
                       fontWeight: isActive || isNext ? "700" : "600",
                     },
                   ]}
@@ -221,15 +221,15 @@ export function PrayerTimeCard({
                       styles.statusBadge,
                       {
                         backgroundColor: isActive
-                          ? colors.primary
-                          : colors.primary + "25",
+                          ? colors.tint
+                          : colors.tint + "25",
                       },
                     ]}
                   >
                     <ThemedText
                       style={[
                         styles.statusText,
-                        { color: isActive ? "#fff" : colors.primary },
+                        { color: isActive ? "#fff" : colors.tint },
                       ]}
                     >
                       {isActive
@@ -249,7 +249,7 @@ export function PrayerTimeCard({
                     styles.notificationButton,
                     {
                       backgroundColor: hasNotificationsEnabled
-                        ? colors.primary + "15"
+                        ? colors.tint + "15"
                         : colorScheme === "dark"
                         ? "rgba(255,255,255,0.08)"
                         : "rgba(0,0,0,0.05)",
@@ -263,7 +263,7 @@ export function PrayerTimeCard({
                     size={18}
                     color={
                       hasNotificationsEnabled
-                        ? colors.primary
+                        ? colors.tint
                         : colors.text + "60"
                     }
                   />
@@ -283,7 +283,7 @@ export function PrayerTimeCard({
                   style={[
                     styles.timeValue,
                     {
-                      color: isActive ? colors.primary : colors.text,
+                      color: isActive ? colors.tint : colors.text,
                       fontWeight: isActive ? "700" : "600",
                     },
                   ]}
@@ -310,7 +310,7 @@ export function PrayerTimeCard({
                       style={[
                         styles.timeValue,
                         {
-                          color: isActive ? colors.primary : colors.text,
+                          color: isActive ? colors.tint : colors.text,
                           fontWeight: isActive ? "700" : "600",
                         },
                       ]}
@@ -480,9 +480,9 @@ function NotificationSettingsSheet({
                 onValueChange={handleToggleBeginTime}
                 trackColor={{
                   false: colors.text + "20",
-                  true: colors.primary + "60",
+                  true: colors.tint + "60",
                 }}
-                thumbColor={settings.beginTime ? colors.primary : "#f4f3f4"}
+                thumbColor={settings.beginTime ? colors.tint : "#f4f3f4"}
               />
             </View>
 
@@ -513,9 +513,9 @@ function NotificationSettingsSheet({
                 onValueChange={handleToggleJamahTime}
                 trackColor={{
                   false: colors.text + "20",
-                  true: colors.primary + "60",
+                  true: colors.tint + "60",
                 }}
-                thumbColor={settings.jamahTime ? colors.primary : "#f4f3f4"}
+                thumbColor={settings.jamahTime ? colors.tint : "#f4f3f4"}
               />
             </View>
 
@@ -536,11 +536,11 @@ function NotificationSettingsSheet({
                         {
                           backgroundColor:
                             settings.jamahReminderMinutes === minutes
-                              ? colors.primary
+                              ? colors.tint
                               : colors.surface,
                           borderColor:
                             settings.jamahReminderMinutes === minutes
-                              ? colors.primary
+                              ? colors.tint
                               : colors.text + "20",
                         },
                       ]}

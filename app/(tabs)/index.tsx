@@ -490,7 +490,7 @@ export default function TodayScreen() {
             <TouchableOpacity
               style={[
                 styles.refreshButton,
-                { backgroundColor: colors.primary },
+                { backgroundColor: colors.tint },
               ]}
               onPress={refreshData}
               disabled={isLoading}
@@ -569,26 +569,26 @@ export default function TodayScreen() {
               <View
                 style={[
                   styles.nextPrayerSummary,
-                  { backgroundColor: colors.primary + "12" },
+                  { backgroundColor: colors.tint + "12" },
                 ]}
               >
                 <View style={styles.nextPrayerContent}>
                   <Text
                     style={[
                       styles.nextPrayerLabel,
-                      { color: colors.primary + "85" },
+                      { color: colors.tint + "85" },
                     ]}
                   >
                     NEXT PRAYER
                   </Text>
                   <Text
-                    style={[styles.nextPrayerName, { color: colors.primary }]}
+                    style={[styles.nextPrayerName, { color: colors.tint }]}
                   >
                     {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
                   </Text>
                 </View>
                 <Text
-                  style={[styles.nextPrayerTime, { color: colors.primary }]}
+                  style={[styles.nextPrayerTime, { color: colors.tint }]}
                 >
                   {getCountdownToNext() || "Soon"}
                 </Text>
@@ -650,7 +650,7 @@ export default function TodayScreen() {
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.tint} />
           </View>
         ) : (
           <Animated.View style={{ opacity: fadeAnim }}>
@@ -751,13 +751,13 @@ export default function TodayScreen() {
                         <View
                           style={[
                             styles.toggleIcon,
-                            { backgroundColor: colors.primary + "15" },
+                            { backgroundColor: colors.tint + "15" },
                           ]}
                         >
                           <IconSymbol
                             name="bell"
                             size={20}
-                            color={colors.primary}
+                            color={colors.tint}
                           />
                         </View>
                         <View style={styles.toggleInfo}>
@@ -781,10 +781,10 @@ export default function TodayScreen() {
                         onValueChange={handleToggleAllBeginTimes}
                         trackColor={{
                           false: colors.text + "20",
-                          true: colors.primary + "60",
+                          true: colors.tint + "60",
                         }}
                         thumbColor={
-                          allBeginTimesEnabled ? colors.primary : "#f4f3f4"
+                          allBeginTimesEnabled ? colors.tint : "#f4f3f4"
                         }
                         style={styles.toggleSwitch}
                       />
@@ -825,10 +825,10 @@ export default function TodayScreen() {
                         onValueChange={handleToggleAllJamahTimes}
                         trackColor={{
                           false: colors.text + "20",
-                          true: colors.primary + "60",
+                          true: colors.tint + "60",
                         }}
                         thumbColor={
-                          allJamahTimesEnabled ? colors.primary : "#f4f3f4"
+                          allJamahTimesEnabled ? colors.tint : "#f4f3f4"
                         }
                         style={styles.toggleSwitch}
                       />
@@ -840,7 +840,7 @@ export default function TodayScreen() {
                     style={[
                       styles.printButton,
                       {
-                        backgroundColor: colors.primary,
+                        backgroundColor: colors.tint,
                         opacity: isExporting ? 0.7 : 1,
                       },
                     ]}
@@ -912,21 +912,6 @@ export default function TodayScreen() {
           </Animated.View>
         )}
       </ScrollView>
-           {/* Test Modal Button - Development Only */}
-      {__DEV__ && (
-        <TouchableOpacity
-          style={[
-            styles.devTestButton,
-            { backgroundColor: colors.primary },
-          ]}
-          onPress={() => {
-            console.log("Test button pressed, showing setup modal");
-            showSetupModal();
-          }}
-        >
-          <Text style={styles.devTestButtonText}>Test Notification Setup</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -1339,24 +1324,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
     letterSpacing: -0.4,
-  },
-    // Dev Test Button
-  devTestButton: {
-    position: "absolute",
-    bottom: Platform.OS === "ios" ? 110 : 90,
-    right: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  devTestButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
   },
 });

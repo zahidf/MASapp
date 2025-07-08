@@ -5,6 +5,7 @@ import React from "react";
 import {
   Alert,
   Animated,
+  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -16,34 +17,52 @@ import {
 
 import { ThemedText } from "@/components/ThemedText";
 import { CSVUploader } from "@/components/admin/CSVUploader";
-import { YearlyCSVUploader } from "@/components/admin/YearlyCSVUploader";
 import { QuickUpdate } from "@/components/admin/QuickUpdateExpo";
+import { YearlyCSVUploader } from "@/components/admin/YearlyCSVUploader";
+import { DebugLogViewer } from "@/components/debug/DebugLogViewer";
+import { FirebaseDebugDashboard } from "@/components/debug/FirebaseDebugDashboard";
+import { QiblaCalibrationModal } from "@/components/qibla/QiblaCalibrationModal";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
-import { clearAllData, getLastUpdateTime, loadPrayerTimes } from "@/utils/storage";
 import { generateCSVContent, generateMonthlyCSVContent } from "@/utils/csvParser";
 import { getMonthName } from "@/utils/dateHelpers";
+import { debugLogger } from "@/utils/debugLogger";
+import { clearAllData, getLastUpdateTime, loadPrayerTimes } from "@/utils/storage";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
 // Custom hook for admin authentication guard
 function useAdminAuthGuard() {
-  const { user } = useAuth();
-  const isDev = __DEV__;
+  const { user, config } = useAuth();
+  const isDev = config.isDevelopment;
+  const [isChecking, setIsChecking] = React.useState(true);
 
   React.useEffect(() => {
-    // In production, redirect to login if not admin
-    if (!isDev && !user?.isAdmin) {
-      router.push("/auth/login");
-    }
-  }, [user, isDev]);
+    // Add a small delay to ensure auth state is loaded
+    const checkAuth = async () => {
+      setIsChecking(true);
+      
+      // Wait a bit for auth state to settle
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Always redirect to login if not admin (regardless of environment)
+      if (!user?.isAdmin) {
+        router.replace("/auth/login");
+      }
+      
+      setIsChecking(false);
+    };
+    
+    checkAuth();
+  }, [user]);
 
   return {
     isAuthenticated: !!user?.isAdmin,
-    isLoading: !isDev && !user?.isAdmin,
+    isLoading: isChecking,
     user,
   };
 }
@@ -51,11 +70,16 @@ function useAdminAuthGuard() {
 export default function AdminScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const { logout, devLogin } = useAuth();
+  const { logout, config } = useAuth();
   const { refreshData } = usePrayerTimes();
   const [lastUpdate, setLastUpdate] = React.useState<string | null>(null);
   const [fadeAnim] = React.useState(new Animated.Value(0));
   const [headerAnim] = React.useState(new Animated.Value(0));
+  const [debugModalVisible, setDebugModalVisible] = React.useState(false);
+  const [debugViewerVisible, setDebugViewerVisible] = React.useState(false);
+  const [showQiblaCalibrationModal, setShowQiblaCalibrationModal] = React.useState(false);
+  const { showSetupModal } = useNotificationContext();
+  const isDev = config.isDevelopment;
 
   // Use auth guard
   const { isAuthenticated, isLoading, user } = useAdminAuthGuard();
@@ -164,7 +188,8 @@ export default function AdminScreen() {
         onPress: async () => {
           try {
             await logout();
-            // After logout, the auth guard will redirect to login
+            // Navigate to the home tab after logout
+            router.replace("/");
           } catch (error) {
             Alert.alert("Error", "Failed to sign out.");
           }
@@ -243,16 +268,6 @@ export default function AdminScreen() {
     }
   };
 
-  const handleDevLoginAsAdmin = async () => {
-    if (!__DEV__) return;
-
-    try {
-      await devLogin();
-      Alert.alert("Success", "Logged in as dev admin!");
-    } catch (error) {
-      Alert.alert("Error", "Failed to login as dev admin.");
-    }
-  };
 
   // Show loading while redirecting
   if (isLoading) {
@@ -270,117 +285,17 @@ export default function AdminScreen() {
     );
   }
 
-  // Development mode: Show dev bypass if not authenticated
-  if (__DEV__ && !isAuthenticated) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar
-          barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-        />
-        
-        {/* iOS-style Header */}
-        <BlurView
-          intensity={85}
-          tint={colorScheme === "dark" ? "dark" : "light"}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Admin Access Required
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: colors.text + "80" }]}>
-              Sign in to access administrative features
-            </Text>
-          </View>
-        </BlurView>
-
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View style={[styles.accessDeniedContainer, { opacity: fadeAnim }]}>
-            {/* Dev Mode Badge */}
-            <View style={styles.devBadgeContainer}>
-              <View style={[styles.devBadge, { backgroundColor: "#FF9800" }]}>
-                <Text style={styles.devBadgeText}>🔧 Development Mode</Text>
-              </View>
-            </View>
-
-            {/* Access Icon */}
-            <View style={[styles.accessIconContainer, { backgroundColor: colors.primary + "15" }]}>
-              <IconSymbol name="person.badge.key" size={64} color={colors.primary} />
-            </View>
-
-            <Text style={[styles.accessTitle, { color: colors.text }]}>
-              Authentication Required
-            </Text>
-            
-            <Text style={[styles.accessDescription, { color: colors.text + "60" }]}>
-              You need admin privileges to access this section. In development mode, you can bypass authentication or use the login screen.
-            </Text>
-
-            {/* Action Cards */}
-            <View style={styles.actionCards}>
-              <TouchableOpacity
-                style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }]}
-                onPress={handleDevLoginAsAdmin}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.actionIconContainer, { backgroundColor: "#FF9800" + "20" }]}>
-                  <IconSymbol name="hammer" size={24} color="#FF9800" />
-                </View>
-                <View style={styles.actionContent}>
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
-                    Grant Admin Access
-                  </Text>
-                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
-                    Development bypass
-                  </Text>
-                </View>
-                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }]}
-                onPress={() => router.push("/auth/login")}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.actionIconContainer, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="person" size={24} color={colors.primary} />
-                </View>
-                <View style={styles.actionContent}>
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
-                    Sign In
-                  </Text>
-                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
-                    Use admin credentials
-                  </Text>
-                </View>
-                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.devNote, { color: colors.text + "40" }]}>
-              Development options • Not available in production
-            </Text>
-          </Animated.View>
-        </ScrollView>
-      </View>
-    );
-  }
-
   // Main admin interface (only shown if authenticated)
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.systemGroupedBackground }]}>
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
 
-      {/* Enhanced iOS-style Header with Blur */}
+      {/* iOS-style Navigation Bar with Liquid Glass */}
       <Animated.View
         style={[
-          styles.headerWrapper,
+          styles.navigationBarWrapper,
           {
             opacity: headerAnim,
             transform: [
@@ -395,156 +310,96 @@ export default function AdminScreen() {
         ]}
       >
         <BlurView
-          intensity={85}
+          intensity={Platform.OS === "ios" ? 98 : 85}
           tint={colorScheme === "dark" ? "dark" : "light"}
-          style={styles.header}
+          style={styles.navigationBar}
         >
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
+          <View style={styles.navigationContent}>
+            <Text style={[styles.navigationTitle, { color: colors.text }]}>
               Admin Panel
             </Text>
-            <Text
-              style={[styles.headerSubtitle, { color: colors.text + "80" }]}
-            >
-              Manage prayer times and app settings
-            </Text>
-            {__DEV__ && (
-              <View style={styles.headerBadge}>
-                <View style={[styles.devModeBadge, { backgroundColor: "#FF9800" }]}>
-                  <Text style={styles.devModeBadgeText}>DEV MODE</Text>
-                </View>
-              </View>
-            )}
           </View>
         </BlurView>
-
-        {/* Header edge effect */}
-        <View style={styles.headerEdgeEffect}>
-          <View
-            style={[
-              styles.headerEdgeGradient,
-              {
-                backgroundColor:
-                  colorScheme === "dark"
-                    ? "rgba(0,0,0,0.2)"
-                    : "rgba(0,0,0,0.08)",
-              },
-            ]}
-          />
-        </View>
+        
+        {/* Soft edge effect */}
+        <View 
+          style={[
+            styles.navigationEdge, 
+            { backgroundColor: colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }
+          ]} 
+        />
       </Animated.View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.groupedScrollContent}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* User Info Card */}
-          <BlurView
-            intensity={60}
-            tint={colorScheme === "dark" ? "dark" : "light"}
-            style={[
-              styles.infoCard,
-              {
-                backgroundColor: colors.surface + "95",
-                borderColor:
-                  colorScheme === "dark"
-                    ? "rgba(255,255,255,0.06)"
-                    : "rgba(0,0,0,0.04)",
-              },
-            ]}
-          >
-            <View style={styles.userHeader}>
-              <View
-                style={[
-                  styles.userAvatar,
-                  { backgroundColor: colors.primary + "15" },
-                ]}
-              >
-                <IconSymbol name="person.fill" size={28} color={colors.primary} />
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={[styles.userName, { color: colors.text }]}>
-                  {user?.name || "Admin"}
-                </Text>
-                <Text style={[styles.userEmail, { color: colors.text + "60" }]}>
-                  {user?.email || "admin@masjidabubakr.org.uk"}
-                </Text>
-              </View>
-            </View>
-
-            {/* Status Items */}
-            <View style={styles.statusItems}>
-              <View style={styles.statusItem}>
-                <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Role</Text>
-                <Text style={[styles.statusValue, { color: colors.text }]}>Administrator</Text>
-              </View>
-              <View
-                style={[
-                  styles.statusDivider,
-                  { backgroundColor: colors.text + "10" },
-                ]}
-              />
-              <View style={styles.statusItem}>
-                <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Last Update</Text>
-                <Text style={[styles.statusValue, { color: colors.text }]}>
-                  {lastUpdate ? new Date(lastUpdate).toLocaleDateString() : "Never"}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.statusDivider,
-                  { backgroundColor: colors.text + "10" },
-                ]}
-              />
-              <View style={styles.statusItem}>
-                <Text style={[styles.statusLabel, { color: colors.text + "60" }]}>Environment</Text>
-                <Text style={[styles.statusValue, { color: colors.text }]}>
-                  {__DEV__ ? "Development" : "Production"}
-                </Text>
-              </View>
-            </View>
-          </BlurView>
-
-          {/* Prayer Times Management Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
-              PRAYER TIMES MANAGEMENT
-            </Text>
-
-            <BlurView
-              intensity={60}
-              tint={colorScheme === "dark" ? "dark" : "light"}
+          {/* User Info Section */}
+          <View style={styles.sectionContainer}>
+            <View
               style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: colors.surface + "95",
-                  borderColor:
-                    colorScheme === "dark"
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(0,0,0,0.04)",
-                },
+                styles.groupedSection,
+                { backgroundColor: colors.secondarySystemGroupedBackground }
               ]}
             >
-              {/* Monthly Upload Card */}
-              <View style={[styles.uploadCard, { borderBottomColor: colors.text + "10" }]}>
-                <View style={styles.uploadHeader}>
-                  <View style={[styles.uploadIconContainer, { backgroundColor: colors.primary + "15" }]}>
-                    <IconSymbol name="calendar" size={24} color={colors.primary} />
+              <View style={styles.userInfoRow}>
+                <View style={[styles.userAvatar, { backgroundColor: colors.systemGray5 }]}>
+                  <IconSymbol name="person.fill" size={24} color={colors.systemGray} />
+                </View>
+                <View style={styles.userTextInfo}>
+                  <Text style={[styles.userName, { color: colors.text }]}>
+                    {user?.name || "Administrator"}
+                  </Text>
+                  <Text style={[styles.userRole, { color: colors.secondaryText }]}>
+                    {user?.email || "admin@masjidabubakr.org.uk"}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+              
+              <View style={styles.userStats}>
+                <View style={styles.userStatItem}>
+                  <Text style={[styles.userStatLabel, { color: colors.secondaryText }]}>
+                    Last Update
+                  </Text>
+                  <Text style={[styles.userStatValue, { color: colors.text }]}>
+                    {lastUpdate ? new Date(lastUpdate).toLocaleDateString() : "Never"}
+                  </Text>
+                </View>
+                <View style={[styles.userStatDivider, { backgroundColor: colors.separator }]} />
+                <View style={styles.userStatItem}>
+                  <Text style={[styles.userStatLabel, { color: colors.secondaryText }]}>
+                    Environment
+                  </Text>
+                  <Text style={[styles.userStatValue, { color: colors.text }]}>
+                    {isDev ? "Development" : "Production"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Prayer Times Management Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionHeader, { color: colors.secondaryText }]}>
+              PRAYER TIMES MANAGEMENT
+            </Text>
+            
+            <View style={[styles.groupedSection, { backgroundColor: colors.secondarySystemGroupedBackground }]}>
+              {/* Monthly Upload */}
+              <View style={styles.listItem}>
+                <View style={styles.listItemContent}>
+                  <View style={[styles.listIcon, { backgroundColor: colors.tint + "15" }]}>
+                    <IconSymbol name="calendar" size={22} color={colors.tint} />
                   </View>
-                  <View style={styles.uploadInfo}>
-                    <View style={styles.uploadTitleRow}>
-                      <Text style={[styles.uploadTitle, { color: colors.text }]}>
-                        Monthly Upload
-                      </Text>
-                      <View style={[styles.recommendedBadge, { backgroundColor: colors.primary + "20" }]}>
-                        <Text style={[styles.recommendedText, { color: colors.primary }]}>
-                          RECOMMENDED
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.uploadDescription, { color: colors.text + "60" }]}>
+                  <View style={styles.listItemText}>
+                    <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                      Monthly Upload
+                    </Text>
+                    <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
                       Upload prayer times for a specific month
                     </Text>
                   </View>
@@ -552,227 +407,249 @@ export default function AdminScreen() {
                 <CSVUploader onUploadComplete={loadLastUpdate} />
               </View>
 
-              {/* Yearly Upload Card */}
-              <View style={styles.uploadCard}>
-                <View style={styles.uploadHeader}>
-                  <View style={[styles.uploadIconContainer, { backgroundColor: "#FF9800" + "15" }]}>
-                    <IconSymbol name="calendar" size={24} color="#FF9800" />
+              <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+
+              {/* Yearly Upload */}
+              <View style={styles.listItem}>
+                <View style={styles.listItemContent}>
+                  <View style={[styles.listIcon, { backgroundColor: colors.systemOrange + "15" }]}>
+                    <IconSymbol name="calendar.badge.exclamationmark" size={22} color={colors.systemOrange} />
                   </View>
-                  <View style={styles.uploadInfo}>
-                    <View style={styles.uploadTitleRow}>
-                      <Text style={[styles.uploadTitle, { color: colors.text }]}>
-                        Yearly Upload
-                      </Text>
-                      <View style={[styles.warningBadge, { backgroundColor: "#FF9800" + "20" }]}>
-                        <Text style={[styles.warningText, { color: "#FF9800" }]}>
-                          ADVANCED
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.uploadDescription, { color: colors.text + "60" }]}>
-                      Replace ALL existing prayer times with yearly data
+                  <View style={styles.listItemText}>
+                    <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                      Yearly Upload
+                    </Text>
+                    <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                      Replace all existing prayer times
                     </Text>
                   </View>
                 </View>
                 <YearlyCSVUploader onUploadComplete={loadLastUpdate} />
               </View>
-            </BlurView>
+            </View>
           </View>
 
           {/* Quick Update Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionHeader, { color: colors.secondaryText }]}>
               QUICK UPDATE
             </Text>
-
-            <BlurView
-              intensity={60}
-              tint={colorScheme === "dark" ? "dark" : "light"}
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: colors.surface + "95",
-                  borderColor:
-                    colorScheme === "dark"
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(0,0,0,0.04)",
-                },
-              ]}
-            >
-              <View style={styles.quickUpdateContainer}>
-                <View style={styles.quickUpdateHeader}>
-                  <View style={[styles.quickUpdateIconContainer, { backgroundColor: colors.primary + "15" }]}>
-                    <IconSymbol name="bolt" size={24} color={colors.primary} />
+            
+            <View style={[styles.groupedSection, { backgroundColor: colors.secondarySystemGroupedBackground }]}>
+              <View style={styles.quickUpdateSection}>
+                <View style={styles.listItemContent}>
+                  <View style={[styles.listIcon, { backgroundColor: colors.tint + "15" }]}>
+                    <IconSymbol name="clock.badge.checkmark" size={22} color={colors.tint} />
                   </View>
-                  <View style={styles.quickUpdateInfo}>
-                    <View style={styles.quickUpdateTitleRow}>
-                      <Text style={[styles.quickUpdateTitle, { color: colors.text }]}>
-                        Quick Time Adjustment
-                      </Text>
-                      <View style={[styles.instantBadge, { backgroundColor: colors.primary + "20" }]}>
-                        <Text style={[styles.instantText, { color: colors.primary }]}>
-                          INSTANT
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.quickUpdateDescription, { color: colors.text + "60" }]}>
-                      Update prayer times for any date directly
+                  <View style={styles.listItemText}>
+                    <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                      Time Adjustment
+                    </Text>
+                    <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                      Update prayer times for any date
                     </Text>
                   </View>
                 </View>
-                <QuickUpdate onUploadComplete={loadLastUpdate} />
+                <QuickUpdate onUpdateComplete={loadLastUpdate} />
               </View>
-            </BlurView>
+            </View>
           </View>
 
           {/* Download Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
-              DOWNLOAD DATA
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionHeader, { color: colors.secondaryText }]}>
+              EXPORT DATA
             </Text>
-
-            <BlurView
-              intensity={60}
-              tint={colorScheme === "dark" ? "dark" : "light"}
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: colors.surface + "95",
-                  borderColor:
-                    colorScheme === "dark"
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(0,0,0,0.04)",
-                },
-              ]}
-            >
-              {/* Download Current Month CSV */}
+            
+            <View style={[styles.groupedSection, { backgroundColor: colors.secondarySystemGroupedBackground }]}>
               <TouchableOpacity
-                style={[styles.actionRow, { borderBottomColor: colors.text + "10" }]}
+                style={styles.listButton}
                 onPress={handleDownloadMonthlyCSV}
                 activeOpacity={0.7}
               >
-                <View style={[styles.actionIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="square.and.arrow.down" size={20} color={colors.primary} />
+                <View style={[styles.listIcon, { backgroundColor: colors.systemBlue + "15" }]}>
+                  <IconSymbol name="square.and.arrow.down" size={22} color={colors.systemBlue} />
                 </View>
-                <View style={styles.actionContent}>
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
-                    Download Current Month CSV
+                <View style={styles.listItemText}>
+                  <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                    Export Current Month
                   </Text>
-                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
-                    Export {getMonthName(new Date().getMonth())} {new Date().getFullYear()} prayer times
+                  <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                    Download {getMonthName(new Date().getMonth())} {new Date().getFullYear()}
                   </Text>
                 </View>
-                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+                <IconSymbol name="chevron.right" size={16} color={colors.tertiaryText} />
               </TouchableOpacity>
 
-              {/* Download Yearly CSV */}
+              <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+
               <TouchableOpacity
-                style={styles.actionRow}
+                style={styles.listButton}
                 onPress={handleDownloadYearlyCSV}
                 activeOpacity={0.7}
               >
-                <View style={[styles.actionIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="doc.on.doc" size={20} color={colors.primary} />
+                <View style={[styles.listIcon, { backgroundColor: colors.systemBlue + "15" }]}>
+                  <IconSymbol name="doc.on.doc" size={22} color={colors.systemBlue} />
                 </View>
-                <View style={styles.actionContent}>
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
-                    Download Full Year CSV
+                <View style={styles.listItemText}>
+                  <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                    Export Full Year
                   </Text>
-                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
-                    Export all available prayer times data
+                  <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                    Download all available data
                   </Text>
                 </View>
-                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+                <IconSymbol name="chevron.right" size={16} color={colors.tertiaryText} />
               </TouchableOpacity>
-            </BlurView>
+            </View>
           </View>
 
-          {/* Actions Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text + "60" }]}>
-              ACTIONS
+
+          {/* System Actions Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionHeader, { color: colors.secondaryText }]}>
+              SYSTEM
             </Text>
-
-            <BlurView
-              intensity={60}
-              tint={colorScheme === "dark" ? "dark" : "light"}
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: colors.surface + "95",
-                  borderColor:
-                    colorScheme === "dark"
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(0,0,0,0.04)",
-                },
-              ]}
-            >
-              {/* Clear Data Button */}
+            
+            <View style={[styles.groupedSection, { backgroundColor: colors.secondarySystemGroupedBackground }]}>
               <TouchableOpacity
-                style={[styles.actionRow, { borderBottomColor: colors.text + "10" }]}
-                onPress={handleClearData}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: colors.error + "15" }]}>
-                  <IconSymbol name="trash" size={20} color={colors.error} />
-                </View>
-                <View style={styles.actionContent}>
-                  <Text style={[styles.actionTitle, { color: colors.error }]}>
-                    Clear All Data
-                  </Text>
-                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
-                    Delete all prayer times and user data
-                  </Text>
-                </View>
-                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
-              </TouchableOpacity>
-
-              {/* Reset Notification Setup Button */}
-              <TouchableOpacity
-                style={[styles.actionRow, { borderBottomColor: colors.text + "10" }]}
+                style={styles.listButton}
                 onPress={handleResetNotificationSetup}
                 activeOpacity={0.7}
               >
-                <View style={[styles.actionIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="bell.slash" size={20} color={colors.primary} />
+                <View style={[styles.listIcon, { backgroundColor: colors.tint + "15" }]}>
+                  <IconSymbol name="bell.slash" size={22} color={colors.tint} />
                 </View>
-                <View style={styles.actionContent}>
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
-                    Reset Notification Setup
+                <View style={styles.listItemText}>
+                  <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                    Reset Notifications
                   </Text>
-                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
-                    Show notification setup modal again
+                  <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                    Show setup modal on next launch
                   </Text>
                 </View>
-                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+                <IconSymbol name="chevron.right" size={16} color={colors.tertiaryText} />
               </TouchableOpacity>
 
-              {/* Sign Out Button */}
+              <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+
               <TouchableOpacity
-                style={styles.actionRow}
+                style={styles.listButton}
+                onPress={() => showSetupModal()}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.listIcon, { backgroundColor: colors.tint + "15" }]}>
+                  <IconSymbol name="bell.badge" size={22} color={colors.tint} />
+                </View>
+                <View style={styles.listItemText}>
+                  <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                    Test Notification Setup
+                  </Text>
+                  <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                    Preview the setup modal
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.tertiaryText} />
+              </TouchableOpacity>
+
+              <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+
+              <TouchableOpacity
+                style={styles.listButton}
+                onPress={() => setShowQiblaCalibrationModal(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.listIcon, { backgroundColor: colors.tint + "15" }]}>
+                  <IconSymbol name="location.fill" size={22} color={colors.tint} />
+                </View>
+                <View style={styles.listItemText}>
+                  <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                    Test Qibla Calibration
+                  </Text>
+                  <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                    Preview the calibration modal
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.tertiaryText} />
+              </TouchableOpacity>
+
+              <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+
+              <TouchableOpacity
+                style={styles.listButton}
+                onPress={handleClearData}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.listIcon, { backgroundColor: colors.systemRed + "15" }]}>
+                  <IconSymbol name="trash" size={22} color={colors.systemRed} />
+                </View>
+                <View style={styles.listItemText}>
+                  <Text style={[styles.listItemTitle, { color: colors.systemRed }]}>
+                    Clear All Data
+                  </Text>
+                  <Text style={[styles.listItemSubtitle, { color: colors.secondaryText }]}>
+                    Delete all prayer times and settings
+                  </Text>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={colors.tertiaryText} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Sign Out Section */}
+          <View style={styles.sectionContainer}>
+            <View style={[styles.groupedSection, { backgroundColor: colors.secondarySystemGroupedBackground }]}>
+              <TouchableOpacity
+                style={[styles.listButton, { justifyContent: "center" }]}
                 onPress={handleLogout}
                 activeOpacity={0.7}
               >
-                <View style={[styles.actionIcon, { backgroundColor: colors.text + "10" }]}>
-                  <IconSymbol name="arrow.right.square" size={20} color={colors.text + "60"} />
-                </View>
-                <View style={styles.actionContent}>
-                  <Text style={[styles.actionTitle, { color: colors.text }]}>
-                    Sign Out
-                  </Text>
-                  <Text style={[styles.actionSubtitle, { color: colors.text + "60" }]}>
-                    Exit admin panel
-                  </Text>
-                </View>
-                <IconSymbol name="chevron.right" size={16} color={colors.text + "40"} />
+                <Text style={[styles.signOutText, { color: colors.systemRed }]}>
+                  Sign Out
+                </Text>
               </TouchableOpacity>
-            </BlurView>
+            </View>
           </View>
 
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
         </Animated.View>
       </ScrollView>
+
+      {/* Debug Modal */}
+      <Modal
+        visible={debugModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setDebugModalVisible(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.systemGroupedBackground }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.secondarySystemGroupedBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Firebase Dashboard</Text>
+            <TouchableOpacity
+              onPress={() => setDebugModalVisible(false)}
+              style={[styles.modalCloseButton, { backgroundColor: colors.systemGray5 }]}
+            >
+              <IconSymbol name="xmark" size={18} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <FirebaseDebugDashboard />
+        </View>
+      </Modal>
+
+      {/* Debug Log Viewer Modal */}
+      <DebugLogViewer
+        visible={debugViewerVisible}
+        onClose={() => setDebugViewerVisible(false)}
+      />
+
+      {/* Qibla Calibration Modal */}
+      <QiblaCalibrationModal
+        showCalibrationModal={showQiblaCalibrationModal}
+        setShowCalibrationModal={setShowQiblaCalibrationModal}
+        colors={colors}
+        colorScheme={colorScheme}
+      />
     </View>
   );
 }
@@ -789,66 +666,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "400",
     letterSpacing: -0.4,
   },
 
-  // Enhanced iOS-style header
-  headerWrapper: {
-    backgroundColor: "transparent",
+  // iOS Navigation Bar (Liquid Glass)
+  navigationBarWrapper: {
     zIndex: 10,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0.5 },
+        shadowOpacity: 0.1,
+        shadowRadius: 0,
       },
       android: {
         elevation: 4,
       },
     }),
   },
-  header: {
-    paddingTop: Platform.OS === "ios" ? 60 : StatusBar.currentHeight || 24,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+  navigationBar: {
+    paddingTop: Platform.OS === "ios" ? 60 : StatusBar.currentHeight || 44,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
   },
-  headerEdgeEffect: {
-    height: 1,
+  navigationContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerEdgeGradient: {
-    height: 1,
-    opacity: 0.15,
-  },
-  headerContent: {
-    gap: 4,
-  },
-  headerTitle: {
-    fontSize: 34,
-    fontWeight: "700",
-    letterSpacing: 0.37,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    fontWeight: "400",
+  navigationTitle: {
+    fontSize: 17,
+    fontWeight: "600",
     letterSpacing: -0.4,
   },
-  headerBadge: {
-    marginTop: 8,
+  navigationEdge: {
+    height: StyleSheet.hairlineWidth,
+    opacity: 0.3,
   },
   devModeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: "flex-start",
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   devModeBadgeText: {
-    fontSize: 10,
-    color: "#fff",
+    fontSize: 11,
+    color: "#FFFFFF",
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.06,
   },
 
   // Scroll view
@@ -858,15 +725,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: Platform.OS === "ios" ? 100 : 80,
   },
+  groupedScrollContent: {
+    paddingTop: 20,
+    paddingBottom: Platform.OS === "ios" ? 100 : 80,
+  },
 
   // Access Denied View
   accessDeniedContainer: {
-    flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 60,
+    alignItems: "center",
   },
   devBadgeContainer: {
-    alignItems: "center",
     marginBottom: 32,
   },
   devBadge: {
@@ -875,276 +745,220 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   devBadgeText: {
-    fontSize: 12,
-    color: "#fff",
+    fontSize: 13,
+    color: "#FFFFFF",
     fontWeight: "600",
+    letterSpacing: -0.08,
   },
   accessIconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: "center",
     marginBottom: 24,
   },
   accessTitle: {
     fontSize: 28,
     fontWeight: "700",
-    letterSpacing: 0.37,
-    textAlign: "center",
+    letterSpacing: 0.35,
     marginBottom: 12,
+    textAlign: "center",
   },
   accessDescription: {
     fontSize: 17,
     letterSpacing: -0.4,
     textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
-    paddingHorizontal: 20,
+    lineHeight: 22,
+    marginBottom: 44,
+    paddingHorizontal: 32,
   },
-  actionCards: {
+  actionButtons: {
     gap: 12,
-    marginBottom: 24,
+    width: "100%",
+    maxWidth: 320,
   },
-  actionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 12,
-  },
-  actionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  primaryButton: {
+    height: 50,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
-  actionContent: {
-    flex: 1,
-  },
-  actionTitle: {
+  primaryButtonText: {
     fontSize: 17,
     fontWeight: "600",
     letterSpacing: -0.4,
-    marginBottom: 2,
   },
-  actionSubtitle: {
-    fontSize: 13,
-    letterSpacing: -0.08,
-  },
-  devNote: {
-    fontSize: 13,
-    letterSpacing: -0.08,
-    textAlign: "center",
-    fontStyle: "italic",
-  },
-
-  // User Info Card
-  infoCard: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 20,
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  userHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 20,
-  },
-  userAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  secondaryButton: {
+    height: 50,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
+  secondaryButtonText: {
+    fontSize: 17,
     fontWeight: "600",
     letterSpacing: -0.4,
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: 15,
-    letterSpacing: -0.2,
-  },
-  statusItems: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statusItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statusLabel: {
-    fontSize: 12,
-    letterSpacing: -0.08,
-    marginBottom: 4,
-  },
-  statusValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    letterSpacing: -0.4,
-  },
-  statusDivider: {
-    width: 1,
-    height: 32,
-    opacity: 0.5,
   },
 
   // Sections
-  section: {
+  sectionContainer: {
     marginBottom: 35,
   },
-  sectionTitle: {
+  sectionHeader: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "400",
     letterSpacing: -0.08,
-    textTransform: "uppercase",
-    marginLeft: 32,
+    marginLeft: 20,
     marginBottom: 8,
+    textTransform: "uppercase",
   },
-  sectionCard: {
+  groupedSection: {
     marginHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 12,
     overflow: "hidden",
   },
 
-  // Upload Cards
-  uploadCard: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  uploadHeader: {
+  // User Info
+  userInfoRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    padding: 16,
     gap: 12,
-    marginBottom: 16,
   },
-  uploadIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  userAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
   },
-  uploadInfo: {
+  userTextInfo: {
     flex: 1,
   },
-  uploadTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  uploadTitle: {
+  userName: {
     fontSize: 17,
     fontWeight: "600",
     letterSpacing: -0.4,
+    marginBottom: 2,
   },
-  uploadDescription: {
+  userRole: {
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+  userStats: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  userStatItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  userStatLabel: {
     fontSize: 13,
     letterSpacing: -0.08,
+    marginBottom: 4,
   },
-  recommendedBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+  userStatValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.2,
   },
-  recommendedText: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  warningBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  warningText: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+  userStatDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 32,
+    marginHorizontal: 16,
   },
 
-  // Action Rows
-  actionRow: {
+  // List Items
+  listItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  listButton: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    minHeight: 60,
+    minHeight: 44,
   },
-  actionIcon: {
+  listItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  listIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
-
-  bottomSpacing: {
-    height: Platform.OS === "ios" ? 100 : 80,
-  },
-
-  // Quick Update Styles
-  quickUpdateContainer: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  quickUpdateHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 16,
-  },
-  quickUpdateIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quickUpdateInfo: {
+  listItemText: {
     flex: 1,
   },
-  quickUpdateTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
+  listItemTitle: {
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
+    marginBottom: 2,
   },
-  quickUpdateTitle: {
+  listItemSubtitle: {
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+
+  // Separator
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 64,
+  },
+
+  // Quick Update
+  quickUpdateSection: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+
+  // Sign Out
+  signOutText: {
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
+    textAlign: "center",
+  },
+
+  // Bottom spacing
+  bottomSpacing: {
+    height: 20,
+  },
+
+  // Modal
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    paddingTop: Platform.OS === "ios" ? 60 : 24,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.1)",
+  },
+  modalTitle: {
     fontSize: 17,
     fontWeight: "600",
     letterSpacing: -0.4,
   },
-  quickUpdateDescription: {
-    fontSize: 13,
-    letterSpacing: -0.08,
-  },
-  instantBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  instantText: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+  modalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

@@ -36,6 +36,7 @@ yarn-error.*
 .env.development.local
 .env.staging.local
 .env.production.local
+.env.production
 
 # Environment secrets
 .env.secret

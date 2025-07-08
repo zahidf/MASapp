@@ -214,14 +214,14 @@ export default function ExploreScreen() {
           {
             backgroundColor: item.color
               ? `${item.color}15`
-              : `${colors.primary}15`,
+              : `${colors.tint}15`,
           },
         ]}
       >
         <IconSymbol
           name={item.icon as any}
           size={22}
-          color={item.destructive ? colors.error : item.color || colors.primary}
+          color={item.destructive ? colors.error : item.color || colors.tint}
         />
       </View>
       <View style={styles.menuItemContent}>
@@ -322,7 +322,7 @@ export default function ExploreScreen() {
               <View
                 style={[
                   styles.mosqueIconContainer,
-                  { backgroundColor: colors.primary + "15" },
+                  { backgroundColor: colors.tint + "15" },
                 ]}
               >
                 {logoSvg ? (
@@ -331,7 +331,7 @@ export default function ExploreScreen() {
                   <IconSymbol
                     name="building.2.fill"
                     size={32}
-                    color={colors.primary}
+                    color={colors.tint}
                   />
                 )}
               </View>
@@ -346,7 +346,7 @@ export default function ExploreScreen() {
 
             <View style={styles.mosqueStats}>
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.primary }]}>
+                <Text style={[styles.statValue, { color: colors.tint }]}>
                   5
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
@@ -360,7 +360,7 @@ export default function ExploreScreen() {
                 ]}
               />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.primary }]}>
+                <Text style={[styles.statValue, { color: colors.tint }]}>
                   365
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
@@ -374,7 +374,7 @@ export default function ExploreScreen() {
                 ]}
               />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.primary }]}>
+                <Text style={[styles.statValue, { color: colors.tint }]}>
                   ∞
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
