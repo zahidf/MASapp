@@ -3,11 +3,7 @@ import { MonthlyUploadRow, PrayerTime } from "../types/prayer";
 export const parseYearlyCSV = (
   csvContent: string | null | undefined
 ): PrayerTime[] => {
-  console.log(
-    "parseYearlyCSV called with:",
-    typeof csvContent,
-    csvContent?.length
-  );
+  // Removed console.log for production
 
   // Handle all possible invalid inputs
   if (
@@ -15,7 +11,7 @@ export const parseYearlyCSV = (
     typeof csvContent !== "string" ||
     csvContent.trim() === ""
   ) {
-    console.log("Invalid or empty CSV content");
+    // Invalid or empty CSV content
     return [];
   }
 
@@ -28,22 +24,22 @@ export const parseYearlyCSV = (
       return line && typeof line === "string" && line.trim().length > 0;
     });
 
-    console.log("Total lines after filtering:", lines.length);
+    // Total lines after filtering
 
     if (lines.length < 2) {
-      console.log("Not enough lines in CSV (need header + data)");
+      // Not enough lines in CSV (need header + data)
       return [];
     }
 
     // Parse header
     const headerLine = lines[0];
     if (!headerLine || typeof headerLine !== "string") {
-      console.log("Invalid header line");
+      // Invalid header line
       return [];
     }
 
     const headers = headerLine.split(",").map((h) => (h ? h.trim() : ""));
-    console.log("Headers:", headers);
+    // Headers parsed
 
     // Parse data lines
     const dataLines = lines.slice(1);
@@ -54,7 +50,7 @@ export const parseYearlyCSV = (
       const lineNumber = i + 2; // +2 for header and 0-based index
 
       if (!line || typeof line !== "string") {
-        console.warn(`Line ${lineNumber} is invalid:`, line);
+        // Line is invalid
         continue;
       }
 
@@ -97,15 +93,15 @@ export const parseYearlyCSV = (
           results.push(result);
         }
       } catch (lineError) {
-        console.warn(`Error parsing line ${lineNumber}:`, lineError);
+        // Error parsing line
         continue;
       }
     }
 
-    console.log("Successfully parsed", results.length, "prayer times");
+    // Successfully parsed prayer times
     return results;
   } catch (error) {
-    console.error("Error in parseYearlyCSV:", error);
+    // Error in parseYearlyCSV
     return [];
   }
 };
@@ -113,18 +109,14 @@ export const parseYearlyCSV = (
 export const parseMonthlyCSV = (
   csvContent: string | null | undefined
 ): MonthlyUploadRow[] => {
-  console.log(
-    "parseMonthlyCSV called with:",
-    typeof csvContent,
-    csvContent?.length
-  );
+  // Removed console.log for production
 
   if (
     !csvContent ||
     typeof csvContent !== "string" ||
     csvContent.trim() === ""
   ) {
-    console.log("Invalid or empty CSV content");
+    // Invalid or empty CSV content
     return [];
   }
 
@@ -136,13 +128,13 @@ export const parseMonthlyCSV = (
     });
 
     if (lines.length < 2) {
-      console.log("Not enough lines in CSV (need header + data)");
+      // Not enough lines in CSV (need header + data)
       return [];
     }
 
     const headerLine = lines[0];
     if (!headerLine || typeof headerLine !== "string") {
-      console.log("Invalid header line");
+      // Invalid header line
       return [];
     }
 
@@ -155,7 +147,7 @@ export const parseMonthlyCSV = (
       const lineNumber = i + 2;
 
       if (!line || typeof line !== "string") {
-        console.warn(`Line ${lineNumber} is invalid:`, line);
+        // Line is invalid
         continue;
       }
 
@@ -178,15 +170,15 @@ export const parseMonthlyCSV = (
           results.push(row as MonthlyUploadRow);
         }
       } catch (lineError) {
-        console.warn(`Error parsing line ${lineNumber}:`, lineError);
+        // Error parsing line
         continue;
       }
     }
 
-    console.log("Successfully parsed", results.length, "monthly rows");
+    // Successfully parsed monthly rows
     return results;
   } catch (error) {
-    console.error("Error in parseMonthlyCSV:", error);
+    // Error in parseMonthlyCSV
     return [];
   }
 };
@@ -216,10 +208,10 @@ export const formatTime = (time: string | null | undefined): string => {
     }
 
     // If it doesn't match expected formats, return default
-    console.warn("Invalid time format:", time);
+    // Invalid time format
     return "00:00:00";
   } catch (error) {
-    console.error("Error formatting time:", time, error);
+    // Error formatting time
     return "00:00:00";
   }
 };

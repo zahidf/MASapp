@@ -131,7 +131,7 @@ export default function TodayScreen() {
         const svgContent = await response.text();
         setLogoSvg(svgContent);
       } catch (error) {
-        console.error("Error loading logo:", error);
+        // Error loading logo
       }
     };
     loadLogo();
@@ -212,7 +212,7 @@ export default function TodayScreen() {
           setCurrentPrayer(current);
           setNextPrayer(next);
         } catch (error) {
-          console.log("Error:", error);
+          // Error getting current prayer
           setCurrentPrayer(null);
           setNextPrayer("fajr");
         }
@@ -301,7 +301,7 @@ export default function TodayScreen() {
         });
       }
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      // Error generating PDF
       Alert.alert("Error", "Failed to generate PDF. Please try again.");
     } finally {
       setIsExporting(false);

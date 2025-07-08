@@ -242,7 +242,7 @@ export function IconSymbol({
   const materialIconName = ICON_MAPPING[name];
 
   if (!materialIconName) {
-    console.warn(`No Material Icon mapping found for SF Symbol: ${name}`);
+    // No Material Icon mapping found for SF Symbol
     // Fallback to a question mark
     return (
       <View style={[{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }, style as any]}>

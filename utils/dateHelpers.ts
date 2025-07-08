@@ -16,7 +16,7 @@ export const parseTimeString = (timeStr: string | null | undefined): Date => {
 
   // Handle null, undefined, or empty timeStr
   if (!timeStr || typeof timeStr !== "string" || timeStr.trim() === "") {
-    console.warn("parseTimeString called with invalid time:", timeStr);
+    // parseTimeString called with invalid time
     // Return current time as fallback
     return today;
   }
@@ -31,7 +31,7 @@ export const parseTimeString = (timeStr: string | null | undefined): Date => {
     const secondNum = parseInt(seconds);
 
     if (isNaN(hourNum) || isNaN(minuteNum) || isNaN(secondNum)) {
-      console.warn("Invalid time components in:", timeStr);
+      // Invalid time components
       return today;
     }
 
@@ -39,7 +39,7 @@ export const parseTimeString = (timeStr: string | null | undefined): Date => {
     newDate.setHours(hourNum, minuteNum, secondNum, 0);
     return newDate;
   } catch (error) {
-    console.error("Error parsing time string:", timeStr, error);
+    // Error parsing time string
     return today;
   }
 };
@@ -60,7 +60,7 @@ export const formatTimeForDisplay = (
     }
     return trimmed;
   } catch (error) {
-    console.error("Error formatting time for display:", timeStr, error);
+    // Error formatting time for display
     return "00:00";
   }
 };
@@ -69,10 +69,7 @@ export const getCurrentPrayerAndNext = (
   prayerTime: PrayerTime
 ): { current: PrayerName | null; next: PrayerName } => {
   if (!prayerTime || typeof prayerTime !== "object") {
-    console.warn(
-      "getCurrentPrayerAndNext called with invalid prayerTime:",
-      prayerTime
-    );
+    // getCurrentPrayerAndNext called with invalid prayerTime
     return { current: null, next: "fajr" };
   }
 
@@ -95,7 +92,7 @@ export const getCurrentPrayerAndNext = (
     const timeStr = prayers[i].time;
 
     if (!timeStr || typeof timeStr !== "string") {
-      console.warn(`Invalid time for ${prayers[i].name}:`, timeStr);
+      // Invalid time for prayer
       continue;
     }
 
@@ -105,7 +102,7 @@ export const getCurrentPrayerAndNext = (
       const minuteNum = parseInt(minutes);
 
       if (isNaN(hourNum) || isNaN(minuteNum)) {
-        console.warn(`Invalid time format for ${prayers[i].name}:`, timeStr);
+        // Invalid time format for prayer
         continue;
       }
 
@@ -118,11 +115,7 @@ export const getCurrentPrayerAndNext = (
         break;
       }
     } catch (error) {
-      console.error(
-        `Error processing time for ${prayers[i].name}:`,
-        timeStr,
-        error
-      );
+      // Error processing time for prayer
       continue;
     }
   }
@@ -138,7 +131,7 @@ export const getTimeUntilNext = (
     typeof nextPrayerTime !== "string" ||
     nextPrayerTime.trim() === ""
   ) {
-    console.warn("getTimeUntilNext called with invalid time:", nextPrayerTime);
+    // getTimeUntilNext called with invalid time
     return "0m";
   }
 
@@ -166,11 +159,7 @@ export const getTimeUntilNext = (
       return `${minutes}m`;
     }
   } catch (error) {
-    console.error(
-      "Error calculating time until next prayer:",
-      nextPrayerTime,
-      error
-    );
+    // Error calculating time until next prayer
     return "0m";
   }
 };
@@ -236,7 +225,7 @@ export const getDetailedCountdown = (
       return `${days}d ${remainingHours}h`;
     }
   } catch (error) {
-    console.error("Error calculating detailed countdown:", error);
+    // Error calculating detailed countdown
     return "";
   }
 };
@@ -262,7 +251,7 @@ export const getMonthName = (month: number): string => {
   ];
 
   if (month < 0 || month >= months.length) {
-    console.warn("Invalid month index:", month);
+    // Invalid month index
     return "Unknown";
   }
 
@@ -271,10 +260,7 @@ export const getMonthName = (month: number): string => {
 
 export const extractPrayersFromTime = (prayerTime: PrayerTime): Prayer[] => {
   if (!prayerTime || typeof prayerTime !== "object") {
-    console.warn(
-      "extractPrayersFromTime called with invalid prayerTime:",
-      prayerTime
-    );
+    // extractPrayersFromTime called with invalid prayerTime
     return [];
   }
 

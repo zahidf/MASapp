@@ -40,7 +40,7 @@ try {
     app = getApp();
   }
 } catch (error) {
-  console.error('Failed to initialize Firebase:', error);
+  // Failed to initialize Firebase
   throw error;
 }
 
@@ -87,9 +87,9 @@ if (__DEV__ && process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
   try {
     connectDatabaseEmulator(database, emulatorHost, 9000);
     connectAuthEmulator(auth, `http://${emulatorHost}:9099`, { disableWarnings: true });
-    console.log('Connected to Firebase emulators');
+    // Connected to Firebase emulators
   } catch (error) {
-    console.warn('Failed to connect to Firebase emulators:', error);
+    // Failed to connect to Firebase emulators
   }
 }
 

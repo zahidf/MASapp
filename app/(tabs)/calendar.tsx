@@ -184,7 +184,7 @@ export default function CalendarScreen() {
 
       setShowExportModal(false);
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      // Error generating PDF
       Alert.alert("Error", "Failed to generate PDF. Please try again.");
     } finally {
       setIsExporting(false);

@@ -35,7 +35,7 @@ export class NotificationService {
       }
 
       if (finalStatus !== "granted") {
-        console.log("Notification permission denied");
+        // Notification permission denied
         return false;
       }
 
@@ -52,7 +52,7 @@ export class NotificationService {
 
       return true;
     } catch (error) {
-      console.error("Error requesting notification permissions:", error);
+      // Error requesting notification permissions
       return false;
     }
   }
@@ -65,9 +65,9 @@ export class NotificationService {
         NOTIFICATION_STORAGE_KEY,
         JSON.stringify(preferences)
       );
-      console.log("Notification preferences saved:", preferences);
+      // Notification preferences saved
     } catch (error) {
-      console.error("Error saving notification preferences:", error);
+      // Error saving notification preferences
       throw error;
     }
   }
@@ -81,7 +81,7 @@ export class NotificationService {
         // Handle migration from old format to new format
         if ("prayerBeginTimes" in preferences) {
           // Old format detected, migrate to new format
-          console.log("Migrating old notification preferences format");
+          // Migrating old notification preferences format
 
           const newPreferences: NotificationPreferences = {
             isEnabled: preferences.isEnabled ?? false,
@@ -130,7 +130,7 @@ export class NotificationService {
       }
       return DEFAULT_NOTIFICATION_PREFERENCES;
     } catch (error) {
-      console.error("Error loading notification preferences:", error);
+      // Error loading notification preferences
       return DEFAULT_NOTIFICATION_PREFERENCES;
     }
   }
@@ -139,9 +139,9 @@ export class NotificationService {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
       await AsyncStorage.removeItem(SCHEDULED_NOTIFICATIONS_KEY);
-      console.log("All notifications cancelled");
+      // All notifications cancelled
     } catch (error) {
-      console.error("Error cancelling notifications:", error);
+      // Error cancelling notifications
     }
   }
 
@@ -151,7 +151,7 @@ export class NotificationService {
     daysAhead: number = 7
   ): Promise<void> {
     if (!preferences.isEnabled) {
-      console.log("Notifications disabled");
+      // Notifications disabled
       return;
     }
 
@@ -161,7 +161,7 @@ export class NotificationService {
     );
 
     if (!hasAnyEnabled) {
-      console.log("No prayer notifications enabled");
+      // No prayer notifications enabled
       return;
     }
 
@@ -195,9 +195,9 @@ export class NotificationService {
         JSON.stringify(scheduledNotifications)
       );
 
-      console.log(`Scheduled ${scheduledNotifications.length} notifications`);
+      // Scheduled notifications
     } catch (error) {
-      console.error("Error scheduling notifications:", error);
+      // Error scheduling notifications
     }
   }
 
@@ -381,10 +381,8 @@ export class NotificationService {
         body,
       });
     } catch (error) {
-      console.error(
-        `Error scheduling ${type} notification for ${prayerName}:`,
-        error
-      );
+      // Error scheduling notification
+      // Type: ${type}, Prayer: ${prayerName}
     }
   }
 
@@ -403,7 +401,7 @@ export class NotificationService {
       );
       return notificationDate;
     } catch (error) {
-      console.error("Error parsing notification time:", timeString, error);
+      // Error parsing notification time
       return new Date();
     }
   }
@@ -421,7 +419,7 @@ export class NotificationService {
       const stored = await AsyncStorage.getItem(SCHEDULED_NOTIFICATIONS_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error("Error loading scheduled notifications:", error);
+      // Error loading scheduled notifications
       return [];
     }
   }
@@ -446,7 +444,7 @@ export class NotificationService {
         },
       });
     } catch (error) {
-      console.error("Error scheduling test notification:", error);
+      // Error scheduling test notification
       throw error;
     }
   }

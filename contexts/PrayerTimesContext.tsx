@@ -1,5 +1,4 @@
 import { PrayerTime } from "@/types/prayer";
-import { loadPrayerTimes, savePrayerTimes } from "@/utils/storage";
 import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 import React, { createContext, ReactNode, useEffect, useState, useRef } from "react";
 
@@ -24,7 +23,7 @@ export function PrayerTimesProvider({ children }: { children: ReactNode }) {
   const connectionUnsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    console.log("PrayerTimesProvider: Starting initial data load");
+    // Starting initial data load
     loadData();
     
     // Set up real-time updates from Firebase
@@ -33,7 +32,7 @@ export function PrayerTimesProvider({ children }: { children: ReactNode }) {
     // Monitor connection status
     connectionUnsubscribeRef.current = firebasePrayerTimesService.monitorConnectionStatus((connected) => {
       setIsOnline(connected);
-      console.log("PrayerTimesProvider: Connection status:", connected ? "online" : "offline");
+      // Connection status updated
     });
 
     return () => {
@@ -50,73 +49,41 @@ export function PrayerTimesProvider({ children }: { children: ReactNode }) {
   const setupRealtimeUpdates = () => {
     // Subscribe to real-time updates from Firebase
     unsubscribeRef.current = firebasePrayerTimesService.subscribeToUpdates((updatedPrayerTimes) => {
-      console.log("PrayerTimesProvider: Received real-time update, length:", updatedPrayerTimes.length);
+      // Received real-time update
       setPrayerTimes(updatedPrayerTimes);
-      
-      // Also save to local storage for offline use
-      savePrayerTimes(updatedPrayerTimes).catch(err => 
-        console.error("Error saving to local storage:", err)
-      );
+      // Firebase service handles caching automatically
     });
   };
 
   const loadData = async () => {
-    console.log("PrayerTimesProvider: loadData called");
+    // loadData called
     setIsLoading(true);
     setError(null);
 
     try {
-      // Try to load from Firebase first
-      let data: PrayerTime[] = [];
-      let loadedFromFirebase = false;
-      
-      try {
-        const isConnected = await firebasePrayerTimesService.isConnected();
-        if (isConnected) {
-          console.log("PrayerTimesProvider: Loading from Firebase");
-          data = await firebasePrayerTimesService.getAllPrayerTimes();
-          loadedFromFirebase = true;
-          
-          // Save to local storage for offline use
-          if (data.length > 0) {
-            await savePrayerTimes(data);
-          }
-        }
-      } catch (firebaseError) {
-        console.log("PrayerTimesProvider: Firebase load failed, falling back to local storage");
-      }
-      
-      // If Firebase load failed or returned no data, try local storage
-      if (!loadedFromFirebase || data.length === 0) {
-        console.log("PrayerTimesProvider: Loading from local storage");
-        const localData = await loadPrayerTimes();
-        if (localData && localData.length > 0) {
-          data = localData;
-        }
-      }
-
-      console.log("PrayerTimesProvider: Loaded data length:", data?.length);
+      // Load from Firebase (it handles caching internally)
+      const data = await firebasePrayerTimesService.getAllPrayerTimes();
 
       // Ensure data is always an array
       const safeData = Array.isArray(data) ? data : [];
       setPrayerTimes(safeData);
 
       if (safeData.length === 0) {
-        console.log("PrayerTimesProvider: No prayer times data available");
+        // No prayer times data available
         setError("No prayer times data available. Please upload prayer times.");
       }
     } catch (err) {
-      console.error("PrayerTimesProvider: Error loading prayer times:", err);
+      // Error loading prayer times
       setError("Failed to load prayer times");
       setPrayerTimes([]); // Ensure we always have an array
     } finally {
       setIsLoading(false);
-      console.log("PrayerTimesProvider: Data loading complete");
+      // Data loading complete
     }
   };
 
   const refreshData = async () => {
-    console.log("PrayerTimesProvider: refreshData called");
+    // refreshData called
     await loadData();
   };
 

@@ -116,7 +116,7 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
         title: "Prayer Times",
       });
     } catch (error) {
-      console.error("Error sharing:", error);
+      // Error sharing
     }
   };
 

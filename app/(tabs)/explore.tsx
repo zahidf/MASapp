@@ -52,7 +52,7 @@ export default function ExploreScreen() {
         const svgContent = await response.text();
         setLogoSvg(svgContent);
       } catch (error) {
-        console.error("Error loading logo:", error);
+        // Error loading logo
       }
     };
     loadLogo();
@@ -419,11 +419,9 @@ export default function ExploreScreen() {
               Masjid Abubakr Siddique App
             </Text>
             <Text style={[styles.footerVersion, { color: colors.text + "30" }]}>
-              Version 1.0.0
+              Version 1.1.1
             </Text>
-            <Text style={[styles.footerSubtext, { color: colors.text + "30" }]}>
-              Made with ❤️ for the Muslim community
-            </Text>
+            
             {__DEV__ && (
               <View style={styles.devFooter}>
                 <Text style={styles.devText}>🔧 Development Build</Text>

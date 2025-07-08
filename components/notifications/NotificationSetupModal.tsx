@@ -35,7 +35,7 @@ export function NotificationSetupModal({
   onComplete,
   onSkip,
 }: NotificationSetupModalProps) {
-  console.log("NotificationSetupModal: Rendering with visible:", visible);
+  // NotificationSetupModal: Rendering
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const [preferences, setPreferences] = useState<NotificationPreferences>(
@@ -51,7 +51,7 @@ export function NotificationSetupModal({
   // Handle modal visibility animations
   useEffect(() => {
     if (visible) {
-      console.log("NotificationSetupModal: Starting entrance animations");
+      // Starting entrance animations
       // Reset animations
       slideAnim.setValue(0);
       fadeAnim.setValue(0);
@@ -78,7 +78,7 @@ export function NotificationSetupModal({
   }, [visible, slideAnim, fadeAnim]);
 
   const handleComplete = () => {
-    console.log("NotificationSetupModal: Complete button pressed");
+    // Complete button pressed
     const updatedPreferences = {
       ...preferences,
       isEnabled: true,
@@ -88,7 +88,7 @@ export function NotificationSetupModal({
   };
 
   const handleSkip = () => {
-    console.log("NotificationSetupModal: Skip button pressed");
+    // Skip button pressed
     onSkip();
   };
 
@@ -585,11 +585,11 @@ export function NotificationSetupModal({
   };
 
   if (!visible) {
-    console.log("NotificationSetupModal: Not visible, returning null");
+    // Not visible, returning null
     return null;
   }
 
-  console.log("NotificationSetupModal: Rendering modal");
+  // Rendering modal
 
   return (
     <Modal
@@ -599,7 +599,7 @@ export function NotificationSetupModal({
       statusBarTranslucent={true}
       presentationStyle="overFullScreen"
       onRequestClose={onSkip}
-      onShow={() => console.log("NotificationSetupModal: Modal onShow called")}
+      onShow={() => { /* Modal onShow called */ }}
     >
       <TouchableWithoutFeedback onPress={onSkip}>
         <Animated.View

@@ -49,7 +49,7 @@
           }
         ]
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": false
     },
     "android": {
       "adaptiveIcon": {
@@ -133,7 +133,6 @@
           "fonts": ["./assets/fonts/SpaceMono-Regular.ttf"]
         }
       ],
-      "expo-apple-authentication",
       [
         "expo-location",
         {

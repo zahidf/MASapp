@@ -217,18 +217,5 @@ export const validateConfig = (): { isValid: boolean; errors: string[] } => {
 export const logConfigStatus = (): void => {
   if (!ENV_CONFIG.debugMode) return;
 
-  console.log("🔧 App Configuration Status:", {
-    environment: ENV_CONFIG.appEnv,
-    isDevelopment: ENV_CONFIG.isDevelopment,
-    debugMode: ENV_CONFIG.debugMode,
-    configured: {
-      googleAuth: isConfigured.googleAuth(),
-      firebase: isConfigured.firebase(),
-      api: isConfigured.api(),
-      googleMaps: isConfigured.googleMaps(),
-      analytics: isConfigured.analytics(),
-      sentry: isConfigured.sentry(),
-    },
-    validation: validateConfig(),
-  });
+  // Console logging removed for production
 };

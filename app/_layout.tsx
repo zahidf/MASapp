@@ -12,7 +12,7 @@ import "react-native-reanimated";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { PrayerTimesProvider } from "@/contexts/PrayerTimesContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { loadPrayerTimes } from "@/utils/storage";
+import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -22,13 +22,13 @@ export default function RootLayout() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
-    loadPrayerTimes()
+    // Initialize Firebase prayer times service
+    firebasePrayerTimesService.getAllPrayerTimes()
       .then(() => {
-        console.log("Prayer times loaded successfully");
         setIsDataLoaded(true);
       })
       .catch((error) => {
-        console.error("Failed to load prayer times:", error);
+        // Even if Firebase fails, continue loading the app
         setIsDataLoaded(true);
       });
   }, []);

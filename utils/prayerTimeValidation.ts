@@ -3,7 +3,6 @@
  */
 
 import { PrayerTime } from '@/types/prayer';
-import { debugLogger } from './debugLogger';
 
 /**
  * Time format validation (HH:MM)
@@ -86,18 +85,14 @@ export const validatePrayerTime = (prayerTime: any): prayerTime is PrayerTime =>
   // Check all required fields exist
   for (const field of requiredFields) {
     if (!(field in prayerTime)) {
-      debugLogger.warn('Validation', 'validatePrayerTime', {
-        message: `Missing required field: ${field}`
-      });
+      // Missing required field
       return false;
     }
   }
 
   // Validate date format
   if (!isValidDateFormat(prayerTime.d_date)) {
-    debugLogger.warn('Validation', 'validatePrayerTime', {
-      message: `Invalid date format: ${prayerTime.d_date}`
-    });
+    // Invalid date format
     return false;
   }
 
@@ -105,9 +100,7 @@ export const validatePrayerTime = (prayerTime: any): prayerTime is PrayerTime =>
   const timeFields = requiredFields.filter(field => field !== 'd_date');
   for (const field of timeFields) {
     if (!isValidTimeFormat(prayerTime[field])) {
-      debugLogger.warn('Validation', 'validatePrayerTime', {
-        message: `Invalid time format for ${field}: ${prayerTime[field]}`
-      });
+      // Invalid time format
       return false;
     }
   }
@@ -137,9 +130,7 @@ export const validatePrayerTime = (prayerTime: any): prayerTime is PrayerTime =>
         continue;
       }
       
-      debugLogger.warn('Validation', 'validatePrayerTime', {
-        message: `Time order violation: ${timeOrder[i]} (${currentTime}) should be before ${timeOrder[i + 1]} (${nextTime})`
-      });
+      // Time order violation
       return false;
     }
   }
@@ -201,10 +192,7 @@ export const sanitizePrayerTime = (prayerTime: any): PrayerTime | null => {
 
     return null;
   } catch (error) {
-    debugLogger.error('Validation', 'sanitizePrayerTime', {
-      message: 'Error sanitizing prayer time',
-      error
-    });
+    // Error sanitizing prayer time
     return null;
   }
 };
@@ -214,9 +202,7 @@ export const sanitizePrayerTime = (prayerTime: any): PrayerTime | null => {
  */
 export const validatePrayerTimesArray = (prayerTimes: any[]): PrayerTime[] => {
   if (!Array.isArray(prayerTimes)) {
-    debugLogger.error('Validation', 'validatePrayerTimesArray', {
-      message: 'Input is not an array'
-    });
+    // Input is not an array
     return [];
   }
 
@@ -233,16 +219,7 @@ export const validatePrayerTimesArray = (prayerTimes: any[]): PrayerTime[] => {
     }
   }
 
-  if (errors.length > 0) {
-    debugLogger.warn('Validation', 'validatePrayerTimesArray', {
-      message: `Found ${errors.length} invalid prayer times`,
-      errors: errors.slice(0, 10) // Log first 10 errors
-    });
-  }
-
-  debugLogger.info('Validation', 'validatePrayerTimesArray', {
-    message: `Validated ${validPrayerTimes.length} out of ${prayerTimes.length} prayer times`
-  });
+  // Validation complete
 
   return validPrayerTimes;
 };
@@ -265,12 +242,7 @@ export const findDuplicateDates = (prayerTimes: PrayerTime[]): string[] => {
     }
   });
 
-  if (duplicates.length > 0) {
-    debugLogger.warn('Validation', 'findDuplicateDates', {
-      message: `Found ${duplicates.length} duplicate dates`,
-      duplicates
-    });
-  }
+  // Duplicates check complete
 
   return duplicates;
 };

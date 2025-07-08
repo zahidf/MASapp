@@ -66,16 +66,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Check if we should show modal when prayer times are loaded
   useEffect(() => {
-    console.log(
-      "NotificationProvider: Check modal conditions - prayerTimes:",
-      prayerTimes.length,
-      "hasAskedPermission:",
-      preferences.hasAskedPermission,
-      "hasCheckedForModal:",
-      hasCheckedForModal,
-      "hasInitialized:",
-      hasInitialized
-    );
+    // Check modal conditions
 
     if (
       prayerTimes.length > 0 &&
@@ -83,7 +74,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       !hasCheckedForModal &&
       hasInitialized
     ) {
-      console.log("NotificationProvider: All conditions met, showing modal");
+      // All conditions met, showing modal
       setHasCheckedForModal(true);
       // Delay to ensure smooth UI
       setTimeout(() => {
@@ -102,18 +93,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const initializeNotifications = async () => {
     try {
       setIsLoading(true);
-      console.log("NotificationProvider: Initializing...");
+      // Initializing notifications
 
       const savedPreferences = await NotificationService.loadPreferences();
-      console.log(
-        "NotificationProvider: Loaded preferences:",
-        savedPreferences
-      );
+      // Loaded preferences
 
       setPreferences(savedPreferences);
       setHasInitialized(true);
     } catch (error) {
-      console.error("Error initializing notifications:", error);
+      // Error initializing notifications
       setHasInitialized(true);
     } finally {
       setIsLoading(false);
@@ -123,7 +111,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const updatePreferences = async (newPreferences: NotificationPreferences) => {
     try {
       setIsLoading(true);
-      console.log("Updating notification preferences:", newPreferences);
+      // Updating notification preferences
 
       // Request permissions if enabling notifications
       if (newPreferences.isEnabled && !preferences.isEnabled) {
@@ -156,9 +144,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // Hide setup modal
       setShouldShowSetup(false);
 
-      console.log("Notification preferences updated successfully");
+      // Notification preferences updated successfully
     } catch (error) {
-      console.error("Error updating notification preferences:", error);
+      // Error updating notification preferences
       throw error;
     } finally {
       setIsLoading(false);
@@ -177,7 +165,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       ) {
         const hasPermission = await NotificationService.requestPermissions();
         if (!hasPermission) {
-          console.log("Permission denied, cannot enable notifications");
+          // Permission denied, cannot enable notifications
           return;
         }
       }
@@ -202,7 +190,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       await updatePreferences(newPreferences);
     } catch (error) {
-      console.error("Error updating prayer settings:", error);
+      // Error updating prayer settings
       throw error;
     }
   };
@@ -219,15 +207,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setPreferences(dismissedPreferences);
       setShouldShowSetup(false);
 
-      console.log("Notification setup dismissed");
+      // Notification setup dismissed
     } catch (error) {
-      console.error("Error dismissing setup:", error);
+      // Error dismissing setup
       setShouldShowSetup(false);
     }
   };
 
   const showSetupModal = () => {
-    console.log("NotificationProvider: Manual show setup modal");
+    // Manual show setup modal
     setShouldShowSetup(true);
   };
 
@@ -235,10 +223,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     try {
       if (preferences.isEnabled && prayerTimes.length > 0) {
         await NotificationService.updateNotifications(prayerTimes, preferences);
-        console.log("Notifications refreshed");
+        // Notifications refreshed
       }
     } catch (error) {
-      console.error("Error refreshing notifications:", error);
+      // Error refreshing notifications
     }
   };
 
@@ -247,7 +235,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const { status } = await Notifications.getPermissionsAsync();
       return status === "granted";
     } catch (error) {
-      console.error("Error checking notification permissions:", error);
+      // Error checking notification permissions
       return false;
     }
   };
@@ -257,7 +245,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const responseListener =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const { data } = response.notification.request.content;
-        console.log("Notification tapped:", data);
+        // Notification tapped
 
         // You can add navigation logic here based on notification data
         // For example, navigate to prayer details or today's schedule
@@ -266,7 +254,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // Listen for notifications received while app is in foreground
     const foregroundListener = Notifications.addNotificationReceivedListener(
       (notification) => {
-        console.log("Notification received in foreground:", notification);
+        // Notification received in foreground
       }
     );
 
@@ -310,10 +298,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     showSetupModal,
   };
 
-  console.log(
-    "NotificationProvider: Render - shouldShowSetup:",
-    shouldShowSetup
-  );
+  // NotificationProvider: Render
 
   return (
     <NotificationContext.Provider value={contextValue}>

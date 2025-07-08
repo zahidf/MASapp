@@ -694,7 +694,7 @@ const getMosqueLogoBase64 = async (): Promise<string> => {
 
     return `data:image/png;base64,${base64}`;
   } catch (error) {
-    console.error("Error loading mosque logo:", error);
+    // Error loading mosque logo
 
     // Fallback to a simple mosque icon if the file can't be loaded
     const fallbackSvg = `

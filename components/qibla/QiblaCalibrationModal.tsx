@@ -33,7 +33,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
 
   // Handle modal visibility animations
   useEffect(() => {
-    console.log('CalibrationModal visibility changed:', showCalibrationModal);
+    // CalibrationModal visibility changed
     if (showCalibrationModal) {
       // Reset animations
       modalSlideAnim.setValue(0);
@@ -53,7 +53,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
           useNativeDriver: true,
         }),
       ]).start(() => {
-        console.log('Modal animation completed');
+        // Modal animation completed
       });
     } else {
       // Reset animations when modal closes
@@ -62,7 +62,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
     }
   }, [showCalibrationModal, modalSlideAnim, modalFadeAnim]);
 
-  console.log('CalibrationModal component rendering, visible:', showCalibrationModal);
+  // CalibrationModal component rendering
   
   return (
     <Modal
