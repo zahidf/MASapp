@@ -93,15 +93,14 @@ export default function QiblaScreen() {
   const [usingTrueHeading, setUsingTrueHeading] = useState(false);
   const [deviceMotionSubscription, setDeviceMotionSubscription] = useState<any>(null);
   const [isPhoneFlat, setIsPhoneFlat] = useState(true);
-  const [showFlatSurfaceWarning, setShowFlatSurfaceWarning] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   
   const compassRotation = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const headerSlideAnim = useRef(new Animated.Value(50)).current;
   const cardSlideAnim = useRef(new Animated.Value(30)).current;
-  const warningSlideAnim = useRef(new Animated.Value(-100)).current;
-  const warningOpacityAnim = useRef(new Animated.Value(0)).current;
+  const successFadeAnim = useRef(new Animated.Value(0)).current;
   
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -170,15 +169,21 @@ export default function QiblaScreen() {
           // Phone is considered flat if pitch and roll are less than 15 degrees
           const isFlat = pitch < 0.26 && roll < 0.26; // 0.26 radians = ~15 degrees
           
+          const wasFlat = isPhoneFlat;
           setIsPhoneFlat(isFlat);
           
-          // Show warning if not flat
-          if (!isFlat && !showFlatSurfaceWarning) {
-            setShowFlatSurfaceWarning(true);
-          } else if (isFlat && showFlatSurfaceWarning) {
-            // Hide warning after 2 seconds when phone becomes flat
+          // Show success message when phone becomes flat
+          if (!wasFlat && isFlat) {
+            setShowSuccessMessage(true);
+            // Fade out success message after 2 seconds
             setTimeout(() => {
-              setShowFlatSurfaceWarning(false);
+              Animated.timing(successFadeAnim, {
+                toValue: 0,
+                duration: 500,
+                useNativeDriver: true,
+              }).start(() => {
+                setShowSuccessMessage(false);
+              });
             }, 2000);
           }
         }
@@ -383,38 +388,16 @@ export default function QiblaScreen() {
   }, [heading, qiblaDirection]);
 
 
-  // Handle flat surface warning animations
+  // Handle success message animation
   useEffect(() => {
-    if (showFlatSurfaceWarning) {
-      Animated.parallel([
-        Animated.spring(warningSlideAnim, {
-          toValue: 0,
-          tension: 65,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-        Animated.timing(warningOpacityAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.spring(warningSlideAnim, {
-          toValue: -100,
-          tension: 65,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-        Animated.timing(warningOpacityAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    if (showSuccessMessage) {
+      Animated.timing(successFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
-  }, [showFlatSurfaceWarning]);
+  }, [showSuccessMessage]);
 
 
   if (loading) {
@@ -443,35 +426,6 @@ export default function QiblaScreen() {
         colors={colors}
         colorScheme={colorScheme}
       />
-      
-      {/* Flat Surface Warning */}
-      <Animated.View
-        style={[
-          styles.flatSurfaceWarning,
-          {
-            transform: [{ translateY: warningSlideAnim }],
-            opacity: warningOpacityAnim,
-          },
-        ]}
-        pointerEvents={showFlatSurfaceWarning ? 'auto' : 'none'}
-      >
-        <BlurView
-          intensity={100}
-          tint={colorScheme === "dark" ? "dark" : "light"}
-          style={[
-            styles.warningContainer,
-            {
-              backgroundColor: colors.notification + "f5",
-              borderColor: colors.notification + "40",
-            },
-          ]}
-        >
-          <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.notification} />
-          <Text style={[styles.warningText, { color: colors.text }]}>
-            Place phone on a flat surface for accurate direction
-          </Text>
-        </BlurView>
-      </Animated.View>
       
       {/* iOS-style Header */}
       <View style={styles.headerWrapper}>
@@ -526,6 +480,34 @@ export default function QiblaScreen() {
             },
           ]}
         >
+        {/* Flat Surface Indicator - Above Compass */}
+        <View
+          style={[
+            styles.surfaceIndicator,
+            {
+              backgroundColor: (isPhoneFlat || showSuccessMessage) ? colors.tint + "10" : colors.notification + "10",
+              borderColor: (isPhoneFlat || showSuccessMessage) ? colors.tint + "20" : colors.notification + "20",
+            },
+          ]}
+        >
+          <View style={styles.surfaceIndicatorContent}>
+            <IconSymbol 
+              name={(isPhoneFlat || showSuccessMessage) ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"} 
+              size={20} 
+              color={(isPhoneFlat || showSuccessMessage) ? colors.tint : colors.notification} 
+            />
+            <Animated.Text style={[
+              styles.surfaceIndicatorText, 
+              { 
+                color: (isPhoneFlat || showSuccessMessage) ? colors.tint : colors.notification,
+                opacity: showSuccessMessage ? successFadeAnim : 1
+              }
+            ]}>
+              {showSuccessMessage ? 'Phone Position Good ✓' : (isPhoneFlat ? 'Phone Position Good' : 'Place on flat surface')}
+            </Animated.Text>
+          </View>
+        </View>
+
         <BlurView
           intensity={60}
           tint={colorScheme === "dark" ? "dark" : "light"}
@@ -614,38 +596,6 @@ export default function QiblaScreen() {
             
           </View>
         </BlurView>
-
-        {/* Flat Surface Card */}
-        <View
-          style={[
-            styles.surfaceCard,
-            {
-              backgroundColor: isPhoneFlat ? colors.tint + "10" : colors.notification + "10",
-              borderColor: isPhoneFlat ? colors.tint + "20" : colors.notification + "20",
-            },
-          ]}
-        >
-          <View style={styles.surfaceCardContent}>
-            <View style={styles.surfaceCardHeader}>
-              <IconSymbol 
-                name={isPhoneFlat ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"} 
-                size={24} 
-                color={isPhoneFlat ? colors.tint : colors.notification} 
-              />
-              <Text style={[
-                styles.surfaceCardTitle, 
-                { color: isPhoneFlat ? colors.tint : colors.notification }
-              ]}>
-                {isPhoneFlat ? 'Phone Position Good' : 'Not on Flat Surface'}
-              </Text>
-            </View>
-            <Text style={[styles.surfaceCardText, { color: colors.text + "80" }]}>
-              {isPhoneFlat 
-                ? 'Your phone is positioned correctly for accurate Qibla direction'
-                : 'Place your phone on a flat, stable surface for accurate compass readings'}
-            </Text>
-          </View>
-        </View>
 
         {/* Calibration Hint */}
         <TouchableOpacity
@@ -867,60 +817,26 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   
-  // Flat surface card styles
-  surfaceCard: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  surfaceCardContent: {
-    gap: 8,
-  },
-  surfaceCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  surfaceCardTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.4,
-  },
-  surfaceCardText: {
-    fontSize: 14,
-    fontWeight: '400',
-    letterSpacing: -0.2,
-    lineHeight: 20,
-  },
-  
-  // Flat surface warning styles
-  flatSurfaceWarning: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 30,
-    left: 16,
-    right: 16,
-    zIndex: 1000,
-  },
-  warningContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
+  // Surface indicator styles
+  surfaceIndicator: {
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    alignSelf: 'center',
   },
-  warningText: {
-    flex: 1,
+  surfaceIndicatorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  surfaceIndicatorText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     letterSpacing: -0.2,
   },
+  
   
   // Quick actions styles
   quickActions: {
