@@ -58,7 +58,6 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "org.masjidabubakr.prayertimes",
-      "versionCode": 1,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
@@ -120,10 +119,7 @@
             "newArchEnabled": true
           },
           "android": {
-            "newArchEnabled": true,
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34,
-            "buildToolsVersion": "34.0.0"
+            "newArchEnabled": true
           }
         }
       ],

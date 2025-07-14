@@ -11,9 +11,9 @@
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		5D7756E80C714371B43735DF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 89E1F71964A540D284128074 /* PrivacyInfo.xcprivacy */; };
-		4CD48140E48649F885FD02EF /* SpaceMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8EDDE674AB5C4FF59D4223A9 /* SpaceMono-Regular.ttf */; };
-		378EB1E5730343B19F8F7346 /* adhan.wav in Resources */ = {isa = PBXBuildFile; fileRef = 688540CE61D6404EBB9166F1 /* adhan.wav */; };
+		85CD550D94FE47148355A7A6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1CA45C084884A4E8B55D2C8 /* PrivacyInfo.xcprivacy */; };
+		5F1CDBC1152C4167A3D52AB6 /* SpaceMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 73E1A79521DC47E192A88A23 /* SpaceMono-Regular.ttf */; };
+		FE84267471D147278BBB12F9 /* adhan.wav in Resources */ = {isa = PBXBuildFile; fileRef = 96565BE52AD04B51ABABE516 /* adhan.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,9 +25,9 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MasjidAbubakrSiddique/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* MasjidAbubakrSiddique-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "MasjidAbubakrSiddique-Bridging-Header.h"; path = "MasjidAbubakrSiddique/MasjidAbubakrSiddique-Bridging-Header.h"; sourceTree = "<group>"; };
-		89E1F71964A540D284128074 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; name = "PrivacyInfo.xcprivacy"; path = "MasjidAbubakrSiddique/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		8EDDE674AB5C4FF59D4223A9 /* SpaceMono-Regular.ttf */ = {isa = PBXFileReference; name = "SpaceMono-Regular.ttf"; path = "../assets/fonts/SpaceMono-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		688540CE61D6404EBB9166F1 /* adhan.wav */ = {isa = PBXFileReference; name = "adhan.wav"; path = "MasjidAbubakrSiddique/adhan.wav"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		A1CA45C084884A4E8B55D2C8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; name = "PrivacyInfo.xcprivacy"; path = "MasjidAbubakrSiddique/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		73E1A79521DC47E192A88A23 /* SpaceMono-Regular.ttf */ = {isa = PBXFileReference; name = "SpaceMono-Regular.ttf"; path = "../assets/fonts/SpaceMono-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		96565BE52AD04B51ABABE516 /* adhan.wav */ = {isa = PBXFileReference; name = "adhan.wav"; path = "MasjidAbubakrSiddique/adhan.wav"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,8 +50,8 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				89E1F71964A540D284128074 /* PrivacyInfo.xcprivacy */,
-				688540CE61D6404EBB9166F1 /* adhan.wav */,
+				A1CA45C084884A4E8B55D2C8 /* PrivacyInfo.xcprivacy */,
+				96565BE52AD04B51ABABE516 /* adhan.wav */,
 			);
 			name = MasjidAbubakrSiddique;
 			sourceTree = "<group>";
@@ -78,7 +78,7 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				38D4FADCB9004EA9B4F9606E /* Resources */,
+				E5630963129B495B89D15845 /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -102,10 +102,10 @@
 			path = MasjidAbubakrSiddique/Supporting;
 			sourceTree = "<group>";
 		};
-		38D4FADCB9004EA9B4F9606E /* Resources */ = {
+		E5630963129B495B89D15845 /* Resources */ = {
 			isa = "PBXGroup";
 			children = (
-				8EDDE674AB5C4FF59D4223A9 /* SpaceMono-Regular.ttf */,
+				73E1A79521DC47E192A88A23 /* SpaceMono-Regular.ttf */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -173,9 +173,9 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				5D7756E80C714371B43735DF /* PrivacyInfo.xcprivacy in Resources */,
-				4CD48140E48649F885FD02EF /* SpaceMono-Regular.ttf in Resources */,
-				378EB1E5730343B19F8F7346 /* adhan.wav in Resources */,
+				85CD550D94FE47148355A7A6 /* PrivacyInfo.xcprivacy in Resources */,
+				5F1CDBC1152C4167A3D52AB6 /* SpaceMono-Regular.ttf in Resources */,
+				FE84267471D147278BBB12F9 /* adhan.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -11,7 +11,6 @@ export const generatePDFHTML = async (
   data: PrayerTime[],
   type: "day" | "month" | "year"
 ): Promise<string> => {
-  // Load the actual mosque logo
   const mosqueLogoBase64 = await getMosqueLogoBase64();
 
   let title = "";
