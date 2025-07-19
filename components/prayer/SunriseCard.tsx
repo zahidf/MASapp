@@ -59,82 +59,157 @@ export function SunriseCard({
         styles.sunriseWrapper,
       ]}
     >
-      <BlurView
-        intensity={50}
-        tint={colorScheme === "dark" ? "dark" : "light"}
-        style={[
-          styles.sunriseCard,
-          {
-            backgroundColor: colorScheme === "dark"
-              ? "rgba(255,255,255,0.04)"
-              : "rgba(0,0,0,0.02)",
-            borderColor: colorScheme === "dark"
-              ? "rgba(255,255,255,0.05)"
-              : "rgba(0,0,0,0.03)",
-          },
-        ]}
-      >
-        <View style={styles.sunriseContent}>
-          {/* Left Section - Icon and Label */}
-          <View style={styles.leftSection}>
-            <View
-              style={[
-                styles.iconContainer,
-                {
-                  backgroundColor: colorScheme === "dark"
-                    ? "rgba(255,183,77,0.12)"
-                    : "rgba(255,152,0,0.08)",
-                },
-              ]}
-            >
-              <IconSymbol
-                name="sun.max"
-                size={18}
-                color={
-                  colorScheme === "dark"
-                    ? "#FFB74D"
-                    : "#FF9800"
-                }
-              />
-            </View>
-            
-            <View style={styles.labelContainer}>
-              <ThemedText
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          intensity={50}
+          tint={colorScheme === "dark" ? "dark" : "light"}
+          style={[
+            styles.sunriseCard,
+            {
+              backgroundColor: colorScheme === "dark"
+                ? "rgba(255,255,255,0.04)"
+                : "rgba(0,0,0,0.02)",
+              borderColor: colorScheme === "dark"
+                ? "rgba(255,255,255,0.05)"
+                : "rgba(0,0,0,0.03)",
+            },
+          ]}
+        >
+          <View style={styles.sunriseContent}>
+            {/* Left Section - Icon and Label */}
+            <View style={styles.leftSection}>
+              <View
                 style={[
-                  styles.sunriseLabel,
-                  { color: colors.text + "60" }
+                  styles.iconContainer,
+                  {
+                    backgroundColor: colorScheme === "dark"
+                      ? "rgba(255,183,77,0.12)"
+                      : "rgba(255,152,0,0.08)",
+                  },
                 ]}
               >
-                Sunrise
-              </ThemedText>
-              {(isActive || isNext) && (
+                <IconSymbol
+                  name="sun.max"
+                  size={18}
+                  color={
+                    colorScheme === "dark"
+                      ? "#FFB74D"
+                      : "#FF9800"
+                  }
+                />
+              </View>
+              
+              <View style={styles.labelContainer}>
                 <ThemedText
                   style={[
-                    styles.statusLabel,
-                    { color: colors.text + "40" }
+                    styles.sunriseLabel,
+                    { color: colors.text + "60" }
                   ]}
                 >
-                  {isActive ? "Now" : getCountdownToNext ? getCountdownToNext() : "Next"}
+                  Sunrise
                 </ThemedText>
-              )}
+                {(isActive || isNext) && (
+                  <ThemedText
+                    style={[
+                      styles.statusLabel,
+                      { color: colors.text + "40" }
+                    ]}
+                  >
+                    {isActive ? "Now" : getCountdownToNext ? getCountdownToNext() : "Next"}
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+
+            {/* Right Section - Time */}
+            <View style={styles.rightSection}>
+              <ThemedText
+                style={[
+                  styles.timeValue,
+                  {
+                    color: colors.text + "70",
+                  }
+                ]}
+              >
+                {formatTime(time)}
+              </ThemedText>
             </View>
           </View>
+        </BlurView>
+      ) : (
+        <View
+          style={[
+            styles.sunriseCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colorScheme === "dark"
+                ? "rgba(255,255,255,0.05)"
+                : "rgba(0,0,0,0.03)",
+            },
+          ]}
+        >
+          <View style={styles.sunriseContent}>
+            {/* Left Section - Icon and Label */}
+            <View style={styles.leftSection}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  {
+                    backgroundColor: colorScheme === "dark"
+                      ? "rgba(255,183,77,0.12)"
+                      : "rgba(255,152,0,0.08)",
+                  },
+                ]}
+              >
+                <IconSymbol
+                  name="sun.max"
+                  size={18}
+                  color={
+                    colorScheme === "dark"
+                      ? "#FFB74D"
+                      : "#FF9800"
+                  }
+                />
+              </View>
+              
+              <View style={styles.labelContainer}>
+                <ThemedText
+                  style={[
+                    styles.sunriseLabel,
+                    { color: colors.text + "60" }
+                  ]}
+                >
+                  Sunrise
+                </ThemedText>
+                {(isActive || isNext) && (
+                  <ThemedText
+                    style={[
+                      styles.statusLabel,
+                      { color: colors.text + "40" }
+                    ]}
+                  >
+                    {isActive ? "Now" : getCountdownToNext ? getCountdownToNext() : "Next"}
+                  </ThemedText>
+                )}
+              </View>
+            </View>
 
-          {/* Right Section - Time */}
-          <View style={styles.rightSection}>
-            <ThemedText
-              style={[
-                styles.timeValue,
-                {
-                  color: colors.text + "70",
-                }
-              ]}
-            >
-              {formatTime(time)}
-            </ThemedText>
+            {/* Right Section - Time */}
+            <View style={styles.rightSection}>
+              <ThemedText
+                style={[
+                  styles.timeValue,
+                  {
+                    color: colors.text + "70",
+                  }
+                ]}
+              >
+                {formatTime(time)}
+              </ThemedText>
+            </View>
           </View>
         </View>
-      </BlurView>
+      )}
     </Animated.View>
   );
 }

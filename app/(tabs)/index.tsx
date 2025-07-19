@@ -23,6 +23,7 @@ import { SvgXml } from "react-native-svg";
 
 
 import { PrayerTimesDisplay } from "@/components/prayer/PrayerTimesDisplay";
+import { ThemedText } from "@/components/ThemedText";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts/NotificationContext";
@@ -715,26 +716,27 @@ export default function TodayScreen() {
                   },
                 ]}
               >
-                <BlurView
-                  intensity={60}
-                  tint={colorScheme === "dark" ? "dark" : "light"}
-                  style={[
-                    styles.quickActionsCard,
-                    {
-                      backgroundColor: colors.surface + "95",
-                      borderColor:
-                        colorScheme === "dark"
-                          ? "rgba(255,255,255,0.06)"
-                          : "rgba(0,0,0,0.04)",
-                    },
-                  ]}
-                >
+                {Platform.OS === 'ios' ? (
+                  <BlurView
+                    intensity={60}
+                    tint={colorScheme === "dark" ? "dark" : "light"}
+                    style={[
+                      styles.quickActionsCard,
+                      {
+                        backgroundColor: colors.surface + "95",
+                        borderColor:
+                          colorScheme === "dark"
+                            ? "rgba(255,255,255,0.06)"
+                            : "rgba(0,0,0,0.04)",
+                      },
+                    ]}
+                  >
                   <View style={styles.quickActionsHeader}>
-                    <Text
+                    <ThemedText
                       style={[styles.quickActionsTitle, { color: colors.text }]}
                     >
                       Quick Actions
-                    </Text>
+                    </ThemedText>
                   </View>
 
                   {/* Notification Toggles */}
@@ -761,19 +763,19 @@ export default function TodayScreen() {
                           />
                         </View>
                         <View style={styles.toggleInfo}>
-                          <Text
+                          <ThemedText
                             style={[styles.toggleTitle, { color: colors.text }]}
                           >
                             All Prayer Times
-                          </Text>
-                          <Text
+                          </ThemedText>
+                          <ThemedText
                             style={[
                               styles.toggleSubtitle,
                               { color: colors.text + "60" },
                             ]}
                           >
                             Notify when each prayer begins
-                          </Text>
+                          </ThemedText>
                         </View>
                       </View>
                       <Switch
@@ -805,19 +807,19 @@ export default function TodayScreen() {
                           <FontAwesome6 name="people-group" size={20} color={colors.secondary} />
                         </View>
                         <View style={styles.toggleInfo}>
-                          <Text
+                          <ThemedText
                             style={[styles.toggleTitle, { color: colors.text }]}
                           >
                             All Jamah Times
-                          </Text>
-                          <Text
+                          </ThemedText>
+                          <ThemedText
                             style={[
                               styles.toggleSubtitle,
                               { color: colors.text + "60" },
                             ]}
                           >
                             Notify for congregation prayers
-                          </Text>
+                          </ThemedText>
                         </View>
                       </View>
                       <Switch
@@ -857,57 +859,248 @@ export default function TodayScreen() {
                           size={20}
                           color="#fff"
                         />
-                        <Text style={styles.printButtonText}>
+                        <ThemedText style={styles.printButtonText}>
                           Print {getMonthName(currentMonth)} Timetable
-                        </Text>
+                        </ThemedText>
                       </>
                     )}
                   </TouchableOpacity>
-                </BlurView>
+                  </BlurView>
+                ) : (
+                  <View
+                    style={[
+                      styles.quickActionsCard,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor:
+                          colorScheme === "dark"
+                            ? "rgba(255,255,255,0.06)"
+                            : "rgba(0,0,0,0.04)",
+                      },
+                    ]}
+                  >
+                    <View style={styles.quickActionsHeader}>
+                      <ThemedText
+                        style={[styles.quickActionsTitle, { color: colors.text }]}
+                      >
+                        Quick Actions
+                      </ThemedText>
+                    </View>
+
+                    {/* Notification Toggles */}
+                    <View style={styles.notificationToggles}>
+                      <TouchableOpacity
+                        style={[
+                          styles.notificationToggleRow,
+                          { borderBottomColor: colors.text + "10" },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={handleToggleAllBeginTimes}
+                      >
+                        <View style={styles.toggleLeft}>
+                          <View
+                            style={[
+                              styles.toggleIcon,
+                              { backgroundColor: colors.tint + "15" },
+                            ]}
+                          >
+                            <IconSymbol
+                              name="bell"
+                              size={20}
+                              color={colors.tint}
+                            />
+                          </View>
+                          <View style={styles.toggleInfo}>
+                            <ThemedText
+                              style={[styles.toggleTitle, { color: colors.text }]}
+                            >
+                              All Prayer Times
+                            </ThemedText>
+                            <ThemedText
+                              style={[
+                                styles.toggleSubtitle,
+                                { color: colors.text + "60" },
+                              ]}
+                            >
+                              Notify when each prayer begins
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <Switch
+                          value={allBeginTimesEnabled}
+                          onValueChange={handleToggleAllBeginTimes}
+                          trackColor={{
+                            false: colors.text + "20",
+                            true: colors.tint + "60",
+                          }}
+                          thumbColor={
+                            allBeginTimesEnabled ? colors.tint : "#f4f3f4"
+                          }
+                          style={styles.toggleSwitch}
+                        />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.notificationToggleRow}
+                        activeOpacity={0.7}
+                        onPress={handleToggleAllJamahTimes}
+                      >
+                        <View style={styles.toggleLeft}>
+                          <View
+                            style={[
+                              styles.toggleIcon,
+                              { backgroundColor: colors.secondary + "15" },
+                            ]}
+                          >
+                            <FontAwesome6 name="people-group" size={20} color={colors.secondary} />
+                          </View>
+                          <View style={styles.toggleInfo}>
+                            <ThemedText
+                              style={[styles.toggleTitle, { color: colors.text }]}
+                            >
+                              All Jamah Times
+                            </ThemedText>
+                            <ThemedText
+                              style={[
+                                styles.toggleSubtitle,
+                                { color: colors.text + "60" },
+                              ]}
+                            >
+                              Notify for congregation prayers
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <Switch
+                          value={allJamahTimesEnabled}
+                          onValueChange={handleToggleAllJamahTimes}
+                          trackColor={{
+                            false: colors.text + "20",
+                            true: colors.tint + "60",
+                          }}
+                          thumbColor={
+                            allJamahTimesEnabled ? colors.tint : "#f4f3f4"
+                          }
+                          style={styles.toggleSwitch}
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Print Action */}
+                    <TouchableOpacity
+                      style={[
+                        styles.printButton,
+                        {
+                          backgroundColor: colors.tint,
+                          opacity: isExporting ? 0.7 : 1,
+                        },
+                      ]}
+                      onPress={handlePrint}
+                      disabled={isExporting}
+                      activeOpacity={0.8}
+                    >
+                      {isExporting ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <>
+                          <IconSymbol
+                            name="square.and.arrow.down"
+                            size={20}
+                            color="#fff"
+                          />
+                          <ThemedText style={styles.printButtonText}>
+                            Print {getMonthName(currentMonth)} Timetable
+                          </ThemedText>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </Animated.View>
 
               {/* Enhanced Mosque Info Card */}
-              <BlurView
-                intensity={60}
-                tint={colorScheme === "dark" ? "dark" : "light"}
-                style={[
-                  styles.mosqueInfoCard,
-                  {
-                    backgroundColor: colors.surface + "90",
-                    borderColor:
-                      colorScheme === "dark"
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(0,0,0,0.04)",
-                  },
-                ]}
-              >
-                <View style={styles.mosqueLogoContainer}>
-                  {logoSvg ? (
-                    <SvgXml xml={logoSvg} width={32} height={32} />
-                  ) : (
-                    <IconSymbol
-                      name="building.2"
-                      size={20}
-                      color={colors.text + "60"}
-                    />
-                  )}
+              {Platform.OS === 'ios' ? (
+                <BlurView
+                  intensity={60}
+                  tint={colorScheme === "dark" ? "dark" : "light"}
+                  style={[
+                    styles.mosqueInfoCard,
+                    {
+                      backgroundColor: colors.surface + "90",
+                      borderColor:
+                        colorScheme === "dark"
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(0,0,0,0.04)",
+                    },
+                  ]}
+                >
+                  <View style={styles.mosqueLogoContainer}>
+                    {logoSvg ? (
+                      <SvgXml xml={logoSvg} width={32} height={32} />
+                    ) : (
+                      <IconSymbol
+                        name="building.2"
+                        size={20}
+                        color={colors.text + "60"}
+                      />
+                    )}
+                  </View>
+                  <View style={styles.mosqueInfoContent}>
+                    <ThemedText
+                      style={[styles.mosqueInfoTitle, { color: colors.text }]}
+                    >
+                      Masjid Abubakr Siddique
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.mosqueInfoSubtitle,
+                        { color: colors.text + "60" },
+                      ]}
+                    >
+                      Birmingham, UK
+                    </ThemedText>
+                  </View>
+                </BlurView>
+              ) : (
+                <View
+                  style={[
+                    styles.mosqueInfoCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor:
+                        colorScheme === "dark"
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(0,0,0,0.04)",
+                    },
+                  ]}
+                >
+                  <View style={styles.mosqueLogoContainer}>
+                    {logoSvg ? (
+                      <SvgXml xml={logoSvg} width={32} height={32} />
+                    ) : (
+                      <IconSymbol
+                        name="building.2"
+                        size={20}
+                        color={colors.text + "60"}
+                      />
+                    )}
+                  </View>
+                  <View style={styles.mosqueInfoContent}>
+                    <ThemedText
+                      style={[styles.mosqueInfoTitle, { color: colors.text }]}
+                    >
+                      Masjid Abubakr Siddique
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.mosqueInfoSubtitle,
+                        { color: colors.text + "60" },
+                      ]}
+                    >
+                      Birmingham, UK
+                    </ThemedText>
+                  </View>
                 </View>
-                <View style={styles.mosqueInfoContent}>
-                  <Text
-                    style={[styles.mosqueInfoTitle, { color: colors.text }]}
-                  >
-                    Masjid Abubakr Siddique
-                  </Text>
-                  <Text
-                    style={[
-                      styles.mosqueInfoSubtitle,
-                      { color: colors.text + "60" },
-                    ]}
-                  >
-                    Birmingham, UK
-                  </Text>
-                </View>
-              </BlurView>
+              )}
             </View>
           </Animated.View>
         )}

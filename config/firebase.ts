@@ -21,7 +21,8 @@ let auth: Auth;
 
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
-  // Get Auth instance - persistence is handled automatically in React Native
+  // Firebase v11 handles persistence automatically in React Native
+  // AsyncStorage warning can be safely ignored as auth state persists by default
   auth = getAuth(app);
 } else {
   app = getApp();
