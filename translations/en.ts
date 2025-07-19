@@ -67,6 +67,12 @@ export default {
     openSettings: 'Open Settings',
     notifyWhenEachPrayerBegins: 'Notify when each prayer begins',
     notifyForCongregationPrayers: 'Notify for congregation prayers',
+    smartRemindersDescription: 'Get customizable alerts before each prayer time',
+    jamahTimesDescription: 'Join the congregation on time with precise reminders',
+    chooseNotificationsDescription: 'Select which prayers you want to be notified about',
+    whenPrayerBegins: 'When prayer begins',
+    remindBeforeJamah: 'Remind before Jamah:',
+    noNotificationsWarning: 'No notifications selected. You won\'t receive any prayer reminders.',
   },
   
   // Qibla screen
@@ -154,6 +160,7 @@ export default {
     loading: 'Loading...',
     error: 'Error',
     sharePrayerTimesPDF: 'Share Prayer Times PDF',
+    tapToViewPrayerTimes: 'Tap any highlighted day to view prayer times',
     weekdays: {
       sun: 'Sun',
       mon: 'Mon',
@@ -255,6 +262,11 @@ export default {
     next: 'NEXT',
     checking: 'Checking...',
     refresh: 'Refresh',
+    skip: 'Skip',
+    continue: 'Continue',
+    back: 'Back',
+    notNow: 'Not Now',
+    enable: 'Enable',
   },
   
   // Mosque Info
@@ -276,5 +288,6 @@ export default {
     isha: 'Isha',
     now: 'NOW',
     soon: 'Soon',
+    next: 'Next',
   },
 };

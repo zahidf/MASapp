@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { PrayerTime } from "@/types/prayer";
 import { getDaysInMonth, getTodayString } from "@/utils/dateHelpers";
 
@@ -22,6 +23,7 @@ export function MonthlyCalendar({
 }: MonthlyCalendarProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
   const today = getTodayString();
 
   const daysInMonth = getDaysInMonth(year, month);
@@ -161,7 +163,7 @@ export function MonthlyCalendar({
         ]}
       >
         <Text style={[styles.helperText, { color: colors.text + "60" }]}>
-          Tap any highlighted day to view prayer times
+          {t?.calendar?.tapToViewPrayerTimes || 'Tap any highlighted day to view prayer times'}
         </Text>
       </View>
     </BlurView>

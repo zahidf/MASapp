@@ -47,15 +47,15 @@ export default function CalendarScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [headerAnim] = useState(new Animated.Value(0));
+  
+  // Ensure translations are loaded before accessing any properties
+  if (!t || !t.calendar || !t.calendar.months) {
+    return null;
+  }
 
   const currentMonth = selectedDate.getMonth();
   const currentYear = selectedDate.getFullYear();
   const today = getTodayString();
-  
-  // Ensure translations are loaded
-  if (!t || !t.calendar) {
-    return null;
-  }
 
   React.useEffect(() => {
     Animated.parallel([
