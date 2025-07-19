@@ -11,6 +11,7 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { BlurView } from "expo-blur";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SunriseCardProps {
   time: string;
@@ -29,6 +30,7 @@ export function SunriseCard({
 }: SunriseCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
 
   const formatTime = (timeString: string | undefined) => {
     if (!timeString) return "N/A";
@@ -106,7 +108,7 @@ export function SunriseCard({
                     { color: colors.text + "60" }
                   ]}
                 >
-                  Sunrise
+                  {t.prayers.sunrise}
                 </ThemedText>
                 {(isActive || isNext) && (
                   <ThemedText
@@ -115,7 +117,7 @@ export function SunriseCard({
                       { color: colors.text + "40" }
                     ]}
                   >
-                    {isActive ? "Now" : getCountdownToNext ? getCountdownToNext() : "Next"}
+                    {isActive ? t.prayers.now : getCountdownToNext ? getCountdownToNext() : t.prayers.next}
                   </ThemedText>
                 )}
               </View>
@@ -179,7 +181,7 @@ export function SunriseCard({
                     { color: colors.text + "60" }
                   ]}
                 >
-                  Sunrise
+                  {t.prayers.sunrise}
                 </ThemedText>
                 {(isActive || isNext) && (
                   <ThemedText
@@ -188,7 +190,7 @@ export function SunriseCard({
                       { color: colors.text + "40" }
                     ]}
                   >
-                    {isActive ? "Now" : getCountdownToNext ? getCountdownToNext() : "Next"}
+                    {isActive ? t.prayers.now : getCountdownToNext ? getCountdownToNext() : t.prayers.next}
                   </ThemedText>
                 )}
               </View>

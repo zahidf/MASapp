@@ -16,6 +16,7 @@ import {
 
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -38,6 +39,7 @@ export function NotificationSetupModal({
   // NotificationSetupModal: Rendering
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
   const [preferences, setPreferences] = useState<NotificationPreferences>(
     DEFAULT_NOTIFICATION_PREFERENCES
   );
@@ -193,11 +195,10 @@ export function NotificationSetupModal({
 
       <View style={styles.textContent}>
         <Text style={[styles.stepTitle, { color: colors.text }]}>
-          Never Miss a Prayer
+          {t.notifications.title}
         </Text>
         <Text style={[styles.stepDescription, { color: colors.text + "B3" }]}>
-          Get timely reminders for prayer times and jamah schedules. Customize
-          notifications for each prayer individually.
+          {t.notifications.description}
         </Text>
       </View>
 
@@ -229,12 +230,12 @@ export function NotificationSetupModal({
           </View>
           <View style={styles.featureTextContainer}>
             <Text style={[styles.featureTitle, { color: colors.text }]}>
-              Smart Reminders
+              {t.notifications.smartReminders}
             </Text>
             <Text
               style={[styles.featureDescription, { color: colors.text + "80" }]}
             >
-              Customizable alerts before each prayer
+              {t.notifications.smartRemindersDescription}
             </Text>
           </View>
         </View>
@@ -262,12 +263,12 @@ export function NotificationSetupModal({
           </View>
           <View style={styles.featureTextContainer}>
             <Text style={[styles.featureTitle, { color: colors.text }]}>
-              Jamah Times
+              {t.notifications.jamahTimes}
             </Text>
             <Text
               style={[styles.featureDescription, { color: colors.text + "80" }]}
             >
-              Join the congregation on time
+              {t.notifications.jamahTimesDescription}
             </Text>
           </View>
         </View>
@@ -277,11 +278,11 @@ export function NotificationSetupModal({
 
   const renderStep2 = () => {
     const prayers: Array<{ key: NotificationPrayerName; name: string; icon: string }> = [
-      { key: "fajr", name: "Fajr", icon: "sunrise" },
-      { key: "zuhr", name: "Zuhr", icon: "sun.max.fill" },
-      { key: "asr", name: "Asr", icon: "sun.min" },
-      { key: "maghrib", name: "Maghrib", icon: "sunset" },
-      { key: "isha", name: "Isha", icon: "moon.stars" },
+      { key: "fajr", name: t.prayers.fajr, icon: "sunrise" },
+      { key: "zuhr", name: t.prayers.zuhr, icon: "sun.max.fill" },
+      { key: "asr", name: t.prayers.asr, icon: "sun.min" },
+      { key: "maghrib", name: t.prayers.maghrib, icon: "sunset" },
+      { key: "isha", name: t.prayers.isha, icon: "moon.stars" },
     ];
 
     const currentPrayerData = prayers.find(p => p.key === selectedPrayer)!;
@@ -293,10 +294,10 @@ export function NotificationSetupModal({
         <View style={styles.step2Header}>
           <View style={styles.textContent}>
             <Text style={[styles.stepTitle, { color: colors.text }]}>
-              Choose Your Notifications
+              {t.notifications.chooseNotifications}
             </Text>
             <Text style={[styles.stepDescription, { color: colors.text + "B3" }]}>
-              Select which prayers you'd like to be notified for
+              {t.notifications.chooseNotificationsDescription}
             </Text>
           </View>
 
@@ -315,7 +316,7 @@ export function NotificationSetupModal({
             >
               <IconSymbol name="bell" size={16} color={colors.primary} />
               <Text style={[styles.quickActionText, { color: colors.primary }]}>
-                All Prayer Times
+                {t.notifications.allPrayerTimes}
               </Text>
             </TouchableOpacity>
 
@@ -332,7 +333,7 @@ export function NotificationSetupModal({
             >
               <FontAwesome6 name="people-group" size={16} color={colors.secondary} />
               <Text style={[styles.quickActionText, { color: colors.secondary }]}>
-                All Jamah Times
+                {t.notifications.allJamahTimes}
               </Text>
             </TouchableOpacity>
           </View>
@@ -430,10 +431,10 @@ export function NotificationSetupModal({
                   </View>
                   <View style={styles.notificationOptionText}>
                     <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
-                      Prayer Time
+                      {t.notifications.prayerTime}
                     </Text>
                     <Text style={[styles.notificationOptionDescription, { color: colors.text + "80" }]}>
-                      When prayer begins
+                      {t.notifications.whenPrayerBegins}
                     </Text>
                   </View>
                 </View>
@@ -478,10 +479,10 @@ export function NotificationSetupModal({
                     </View>
                     <View style={styles.notificationOptionText}>
                       <Text style={[styles.notificationOptionTitle, { color: colors.text }]}>
-                        Jamah Time
+                        {t.notifications.jamahTime}
                       </Text>
                       <Text style={[styles.notificationOptionDescription, { color: colors.text + "80" }]}>
-                        For congregation
+                        {t.notifications.forCongregation}
                       </Text>
                     </View>
                   </View>
@@ -513,7 +514,7 @@ export function NotificationSetupModal({
                     ]}
                   >
                     <Text style={[styles.reminderLabel, { color: colors.text + "80" }]}>
-                      Remind me before jamah:
+                      {t.notifications.remindBeforeJamah}
                     </Text>
                     <View style={styles.reminderOptions}>
                       {reminderOptions.map((minutes) => (
@@ -576,7 +577,7 @@ export function NotificationSetupModal({
               color={colors.error}
             />
             <Text style={[styles.warningText, { color: colors.error }]}>
-              No notifications selected. You won't receive any prayer reminders.
+              {t.notifications.noNotificationsWarning}
             </Text>
           </Animated.View>
         )}
@@ -693,7 +694,7 @@ export function NotificationSetupModal({
                             { color: colors.text + "80" },
                           ]}
                         >
-                          Skip
+                          {t.common.skip}
                         </Text>
                       </TouchableOpacity>
 
@@ -706,7 +707,7 @@ export function NotificationSetupModal({
                         onPress={() => setCurrentStep(2)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.primaryButtonText}>Continue</Text>
+                        <Text style={styles.primaryButtonText}>{t.common.continue}</Text>
                       </TouchableOpacity>
                     </>
                   ) : (
@@ -727,7 +728,7 @@ export function NotificationSetupModal({
                         <Text
                           style={[styles.tertiaryButtonText, { color: colors.primary }]}
                         >
-                          Back
+                          {t.common.back}
                         </Text>
                       </TouchableOpacity>
 
@@ -747,7 +748,7 @@ export function NotificationSetupModal({
                               { color: colors.text + "80" },
                             ]}
                           >
-                            Not Now
+                            {t.common.notNow}
                           </Text>
                         </TouchableOpacity>
 
@@ -773,7 +774,7 @@ export function NotificationSetupModal({
                               },
                             ]}
                           >
-                            Enable
+                            {t.common.enable}
                           </Text>
                         </TouchableOpacity>
                       </View>

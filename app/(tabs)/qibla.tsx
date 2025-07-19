@@ -2,6 +2,7 @@ import { QiblaCalibrationModal } from '@/components/qibla/QiblaCalibrationModal'
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -104,9 +105,15 @@ export default function QiblaScreen() {
   
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useLanguage();
   const primaryColor = useThemeColor({}, 'primary');
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
+  
+  // Ensure translations are loaded
+  if (!t || !t.qibla) {
+    return null;
+  }
 
   // Kaaba coordinates (exact location as used by Google)
   const KAABA_LAT = 21.4224779;
@@ -263,8 +270,8 @@ export default function QiblaScreen() {
         // Check if modules are available
         if (!Location) {
           Alert.alert(
-            'Module Not Available', 
-            'Location features require a development build. Please run "npx expo run:ios" or "npx expo run:android" to build the app with native modules.'
+            t.qibla.moduleNotAvailable, 
+            t.qibla.moduleNotAvailableDesc
           );
           setLoading(false);
           return;
@@ -273,7 +280,7 @@ export default function QiblaScreen() {
         // Request location permissions
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Location permission is required to find Qibla direction');
+          Alert.alert(t.qibla.permissionDenied, t.qibla.locationPermissionRequired);
           setLoading(false);
           return;
         }
@@ -331,7 +338,7 @@ export default function QiblaScreen() {
         ]).start();
       } catch (error) {
         // Error setting up Qibla
-        Alert.alert('Error', 'Failed to set up Qibla compass. Make sure you are using a development build with location services enabled.');
+        Alert.alert(t.qibla.error, t.qibla.setupError);
         setLoading(false);
       }
     })();
@@ -367,7 +374,7 @@ export default function QiblaScreen() {
           }),
         ]),
       ).start();
-      return 'You are facing the Qibla ✓';
+      return t.qibla.facingQibla;
     } else {
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
@@ -375,14 +382,14 @@ export default function QiblaScreen() {
     
     // Provide more helpful directional guidance
     if (diff < 15 || diff > 345) {
-      return 'Almost there...';
+      return t.qibla.almostThere;
     } else if (diff < 45 || diff > 315) {
-      if (diff < 180) return `Turn slightly right`;
-      return `Turn slightly left`;
+      if (diff < 180) return t.qibla.turnSlightlyRight;
+      return t.qibla.turnSlightlyLeft;
     } else if (diff < 180) {
-      return `Turn right →`;
+      return t.qibla.turnRight;
     } else {
-      return `← Turn left`;
+      return t.qibla.turnLeft;
     }
   };
 
@@ -415,7 +422,7 @@ export default function QiblaScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.tint} />
           <Text style={[styles.loadingText, { color: colors.text + "80" }]}>
-            Finding Qibla direction...
+            {t.qibla.findingQiblaDirection}
           </Text>
         </View>
       </ThemedView>
@@ -467,10 +474,10 @@ export default function QiblaScreen() {
             ]}
           >
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Qibla Direction
+              {t.qibla.title}
             </Text>
             <Text style={[styles.headerSubtitle, { color: colors.text + "80" }]}>
-              {location ? `${Math.round(calculateDistance(location.coords.latitude, location.coords.longitude))} km from Makkah` : 'Locating...'}
+              {location ? `${Math.round(calculateDistance(location.coords.latitude, location.coords.longitude))} ${t.common.km} ${t.qibla.kmFromMakkah}` : t.qibla.locating}
             </Text>
           </Animated.View>
         </BlurView>
@@ -526,7 +533,7 @@ export default function QiblaScreen() {
                 opacity: showSuccessMessage ? successFadeAnim : 1
               }
             ]}>
-              {showSuccessMessage ? 'Phone Position Good ✓' : (isPhoneFlat ? 'Phone Position Good' : 'Place on flat surface')}
+              {showSuccessMessage ? t.qibla.phonePositionGoodCheck : (isPhoneFlat ? t.qibla.phonePositionGood : t.qibla.placeOnFlatSurface)}
             </Animated.Text>
           </View>
         </View>
@@ -647,7 +654,7 @@ export default function QiblaScreen() {
               ]} />
             </View>
             <Text style={[styles.visualDirectionLabel, { color: colors.text + "60" }]}>
-              {isFacingQibla() ? 'Aligned with Qibla' : getAngleDifference() < 180 ? 'Turn Right →' : '← Turn Left'}
+              {isFacingQibla() ? t.qibla.alignedWithQibla : getAngleDifference() < 180 ? t.qibla.turnRight : t.qibla.turnLeft}
             </Text>
           </View>
           
@@ -657,7 +664,7 @@ export default function QiblaScreen() {
               <View style={[styles.detailIcon, { backgroundColor: colors.tint + "10" }]}>
                 <IconSymbol name="location.fill" size={18} color={colors.tint} />
               </View>
-              <Text style={[styles.detailLabel, { color: colors.text + "60" }]}>Qibla Direction</Text>
+              <Text style={[styles.detailLabel, { color: colors.text + "60" }]}>{t.qibla.qiblaDirection}</Text>
               <Text style={[styles.detailValue, { color: colors.text }]}>{Math.round(qiblaDirection)}°</Text>
             </View>
             
@@ -665,7 +672,7 @@ export default function QiblaScreen() {
               <View style={[styles.detailIcon, { backgroundColor: colors.text + "10" }]}>
                 <FontAwesome5 name="compass" size={18} color={colors.text + "60"} />
               </View>
-              <Text style={[styles.detailLabel, { color: colors.text + "60" }]}>Current Heading</Text>
+              <Text style={[styles.detailLabel, { color: colors.text + "60" }]}>{t.qibla.currentHeading}</Text>
               <Text style={[styles.detailValue, { color: colors.text }]}>{heading}°</Text>
             </View>
             
@@ -673,7 +680,7 @@ export default function QiblaScreen() {
               <View style={[styles.detailIcon, { backgroundColor: getArrowColor() + "10" }]}>
                 <IconSymbol name="arrow.clockwise" size={18} color={getArrowColor()} />
               </View>
-              <Text style={[styles.detailLabel, { color: colors.text + "60" }]}>Degrees to Turn</Text>
+              <Text style={[styles.detailLabel, { color: colors.text + "60" }]}>{t.qibla.degreesToTurn}</Text>
               <Text style={[styles.detailValue, { color: getArrowColor() }]}>
                 {(() => {
                   const diff = getAngleDifference();
@@ -701,7 +708,7 @@ export default function QiblaScreen() {
         >
           <IconSymbol name="info.circle.fill" size={20} color={colors.text + "60"} />
           <Text style={[styles.calibrateHintText, { color: colors.text + "80" }]}>
-            {isCalibrated ? 'Compass Calibrated' : 'Tap for calibration tips'}
+            {isCalibrated ? t.qibla.compassCalibrated : t.qibla.tapForCalibrationTips}
           </Text>
         </TouchableOpacity>
         

@@ -26,6 +26,7 @@ import { PrayerTimesDisplay } from "@/components/prayer/PrayerTimesDisplay";
 import { ThemedText } from "@/components/ThemedText";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
@@ -47,6 +48,7 @@ type ViewMode = "daily" | "monthly";
 export default function TodayScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
   const { prayerTimes, refreshData, isLoading } = usePrayerTimes();
   const { preferences, updatePreferences, checkPermissionStatus, showSetupModal } =
     useNotificationContext();
@@ -108,15 +110,15 @@ export default function TodayScreen() {
 
     const diff = nextTime.getTime() - now.getTime();
 
-    if (diff <= 0) return "Now";
+    if (diff <= 0) return t.prayers.now;
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (hours > 0) {
-      return `${hours}h ${minutes}m`;
+      return `${hours}${t.common.hours.charAt(0)} ${minutes}${t.common.minutes.charAt(0)}`;
     } else {
-      return `${minutes}m`;
+      return `${minutes}${t.common.minutes.charAt(0)}`;
     }
   };
 
@@ -275,7 +277,7 @@ export default function TodayScreen() {
 
     try {
       if (monthData.length === 0) {
-        Alert.alert("Error", "No data available to print");
+        Alert.alert(t.common.error, t.home.noDataToPrint);
         setIsExporting(false);
         return;
       }
@@ -303,7 +305,7 @@ export default function TodayScreen() {
       }
     } catch (error) {
       // Error generating PDF
-      Alert.alert("Error", "Failed to generate PDF. Please try again.");
+      Alert.alert(t.common.error, t.home.failedToGeneratePDF);
     } finally {
       setIsExporting(false);
     }
@@ -315,11 +317,11 @@ export default function TodayScreen() {
       const granted = await NotificationService.requestPermissions();
       if (!granted) {
         Alert.alert(
-          "Permission Required",
-          "Please enable notifications in your device settings to receive prayer time reminders.",
+          t.notifications.permissionRequired,
+          t.notifications.enableNotificationsMessage,
           [
-            { text: "Cancel", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: t.common.cancel, style: "cancel" },
+            { text: t.notifications.openSettings, onPress: () => Linking.openSettings() },
           ]
         );
         return;
@@ -359,11 +361,11 @@ export default function TodayScreen() {
       const granted = await NotificationService.requestPermissions();
       if (!granted) {
         Alert.alert(
-          "Permission Required",
-          "Please enable notifications in your device settings to receive prayer time reminders.",
+          t.notifications.permissionRequired,
+          t.notifications.enableNotificationsMessage,
           [
-            { text: "Cancel", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: t.common.cancel, style: "cancel" },
+            { text: t.notifications.openSettings, onPress: () => Linking.openSettings() },
           ]
         );
         return;
@@ -415,7 +417,7 @@ export default function TodayScreen() {
               <View style={styles.headerMainRow}>
                 <View style={styles.headerTextSection}>
                   <Text style={[styles.headerTitle, { color: colors.text }]}>
-                    Today
+                    {t.home.today}
                   </Text>
                   <Text
                     style={[
@@ -482,11 +484,10 @@ export default function TodayScreen() {
           >
             <IconSymbol name="calendar" size={48} color={colors.text + "40"} />
             <Text style={[styles.noDataTitle, { color: colors.text }]}>
-              Prayer Times Not Available
+              {t.home.prayerTimesNotAvailable}
             </Text>
             <Text style={[styles.noDataText, { color: colors.text + "80" }]}>
-              Prayer times haven't been uploaded yet. Please contact the mosque
-              administration.
+              {t.home.prayerTimesNotUploaded}
             </Text>
             <TouchableOpacity
               style={[
@@ -498,7 +499,7 @@ export default function TodayScreen() {
               activeOpacity={0.8}
             >
               <Text style={styles.refreshButtonText}>
-                {isLoading ? "Checking..." : "Refresh"}
+                {isLoading ? t.common.checking : t.common.refresh}
               </Text>
             </TouchableOpacity>
           </View>
@@ -580,18 +581,18 @@ export default function TodayScreen() {
                       { color: colors.tint + "85" },
                     ]}
                   >
-                    NEXT PRAYER
+                    {t.home.nextPrayer.toUpperCase()}
                   </Text>
                   <Text
                     style={[styles.nextPrayerName, { color: colors.tint }]}
                   >
-                    {nextPrayer.charAt(0).toUpperCase() + nextPrayer.slice(1)}
+                    {t.prayers[nextPrayer as keyof typeof t.prayers]}
                   </Text>
                 </View>
                 <Text
                   style={[styles.nextPrayerTime, { color: colors.tint }]}
                 >
-                  {getCountdownToNext() || "Soon"}
+                  {getCountdownToNext() || t.prayers.soon}
                 </Text>
               </View>
             )}
@@ -682,7 +683,7 @@ export default function TodayScreen() {
                           { color: colors.text + "80" },
                         ]}
                       >
-                        No prayer times available for today
+                        {t.home.noPrayerTimesForToday}
                       </Text>
                     </View>
                   )}
@@ -735,7 +736,7 @@ export default function TodayScreen() {
                     <ThemedText
                       style={[styles.quickActionsTitle, { color: colors.text }]}
                     >
-                      Quick Actions
+                      {t.home.quickActions}
                     </ThemedText>
                   </View>
 
@@ -766,7 +767,7 @@ export default function TodayScreen() {
                           <ThemedText
                             style={[styles.toggleTitle, { color: colors.text }]}
                           >
-                            All Prayer Times
+                            {t.notifications.allPrayerTimes}
                           </ThemedText>
                           <ThemedText
                             style={[
@@ -774,7 +775,7 @@ export default function TodayScreen() {
                               { color: colors.text + "60" },
                             ]}
                           >
-                            Notify when each prayer begins
+                            {t.notifications.notifyWhenEachPrayerBegins}
                           </ThemedText>
                         </View>
                       </View>
@@ -810,7 +811,7 @@ export default function TodayScreen() {
                           <ThemedText
                             style={[styles.toggleTitle, { color: colors.text }]}
                           >
-                            All Jamah Times
+                            {t.notifications.allJamahTimes}
                           </ThemedText>
                           <ThemedText
                             style={[
@@ -818,7 +819,7 @@ export default function TodayScreen() {
                               { color: colors.text + "60" },
                             ]}
                           >
-                            Notify for congregation prayers
+                            {t.notifications.notifyForCongregationPrayers}
                           </ThemedText>
                         </View>
                       </View>
@@ -883,7 +884,7 @@ export default function TodayScreen() {
                       <ThemedText
                         style={[styles.quickActionsTitle, { color: colors.text }]}
                       >
-                        Quick Actions
+                        {t.home.quickActions}
                       </ThemedText>
                     </View>
 
@@ -914,7 +915,7 @@ export default function TodayScreen() {
                             <ThemedText
                               style={[styles.toggleTitle, { color: colors.text }]}
                             >
-                              All Prayer Times
+                              {t.notifications.allPrayerTimes}
                             </ThemedText>
                             <ThemedText
                               style={[
@@ -922,7 +923,7 @@ export default function TodayScreen() {
                                 { color: colors.text + "60" },
                               ]}
                             >
-                              Notify when each prayer begins
+                              {t.notifications.notifyWhenEachPrayerBegins}
                             </ThemedText>
                           </View>
                         </View>
@@ -958,7 +959,7 @@ export default function TodayScreen() {
                             <ThemedText
                               style={[styles.toggleTitle, { color: colors.text }]}
                             >
-                              All Jamah Times
+                              {t.notifications.allJamahTimes}
                             </ThemedText>
                             <ThemedText
                               style={[
@@ -966,7 +967,7 @@ export default function TodayScreen() {
                                 { color: colors.text + "60" },
                               ]}
                             >
-                              Notify for congregation prayers
+                              {t.notifications.notifyForCongregationPrayers}
                             </ThemedText>
                           </View>
                         </View>
@@ -1008,7 +1009,7 @@ export default function TodayScreen() {
                             color="#fff"
                           />
                           <ThemedText style={styles.printButtonText}>
-                            Print {getMonthName(currentMonth)} Timetable
+                            {t.home.printMonth} {getMonthName(currentMonth)} {t.home.timetable}
                           </ThemedText>
                         </>
                       )}
@@ -1048,7 +1049,7 @@ export default function TodayScreen() {
                     <ThemedText
                       style={[styles.mosqueInfoTitle, { color: colors.text }]}
                     >
-                      Masjid Abubakr Siddique
+                      {t.mosqueInfo.name}
                     </ThemedText>
                     <ThemedText
                       style={[
@@ -1056,7 +1057,7 @@ export default function TodayScreen() {
                         { color: colors.text + "60" },
                       ]}
                     >
-                      Birmingham, UK
+                      {t.mosqueInfo.location}
                     </ThemedText>
                   </View>
                 </BlurView>
@@ -1088,7 +1089,7 @@ export default function TodayScreen() {
                     <ThemedText
                       style={[styles.mosqueInfoTitle, { color: colors.text }]}
                     >
-                      Masjid Abubakr Siddique
+                      {t.mosqueInfo.name}
                     </ThemedText>
                     <ThemedText
                       style={[
@@ -1096,7 +1097,7 @@ export default function TodayScreen() {
                         { color: colors.text + "60" },
                       ]}
                     >
-                      Birmingham, UK
+                      {t.mosqueInfo.location}
                     </ThemedText>
                   </View>
                 </View>

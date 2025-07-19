@@ -11,13 +11,17 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SvgXml } from "react-native-svg";
 
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { Language, LANGUAGES } from "@/types/language";
 
 interface MenuSection {
   title: string;
@@ -36,9 +40,12 @@ interface MenuItem {
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t, language, changeLanguage } = useLanguage();
+  const { showSetupModal } = useNotificationContext();
   const [fadeAnim] = React.useState(new Animated.Value(0));
   const [headerAnim] = React.useState(new Animated.Value(0));
   const [logoSvg, setLogoSvg] = React.useState<string>("");
+  const [showLanguageMenu, setShowLanguageMenu] = React.useState(false);
 
   React.useEffect(() => {
     // Load SVG logo
@@ -77,14 +84,14 @@ export default function ExploreScreen() {
     const address = "Grove St, Smethwick, Birmingham B66 2QS";
     const encodedAddress = encodeURIComponent(address);
 
-    Alert.alert("Get Directions", "Choose how to open directions:", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.explore.getDirections, t.explore.chooseDirections, [
+      { text: t.common.cancel, style: "cancel" },
       {
-        text: "Google Maps",
+        text: t.explore.googleMaps,
         onPress: () => Linking.openURL(shareLink),
       },
       {
-        text: "Default Maps",
+        text: t.explore.defaultMaps,
         onPress: () => {
           if (Platform.OS === "ios") {
             Linking.openURL(`maps:0,0?q=${encodedAddress}`);
@@ -97,10 +104,10 @@ export default function ExploreScreen() {
   };
 
   const handleCall = () => {
-    Alert.alert("Contact Mosque", "Would you like to call the mosque?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.explore.contactMosque, t.explore.callMosquePrompt, [
+      { text: t.common.cancel, style: "cancel" },
       {
-        text: "Call",
+        text: t.explore.call,
         onPress: () => Linking.openURL("tel:+447973573059"),
       },
     ]);
@@ -112,15 +119,15 @@ export default function ExploreScreen() {
 
   const handleFeedback = () => {
     Alert.alert(
-      "Send Feedback",
-      "Your feedback helps us improve the app. How would you like to send feedback?",
+      t.explore.sendFeedback,
+      t.explore.feedbackPrompt,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.common.cancel, style: "cancel" },
         {
-          text: "Email",
+          text: t.explore.email,
           onPress: () =>
             Linking.openURL(
-              "mailto:feedback@masjidabubakr.org.uk?subject=Prayer%20Times%20App%20Feedback"
+              "mailto:inf.afghan@gmail.com?subject=Prayer%20Times%20App%20Feedback"
             ),
         },
       ]
@@ -129,67 +136,97 @@ export default function ExploreScreen() {
 
   const handleDonate = () => {
     Alert.alert(
-      "Support the Mosque",
-      "Donation feature is coming soon! Thank you for your interest in supporting the mosque.",
-      [{ text: "OK" }]
+      t.explore.supportMosque,
+      t.explore.donationMessage,
+      [{ text: t.common.ok }]
     );
   };
 
   const handleAbout = () => {
     Alert.alert(
-      "About This App",
-      "Masjid Abubakr Siddique App v1.0.0\n\nDeveloped for Masjid Abubakr Siddique to provide accurate prayer times and mosque information to the community.\n\n© 2025 Masjid Abubakr Siddique",
-      [{ text: "OK" }]
+      t.explore.about,
+      t.explore.aboutMessage,
+      [{ text: t.common.done }]
     );
+  };
+
+  const handleLanguageSelect = () => {
+    setShowLanguageMenu(true);
+  };
+
+  const handleLanguageChange = async (newLanguage: Language) => {
+    await changeLanguage(newLanguage);
+    setShowLanguageMenu(false);
+  };
+
+  const handleNotificationSettings = () => {
+    showSetupModal();
   };
 
   const menuSections: MenuSection[] = [
     {
-      title: "Mosque Information",
+      title: t.explore.settings,
       items: [
         {
-          title: "Location & Directions",
-          subtitle: "Grove St, Smethwick, Birmingham",
+          title: t.explore.language,
+          subtitle: LANGUAGES.find(l => l.code === language)?.name || 'English',
+          icon: "globe",
+          action: handleLanguageSelect,
+        },
+        {
+          title: t.explore.notifications,
+          subtitle: t.explore.notificationSettings,
+          icon: "bell.fill",
+          action: handleNotificationSettings,
+        },
+      ],
+    },
+    {
+      title: t.explore.mosqueInformation,
+      items: [
+        {
+          title: t.explore.locationDirections,
+          subtitle: t.explore.locationSubtitle,
           icon: "location.fill",
           action: handleOpenMaps,
         },
         {
-          title: "Contact Us",
-          subtitle: "Call the mosque directly",
+          title: t.explore.contactUs,
+          subtitle: t.explore.contactSubtitle,
           icon: "phone.fill",
           action: handleCall,
         },
         {
-          title: "Visit Website",
-          subtitle: "Learn more about our community",
+          title: t.explore.visitWebsite,
+          subtitle: t.explore.websiteSubtitle,
           icon: "globe",
           action: handleWebsite,
         },
       ],
     },
     {
-      title: "Community",
+      title: t.explore.community,
       items: [
         {
-          title: "Support the Mosque",
-          subtitle: "Donation feature coming soon",
+          title: t.explore.supportMosque,
+          subtitle: t.explore.donationComingSoon,
           icon: "heart.fill",
           action: handleDonate,
         },
         {
-          title: "Send Feedback",
-          subtitle: "Help us improve the app",
+          title: t.explore.sendFeedback,
+          subtitle: t.explore.feedbackSubtitle,
           icon: "envelope.fill",
           action: handleFeedback,
         },
       ],
     },
     {
-      title: "About",
+      title: t.explore.about,
       items: [
         {
-          title: "About This App",
-          subtitle: "Version 1.0.0",
+          title: t.explore.about,
+          subtitle: `${t.explore.version} 1.0.0`,
           icon: "info.circle.fill",
           action: handleAbout,
         },
@@ -271,12 +308,12 @@ export default function ExploreScreen() {
         >
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              More
+              {t.explore.title}
             </Text>
             <Text
               style={[styles.headerSubtitle, { color: colors.text + "80" }]}
             >
-              Mosque information and app settings
+              {t.explore.subtitle}
             </Text>
           </View>
         </BlurView>
@@ -338,10 +375,10 @@ export default function ExploreScreen() {
             </View>
 
             <Text style={[styles.mosqueTitle, { color: colors.text }]}>
-              Masjid Abubakr Siddique
+              {t.explore.mosqueName}
             </Text>
             <Text style={[styles.mosqueAddress, { color: colors.text + "60" }]}>
-              Grove St, Smethwick, Birmingham B66 2QS
+              {t.explore.mosqueAddress}
             </Text>
 
             <View style={styles.mosqueStats}>
@@ -350,7 +387,7 @@ export default function ExploreScreen() {
                   5
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
-                  Daily Prayers
+                  {t.explore.dailyPrayers}
                 </Text>
               </View>
               <View
@@ -364,7 +401,7 @@ export default function ExploreScreen() {
                   365
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
-                  Days Open
+                  {t.explore.daysOpen}
                 </Text>
               </View>
               <View
@@ -378,7 +415,7 @@ export default function ExploreScreen() {
                   ∞
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
-                  Blessings
+                  {t.explore.blessings}
                 </Text>
               </View>
             </View>
@@ -430,6 +467,60 @@ export default function ExploreScreen() {
           </View>
         </Animated.View>
       </ScrollView>
+
+      {/* Language Selection Modal */}
+      {showLanguageMenu && (
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setShowLanguageMenu(false)}
+          activeOpacity={1}
+        >
+          <TouchableWithoutFeedback>
+            <View
+              style={[
+                styles.languageModal,
+                {
+                  backgroundColor: colors.background,
+                  shadowColor: colorScheme === "dark" ? "#000" : "#000",
+                },
+              ]}
+            >
+              <View style={styles.languageModalHeader}>
+                <Text style={[styles.languageModalTitle, { color: colors.text }]}>
+                  {t.explore.changeLanguage}
+                </Text>
+              </View>
+              {LANGUAGES.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[
+                    styles.languageOption,
+                    language === lang.code && styles.languageOptionActive,
+                  ]}
+                  onPress={() => handleLanguageChange(lang.code as Language)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.languageOptionContent}>
+                    <Text style={[styles.languageOptionName, { color: colors.text }]}>
+                      {lang.name}
+                    </Text>
+                    <Text style={[styles.languageOptionNative, { color: colors.text + "80" }]}>
+                      {lang.nativeName}
+                    </Text>
+                  </View>
+                  {language === lang.code && (
+                    <IconSymbol
+                      name="checkmark.circle.fill"
+                      size={24}
+                      color={colors.tint}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -669,5 +760,72 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#fff",
     fontWeight: "600",
+  },
+
+  // Language Modal
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 100,
+  },
+
+  languageModal: {
+    width: "90%",
+    maxWidth: 320,
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+
+  languageModalHeader: {
+    padding: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.06)",
+  },
+
+  languageModalTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+    textAlign: "center",
+  },
+
+  languageOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.06)",
+  },
+
+  languageOptionActive: {
+    backgroundColor: "rgba(0,122,255,0.08)",
+  },
+
+  languageOptionContent: {
+    flex: 1,
+  },
+
+  languageOptionName: {
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.4,
+    marginBottom: 2,
+  },
+
+  languageOptionNative: {
+    fontSize: 15,
+    letterSpacing: -0.2,
   },
 });

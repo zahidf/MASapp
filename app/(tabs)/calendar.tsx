@@ -24,6 +24,7 @@ import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { PrayerTime } from "@/types/prayer";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { getMonthName, getTodayString } from "@/utils/dateHelpers";
 import { generatePDFHTML } from "@/utils/pdfGenerator";
 
@@ -35,6 +36,7 @@ export default function CalendarScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { prayerTimes, isLoading, refreshData } = usePrayerTimes();
+  const { t } = useLanguage();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedDayData, setSelectedDayData] = useState<PrayerTime | null>(
     null
@@ -49,6 +51,11 @@ export default function CalendarScreen() {
   const currentMonth = selectedDate.getMonth();
   const currentYear = selectedDate.getFullYear();
   const today = getTodayString();
+  
+  // Ensure translations are loaded
+  if (!t || !t.calendar) {
+    return null;
+  }
 
   React.useEffect(() => {
     Animated.parallel([
@@ -129,7 +136,7 @@ export default function CalendarScreen() {
       switch (exportType) {
         case "day":
           if (!selectedDayData) {
-            Alert.alert("Error", "Please select a day to export");
+            Alert.alert(t.calendar.error, t.calendar.errorSelectDay);
             setIsExporting(false);
             return;
           }
@@ -141,7 +148,7 @@ export default function CalendarScreen() {
         case "month":
           const monthData = getMonthData();
           if (monthData.length === 0) {
-            Alert.alert("Error", "No data available for selected month");
+            Alert.alert(t.calendar.error || 'Error', t.calendar.errorNoData || 'No data available for selected month');
             setIsExporting(false);
             return;
           }
@@ -156,7 +163,7 @@ export default function CalendarScreen() {
             pt.d_date.startsWith(currentYear.toString())
           );
           if (yearData.length === 0) {
-            Alert.alert("Error", "No data available for selected year");
+            Alert.alert(t.calendar.error || 'Error', t.calendar.errorNoData || 'No data available for selected year');
             setIsExporting(false);
             return;
           }
@@ -178,14 +185,14 @@ export default function CalendarScreen() {
       } else {
         await Sharing.shareAsync(uri, {
           mimeType: "application/pdf",
-          dialogTitle: "Share Prayer Times PDF",
+          dialogTitle: t.calendar.sharePrayerTimesPDF,
         });
       }
 
       setShowExportModal(false);
     } catch (error) {
       // Error generating PDF
-      Alert.alert("Error", "Failed to generate PDF. Please try again.");
+      Alert.alert(t.calendar.error, t.calendar.exportError);
     } finally {
       setIsExporting(false);
     }
@@ -227,12 +234,12 @@ export default function CalendarScreen() {
         >
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Prayer Calendar
+              {t.calendar.title}
             </Text>
             <Text
               style={[styles.headerSubtitle, { color: colors.text + "80" }]}
             >
-              View and export monthly prayer times
+              {t.calendar.subtitle}
             </Text>
           </View>
         </BlurView>
@@ -288,7 +295,7 @@ export default function CalendarScreen() {
 
             <View style={styles.monthDisplay}>
               <Text style={[styles.monthText, { color: colors.text }]}>
-                {getMonthName(currentMonth)}
+                {t.calendar.months?.[getMonthName(currentMonth).toLowerCase() as keyof typeof t.calendar.months] || getMonthName(currentMonth)}
               </Text>
               <Text style={[styles.yearText, { color: colors.text + "60" }]}>
                 {currentYear}
@@ -337,13 +344,13 @@ export default function CalendarScreen() {
                 <Text
                   style={[styles.todayInfoTitle, { color: colors.tint }]}
                 >
-                  Today's Prayer Times
+                  {t.calendar.todaysPrayerTimes}
                 </Text>
               </View>
               <Text
                 style={[styles.todayInfoText, { color: colors.text + "80" }]}
               >
-                Tap on today's date below to view detailed prayer times
+                {t.calendar.todaysPrayerTimesDesc}
               </Text>
             </BlurView>
           )}
@@ -385,13 +392,14 @@ export default function CalendarScreen() {
                   />
                 </View>
                 <Text style={[styles.noDataTitle, { color: colors.text }]}>
-                  No Prayer Times Available
+                  {t.calendar.noPrayerTimesAvailable}
                 </Text>
                 <Text
                   style={[styles.noDataText, { color: colors.text + "60" }]}
                 >
-                  Prayer times for {getMonthName(currentMonth)} {currentYear}{" "}
-                  haven't been uploaded yet.
+                  {t.calendar.noPrayerTimesMessage
+                    .replace('{month}', t.calendar.months?.[getMonthName(currentMonth).toLowerCase() as keyof typeof t.calendar.months] || getMonthName(currentMonth))
+                    .replace('{year}', currentYear.toString())}
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -411,7 +419,7 @@ export default function CalendarScreen() {
                         size={16}
                         color="#fff"
                       />
-                      <Text style={styles.refreshButtonText}>Refresh Data</Text>
+                      <Text style={styles.refreshButtonText}>{t.calendar.refreshData}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -423,7 +431,7 @@ export default function CalendarScreen() {
           {hasDataForMonth && (
             <View style={styles.quickActionsContainer}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Quick Actions
+                {t.calendar.quickActions}
               </Text>
 
               <View style={styles.actionButtons}>
@@ -460,7 +468,7 @@ export default function CalendarScreen() {
                     <Text
                       style={[styles.actionButtonTitle, { color: colors.text }]}
                     >
-                      Export PDF
+                      {t.calendar.exportPDF}
                     </Text>
                     <Text
                       style={[
@@ -468,7 +476,7 @@ export default function CalendarScreen() {
                         { color: colors.text + "60" },
                       ]}
                     >
-                      Download this month
+                      {t.calendar.downloadThisMonth}
                     </Text>
                   </View>
                   <IconSymbol
@@ -512,7 +520,7 @@ export default function CalendarScreen() {
                           { color: colors.text },
                         ]}
                       >
-                        Today
+                        {t.calendar.today}
                       </Text>
                       <Text
                         style={[
@@ -520,7 +528,7 @@ export default function CalendarScreen() {
                           { color: colors.text + "60" },
                         ]}
                       >
-                        Return to current month
+                        {t.calendar.returnToCurrentMonth}
                       </Text>
                     </View>
                     <IconSymbol
@@ -537,7 +545,7 @@ export default function CalendarScreen() {
           {/* Calendar Legend */}
           <View style={styles.legendContainer}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Legend
+              {t.calendar.legend}
             </Text>
             <View style={styles.legendItems}>
               <View style={styles.legendItem}>
@@ -550,7 +558,7 @@ export default function CalendarScreen() {
                 <Text
                   style={[styles.legendText, { color: colors.text + "80" }]}
                 >
-                  Today
+                  {t.calendar.legendToday}
                 </Text>
               </View>
               <View style={styles.legendItem}>
@@ -568,7 +576,7 @@ export default function CalendarScreen() {
                 <Text
                   style={[styles.legendText, { color: colors.text + "80" }]}
                 >
-                  Ramadan
+                  {t.calendar.legendRamadan}
                 </Text>
               </View>
               <View style={styles.legendItem}>
@@ -585,7 +593,7 @@ export default function CalendarScreen() {
                 <Text
                   style={[styles.legendText, { color: colors.text + "80" }]}
                 >
-                  Has Prayer Times
+                  {t.calendar.legendHasPrayerTimes}
                 </Text>
               </View>
             </View>
@@ -626,7 +634,7 @@ export default function CalendarScreen() {
           >
             <View style={styles.exportModalHeader}>
               <Text style={[styles.exportModalTitle, { color: colors.text }]}>
-                Export Prayer Times
+                {t.calendar.exportPrayerTimes}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowExportModal(false)}
@@ -642,7 +650,7 @@ export default function CalendarScreen() {
                 { color: colors.text + "80" },
               ]}
             >
-              Choose what to export as PDF
+              {t.calendar.selectExportType}
             </Text>
 
             <View style={styles.exportOptions}>
@@ -679,7 +687,7 @@ export default function CalendarScreen() {
                     <Text
                       style={[styles.exportOptionText, { color: colors.text }]}
                     >
-                      Selected Day
+                      {t.calendar.exportTypes.day}
                     </Text>
                     <Text
                       style={[
@@ -732,7 +740,7 @@ export default function CalendarScreen() {
                   <Text
                     style={[styles.exportOptionText, { color: colors.text }]}
                   >
-                    Current Month
+                    {t.calendar.exportTypes.month}
                   </Text>
                   <Text
                     style={[
@@ -740,7 +748,7 @@ export default function CalendarScreen() {
                       { color: colors.text + "60" },
                     ]}
                   >
-                    {getMonthName(currentMonth)} {currentYear}
+                    {t.calendar.months?.[getMonthName(currentMonth).toLowerCase() as keyof typeof t.calendar.months] || getMonthName(currentMonth)} {currentYear}
                   </Text>
                 </View>
                 {exportType === "month" && (
@@ -784,7 +792,7 @@ export default function CalendarScreen() {
                   <Text
                     style={[styles.exportOptionText, { color: colors.text }]}
                   >
-                    Full Year
+                    {t.calendar.exportTypes.year}
                   </Text>
                   <Text
                     style={[
@@ -824,7 +832,7 @@ export default function CalendarScreen() {
                     size={20}
                     color="#fff"
                   />
-                  <Text style={styles.exportConfirmText}>Generate PDF</Text>
+                  <Text style={styles.exportConfirmText}>{t.calendar.generatePDF}</Text>
                 </>
               )}
             </TouchableOpacity>

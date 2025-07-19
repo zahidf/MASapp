@@ -13,6 +13,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import {
@@ -50,6 +51,7 @@ export function PrayerTimeCard({
 }: PrayerTimeCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
   const { preferences, updatePrayerSettings } = useNotificationContext();
   const [showNotificationSheet, setShowNotificationSheet] = useState(false);
 
@@ -180,7 +182,7 @@ export function PrayerTimeCard({
               },
             ]}
           >
-            {name}
+            {t.prayers[name.toLowerCase() as keyof typeof t.prayers] || name}
           </ThemedText>
           {(isActive || isNext) && (
             <View
@@ -200,10 +202,10 @@ export function PrayerTimeCard({
                 ]}
               >
                 {isActive
-                  ? "NOW"
+                  ? t.home.currentPrayer.split(' ')[0].toUpperCase()
                   : getCountdownToNext
-                  ? getCountdownToNext() || "NEXT"
-                  : "NEXT"}
+                  ? getCountdownToNext() || t.home.nextPrayer.split(' ')[0].toUpperCase()
+                  : t.home.nextPrayer.split(' ')[0].toUpperCase()}
               </ThemedText>
             </View>
           )}
@@ -244,7 +246,7 @@ export function PrayerTimeCard({
           <ThemedText
             style={[styles.timeLabel, { color: colors.text + "65" }]}
           >
-            BEGINS
+            {t.home.begins.toUpperCase()}
           </ThemedText>
           <ThemedText
             style={[
@@ -271,7 +273,7 @@ export function PrayerTimeCard({
               <ThemedText
                 style={[styles.timeLabel, { color: colors.text + "65" }]}
               >
-                JAMAH
+                {t.home.jamah.toUpperCase()}
               </ThemedText>
               <ThemedText
                 style={[

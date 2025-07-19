@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface QiblaCalibrationModalProps {
   showCalibrationModal: boolean;
@@ -27,6 +28,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
   colors,
   colorScheme,
 }) => {
+  const { t } = useLanguage();
   // Modal animation values
   const modalSlideAnim = useRef(new Animated.Value(0)).current;
   const modalFadeAnim = useRef(new Animated.Value(0)).current;
@@ -126,11 +128,11 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
                 </View>
                 
                 <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  Calibrate Your Compass
+                  {t.qibla.calibrationTitle}
                 </Text>
                 
                 <Text style={[styles.modalText, { color: colors.text + "80" }]}>
-                  For accurate Qibla direction:
+                  {t.qibla.calibrationDesc}
                 </Text>
                 
                 <View style={styles.modalInstructions}>
@@ -139,7 +141,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
                       <Text style={[styles.instructionNumberText, { color: colors.tint }]}>1</Text>
                     </View>
                     <Text style={[styles.instructionText, { color: colors.text }]}>
-                      Place your phone on a flat surface
+                      {t.qibla.placeOnFlatSurface}
                     </Text>
                   </View>
                   
@@ -148,7 +150,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
                       <Text style={[styles.instructionNumberText, { color: colors.tint }]}>2</Text>
                     </View>
                     <Text style={[styles.instructionText, { color: colors.text }]}>
-                      Move your phone in a figure-8 pattern to calibrate
+                      {t.qibla.calibrationInstructions}
                     </Text>
                   </View>
                 </View>
@@ -157,7 +159,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
                   style={[styles.calibrateButton, { backgroundColor: colors.tint }]}
                   onPress={() => setShowCalibrationModal(false)}
                 >
-                  <Text style={styles.calibrateButtonText}>Got it</Text>
+                  <Text style={styles.calibrateButtonText}>{t.common.ok}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
