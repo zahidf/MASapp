@@ -7,7 +7,7 @@ import { DEFAULT_LANGUAGE_PREFERENCES, Language, LanguagePreferences } from '@/t
 
 interface LanguageContextType {
   language: Language;
-  t: TranslationKeys;
+  t: TranslationKeys & { languageCode?: string };
   hasSelectedLanguage: boolean;
   changeLanguage: (language: Language) => Promise<void>;
   completeLanguageSetup: () => Promise<void>;
@@ -22,7 +22,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const t = getTranslation(preferences.language);
+  const t = { ...getTranslation(preferences.language), languageCode: preferences.language };
 
   useEffect(() => {
     // Always disable RTL layout - we only want text translations, not UI changes

@@ -19,6 +19,7 @@ import {
 
 import { DayDetail } from "@/components/prayer/DayDetail";
 import { MonthlyCalendar } from "@/components/prayer/MonthlyCalendar";
+import { HijriCalendar } from "@/components/prayer/HijriCalendar";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -26,7 +27,17 @@ import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { PrayerTime } from "@/types/prayer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getMonthName, getTodayString } from "@/utils/dateHelpers";
+import { 
+  gregorianToHijri, 
+  formatHijriMonthYear, 
+  getDaysInHijriMonth,
+  getFirstDayOfHijriMonth,
+  hijriToGregorian,
+  getHijriMonthName
+} from "@/utils/hijriDateUtils";
+import { localizeYear, localizeDay, localizeNumbers } from "@/utils/numberLocalization";
 import { generatePDFHTML } from "@/utils/pdfGenerator";
+import { firebaseMosqueDetailsService } from "@/services/firebaseMosqueDetails";
 
 const { width, height } = Dimensions.get("window");
 
@@ -47,6 +58,8 @@ export default function CalendarScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [headerAnim] = useState(new Animated.Value(0));
+  const [calendarType, setCalendarType] = useState<'gregorian' | 'hijri'>('gregorian');
+  const [selectedHijriDate, setSelectedHijriDate] = useState(() => gregorianToHijri(new Date()));
   
   // Ensure translations are loaded before accessing any properties
   if (!t || !t.calendar || !t.calendar.months) {
@@ -74,29 +87,90 @@ export default function CalendarScreen() {
   }, []);
 
   const handleMonthChange = (direction: "prev" | "next") => {
-    const newDate = new Date(selectedDate);
-    if (direction === "prev") {
-      newDate.setMonth(newDate.getMonth() - 1);
+    if (calendarType === 'gregorian') {
+      const newDate = new Date(selectedDate);
+      if (direction === "prev") {
+        newDate.setMonth(newDate.getMonth() - 1);
+      } else {
+        newDate.setMonth(newDate.getMonth() + 1);
+      }
+      setSelectedDate(newDate);
+      setSelectedHijriDate(gregorianToHijri(newDate));
     } else {
-      newDate.setMonth(newDate.getMonth() + 1);
+      // Hijri calendar navigation
+      let newHijriMonth = selectedHijriDate.month;
+      let newHijriYear = selectedHijriDate.year;
+      
+      if (direction === "prev") {
+        newHijriMonth--;
+        if (newHijriMonth < 1) {
+          newHijriMonth = 12;
+          newHijriYear--;
+        }
+      } else {
+        newHijriMonth++;
+        if (newHijriMonth > 12) {
+          newHijriMonth = 1;
+          newHijriYear++;
+        }
+      }
+      
+      const newGregorianDate = hijriToGregorian(newHijriYear, newHijriMonth, 1);
+      setSelectedDate(newGregorianDate);
+      setSelectedHijriDate({
+        year: newHijriYear,
+        month: newHijriMonth,
+        day: 1,
+        monthName: getHijriMonthName(newHijriMonth, 'en', t),
+        monthNameAr: getHijriMonthName(newHijriMonth, 'ar', t)
+      });
     }
-    setSelectedDate(newDate);
   };
 
   const handleDaySelect = useCallback(
-    (day: number) => {
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(
-        2,
-        "0"
-      )}-${String(day).padStart(2, "0")}`;
-      const dayData = prayerTimes.find((pt) => pt.d_date === dateStr);
+    (day: number, dateStr?: string, dayData?: PrayerTime) => {
+      if (calendarType === 'gregorian') {
+        const gregorianDateStr = `${currentYear}-${String(currentMonth + 1).padStart(
+          2,
+          "0"
+        )}-${String(day).padStart(2, "0")}`;
+        const prayerData = prayerTimes.find((pt) => pt.d_date === gregorianDateStr);
 
-      if (dayData) {
-        setSelectedDayData(dayData);
+        if (prayerData) {
+          setSelectedDayData(prayerData);
+          setShowDayDetail(true);
+        }
+      } else {
+        // Hijri calendar - use the provided dateStr and dayData
+        if (dayData) {
+          setSelectedDayData(dayData);
+        } else if (dateStr) {
+          // Show the day even without prayer data
+          const gregorianDate = new Date(dateStr);
+          const hijriDate = gregorianToHijri(gregorianDate);
+          // Create a minimal prayer time object for display
+          const minimalData: PrayerTime = {
+            d_date: dateStr,
+            fajr_begins: '',
+            fajr_jamah: '',
+            sunrise: '',
+            zuhr_begins: '',
+            zuhr_jamah: '',
+            asr_mithl_1: '',
+            asr_mithl_2: '',
+            asr_jamah: '',
+            maghrib_begins: '',
+            maghrib_jamah: '',
+            isha_begins: '',
+            isha_jamah: '',
+            is_ramadan: hijriDate.month === 9 ? 1 : 0
+          };
+          setSelectedDayData(minimalData);
+        }
         setShowDayDetail(true);
       }
     },
-    [currentMonth, currentYear, prayerTimes]
+    [currentMonth, currentYear, prayerTimes, calendarType]
   );
 
   const getMonthData = () => {
@@ -130,6 +204,12 @@ export default function CalendarScreen() {
     setIsExporting(true);
 
     try {
+      // Fetch mosque details and Jumaah times
+      const [mosqueDetails, jumaahTimes] = await Promise.all([
+        firebaseMosqueDetailsService.getMosqueDetails(),
+        firebaseMosqueDetailsService.getJumaahTimes()
+      ]);
+
       let html = "";
       let filename = "";
 
@@ -140,7 +220,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = await generatePDFHTML([selectedDayData], "day");
+          html = await generatePDFHTML([selectedDayData], "day", calendarType, mosqueDetails || undefined, jumaahTimes || undefined);
           const dayDate = new Date(selectedDayData.d_date);
           filename = `prayer-times-${dayDate.toISOString().split("T")[0]}.pdf`;
           break;
@@ -152,10 +232,15 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = await generatePDFHTML(monthData, "month");
-          filename = `prayer-times-${getMonthName(
-            currentMonth
-          )}-${currentYear}.pdf`;
+          html = await generatePDFHTML(monthData, "month", calendarType, mosqueDetails || undefined, jumaahTimes || undefined);
+          if (calendarType === 'hijri') {
+            const monthName = getHijriMonthName(selectedHijriDate.month, 'en');
+            filename = `prayer-times-${monthName}-${selectedHijriDate.year}-AH.pdf`;
+          } else {
+            filename = `prayer-times-${getMonthName(
+              currentMonth
+            )}-${currentYear}.pdf`;
+          }
           break;
 
         case "year":
@@ -167,7 +252,7 @@ export default function CalendarScreen() {
             setIsExporting(false);
             return;
           }
-          html = await generatePDFHTML(yearData, "year");
+          html = await generatePDFHTML(yearData, "year", calendarType, mosqueDetails || undefined, jumaahTimes || undefined);
           filename = `prayer-times-${currentYear}.pdf`;
           break;
       }
@@ -295,10 +380,56 @@ export default function CalendarScreen() {
 
             <View style={styles.monthDisplay}>
               <Text style={[styles.monthText, { color: colors.text }]}>
-                {t.calendar.months?.[getMonthName(currentMonth).toLowerCase() as keyof typeof t.calendar.months] || getMonthName(currentMonth)}
+                {calendarType === 'gregorian' 
+                  ? (t.calendar.months?.[getMonthName(currentMonth).toLowerCase() as keyof typeof t.calendar.months] || getMonthName(currentMonth))
+                  : getHijriMonthName(selectedHijriDate.month, t.languageCode || 'en', t)}
               </Text>
               <Text style={[styles.yearText, { color: colors.text + "60" }]}>
-                {currentYear}
+                {calendarType === 'gregorian' 
+                  ? localizeYear(currentYear, t.languageCode || 'en')
+                  : `${localizeYear(selectedHijriDate.year, t.languageCode || 'en')} ${t.languageCode === 'ar' || t.languageCode === 'fa' || t.languageCode === 'ps' ? 'هـ' : 'AH'}`}
+              </Text>
+              <Text style={[styles.dateRangeText, { color: colors.text + "40" }]}>
+                {calendarType === 'gregorian' ? (
+                  // Show Hijri months that fall within this Gregorian month
+                  (() => {
+                    const firstDay = new Date(currentYear, currentMonth, 1);
+                    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                    const firstHijri = gregorianToHijri(firstDay);
+                    const lastHijri = gregorianToHijri(lastDay);
+                    
+                    if (firstHijri.month === lastHijri.month && firstHijri.year === lastHijri.year) {
+                      return formatHijriMonthYear(firstHijri, t.languageCode || 'en', t);
+                    } else if (firstHijri.year === lastHijri.year) {
+                      const firstMonth = getHijriMonthName(firstHijri.month, t.languageCode || 'en', t);
+                      const lastMonth = getHijriMonthName(lastHijri.month, t.languageCode || 'en', t);
+                      return `${firstMonth}-${lastMonth} ${localizeYear(firstHijri.year, t.languageCode || 'en')} ${t.languageCode === 'ar' || t.languageCode === 'fa' || t.languageCode === 'ps' ? 'هـ' : 'AH'}`;
+                    } else {
+                      const firstMonth = getHijriMonthName(firstHijri.month, t.languageCode || 'en', t);
+                      const lastMonth = getHijriMonthName(lastHijri.month, t.languageCode || 'en', t);
+                      return `${firstMonth} ${localizeYear(firstHijri.year, t.languageCode || 'en')} - ${lastMonth} ${localizeYear(lastHijri.year, t.languageCode || 'en')} ${t.languageCode === 'ar' || t.languageCode === 'fa' || t.languageCode === 'ps' ? 'هـ' : 'AH'}`;
+                    }
+                  })()
+                ) : (
+                  // Show Gregorian date range for this Hijri month
+                  (() => {
+                    const daysInMonth = getDaysInHijriMonth(selectedHijriDate.year, selectedHijriDate.month);
+                    const firstDay = hijriToGregorian(selectedHijriDate.year, selectedHijriDate.month, 1);
+                    const lastDay = hijriToGregorian(selectedHijriDate.year, selectedHijriDate.month, daysInMonth);
+                    const firstMonth = firstDay.toLocaleDateString('en-US', { month: 'short' });
+                    const lastMonth = lastDay.toLocaleDateString('en-US', { month: 'short' });
+                    const firstYear = firstDay.getFullYear();
+                    const lastYear = lastDay.getFullYear();
+                    
+                    if (firstMonth === lastMonth && firstYear === lastYear) {
+                      return `${firstMonth} ${localizeDay(firstDay.getDate(), t.languageCode || 'en')}-${localizeDay(lastDay.getDate(), t.languageCode || 'en')}, ${localizeYear(firstYear, t.languageCode || 'en')}`;
+                    } else if (firstYear === lastYear) {
+                      return `${firstMonth} ${localizeDay(firstDay.getDate(), t.languageCode || 'en')} - ${lastMonth} ${localizeDay(lastDay.getDate(), t.languageCode || 'en')}, ${localizeYear(firstYear, t.languageCode || 'en')}`;
+                    } else {
+                      return `${firstMonth} ${localizeDay(firstDay.getDate(), t.languageCode || 'en')}, ${localizeYear(firstYear, t.languageCode || 'en')} - ${lastMonth} ${localizeDay(lastDay.getDate(), t.languageCode || 'en')}, ${localizeYear(lastYear, t.languageCode || 'en')}`;
+                    }
+                  })()
+                )}
               </Text>
             </View>
 
@@ -314,6 +445,42 @@ export default function CalendarScreen() {
               />
             </TouchableOpacity>
           </BlurView>
+
+          {/* Calendar Type Toggle */}
+          <View style={styles.calendarTypeToggle}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                calendarType === 'gregorian' && styles.toggleButtonActive,
+                { borderColor: calendarType === 'gregorian' ? colors.tint : colors.text + "20" }
+              ]}
+              onPress={() => setCalendarType('gregorian')}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.toggleButtonText,
+                { color: calendarType === 'gregorian' ? colors.tint : colors.text + "60" }
+              ]}>
+                {t.calendar.gregorian}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                calendarType === 'hijri' && styles.toggleButtonActive,
+                { borderColor: calendarType === 'hijri' ? colors.tint : colors.text + "20" }
+              ]}
+              onPress={() => setCalendarType('hijri')}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.toggleButtonText,
+                { color: calendarType === 'hijri' ? colors.tint : colors.text + "60" }
+              ]}>
+                {t.calendar.hijri}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Today's Info Card (if on current month) */}
           {isCurrentMonth() && todaysPrayerTimes && (
@@ -357,14 +524,15 @@ export default function CalendarScreen() {
 
           {/* Calendar Content */}
           <View style={styles.calendarContainer}>
-            {hasDataForMonth ? (
-              <MonthlyCalendar
-                month={currentMonth}
-                year={currentYear}
-                monthData={monthData}
-                onDaySelect={handleDaySelect}
-              />
-            ) : (
+            {calendarType === 'gregorian' ? (
+              hasDataForMonth ? (
+                <MonthlyCalendar
+                  month={currentMonth}
+                  year={currentYear}
+                  monthData={monthData}
+                  onDaySelect={handleDaySelect}
+                />
+              ) : (
               <BlurView
                 intensity={60}
                 tint={colorScheme === "dark" ? "dark" : "light"}
@@ -424,11 +592,20 @@ export default function CalendarScreen() {
                   )}
                 </TouchableOpacity>
               </BlurView>
+              )
+            ) : (
+              // Hijri Calendar
+              <HijriCalendar
+                month={selectedHijriDate.month}
+                year={selectedHijriDate.year}
+                monthData={prayerTimes} // Pass all prayer times, the component will filter
+                onDaySelect={handleDaySelect}
+              />
             )}
           </View>
 
-          {/* Quick Actions */}
-          {hasDataForMonth && (
+          {/* Quick Actions - Show always for both calendar types */}
+          {(hasDataForMonth || calendarType === 'hijri') && (
             <View style={styles.quickActionsContainer}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 {t.calendar.quickActions}
@@ -542,62 +719,6 @@ export default function CalendarScreen() {
             </View>
           )}
 
-          {/* Calendar Legend */}
-          <View style={styles.legendContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t.calendar.legend}
-            </Text>
-            <View style={styles.legendItems}>
-              <View style={styles.legendItem}>
-                <View
-                  style={[
-                    styles.legendDot,
-                    { backgroundColor: colors.tint },
-                  ]}
-                />
-                <Text
-                  style={[styles.legendText, { color: colors.text + "80" }]}
-                >
-                  {t.calendar.legendToday}
-                </Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View
-                  style={[
-                    styles.legendDot,
-                    {
-                      backgroundColor:
-                        colorScheme === "dark" ? "#B8860B" : "#F9A825",
-                    },
-                  ]}
-                >
-                  <Text style={styles.legendIcon}>🌙</Text>
-                </View>
-                <Text
-                  style={[styles.legendText, { color: colors.text + "80" }]}
-                >
-                  {t.calendar.legendRamadan}
-                </Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View
-                  style={[
-                    styles.legendDot,
-                    {
-                      backgroundColor: colors.tint + "20",
-                      borderWidth: 1,
-                      borderColor: colors.tint,
-                    },
-                  ]}
-                />
-                <Text
-                  style={[styles.legendText, { color: colors.text + "80" }]}
-                >
-                  {t.calendar.legendHasPrayerTimes}
-                </Text>
-              </View>
-            </View>
-          </View>
         </Animated.View>
       </ScrollView>
 
@@ -945,6 +1066,41 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
 
+  dateRangeText: {
+    fontSize: 12,
+    fontWeight: "400",
+    letterSpacing: -0.1,
+    marginTop: 4,
+  },
+
+  // Calendar Type Toggle
+  calendarTypeToggle: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 8,
+  },
+
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+
+  toggleButtonActive: {
+    backgroundColor: "rgba(0,0,0,0.02)",
+  },
+
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+
   // Today's Info Card
   todayInfoCard: {
     marginHorizontal: 16,
@@ -1090,40 +1246,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.08,
   },
 
-  // Legend
-  legendContainer: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
-
-  legendItems: {
-    flexDirection: "row",
-    gap: 24,
-  },
-
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  legendDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  legendIcon: {
-    fontSize: 12,
-  },
-
-  legendText: {
-    fontSize: 15,
-    fontWeight: "500",
-    letterSpacing: -0.2,
-  },
 
   // Export Modal
   modalOverlay: {

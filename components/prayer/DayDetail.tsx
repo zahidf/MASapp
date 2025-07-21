@@ -21,6 +21,8 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { PrayerTime } from "@/types/prayer";
 import { getCurrentPrayerAndNext } from "@/utils/dateHelpers";
 import { PrayerTimesDisplay } from "./PrayerTimesDisplay";
+import { gregorianToHijri, formatHijriDate } from "@/utils/hijriDateUtils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface DayDetailProps {
   prayerTime: PrayerTime;
@@ -30,10 +32,15 @@ interface DayDetailProps {
 export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
   const date = new Date(prayerTime.d_date);
+  const hijriDate = gregorianToHijri(date);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [headerAnim] = useState(new Animated.Value(0));
   const [pulseAnim] = useState(new Animated.Value(1));
+  
+  // Check if we have actual prayer data
+  const hasPrayerData = prayerTime.fajr_begins && prayerTime.fajr_begins.trim() !== '';
 
   // Check if the selected date is today
   const today = new Date();
@@ -204,6 +211,9 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
                 })}
               </Text>
               <Text style={[styles.headerSubtitle, { color: colors.text + "60" }]}>
+                {formatHijriDate(hijriDate, 'en')}
+              </Text>
+              <Text style={[styles.headerYear, { color: colors.text + "40" }]}>
                 {date.getFullYear()}
               </Text>
             </View>
@@ -272,14 +282,52 @@ export function DayDetail({ prayerTime, onClose }: DayDetailProps) {
 
           {/* Prayer Times List */}
           <View style={styles.prayersList}>
-            <PrayerTimesDisplay
-              prayerTime={prayerTime}
-              currentPrayer={currentPrayer}
-              nextPrayer={nextPrayer}
-              pulseAnim={pulseAnim}
+            {hasPrayerData ? (
+              <PrayerTimesDisplay
+                prayerTime={prayerTime}
+                currentPrayer={currentPrayer}
+                nextPrayer={nextPrayer}
+                pulseAnim={pulseAnim}
               getCountdownToNext={getCountdownToNext}
               hideNotificationToggle={true}
             />
+            ) : (
+              <BlurView
+                intensity={60}
+                tint={colorScheme === "dark" ? "dark" : "light"}
+                style={[
+                  styles.noPrayerDataCard,
+                  {
+                    backgroundColor: colors.surface + "95",
+                    borderColor:
+                      colorScheme === "dark"
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(0,0,0,0.04)",
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.noPrayerDataIconContainer,
+                    { backgroundColor: colors.tint + "15" },
+                  ]}
+                >
+                  <IconSymbol
+                    name="calendar"
+                    size={48}
+                    color={colors.tint}
+                  />
+                </View>
+                <Text style={[styles.noPrayerDataTitle, { color: colors.text }]}>
+                  {t?.home?.noPrayerTimesForThisDay || 'No Prayer Times Available'}
+                </Text>
+                <Text
+                  style={[styles.noPrayerDataText, { color: colors.text + "60" }]}
+                >
+                  {t?.home?.prayerTimesNotUploadedForDate || 'Prayer times have not been uploaded for this date yet.'}
+                </Text>
+              </BlurView>
+            )}
           </View>
 
           {/* Hijri Date Card */}
@@ -403,6 +451,49 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     letterSpacing: -0.2,
     textAlign: "center",
+  },
+
+  headerYear: {
+    fontSize: 13,
+    fontWeight: "400",
+    letterSpacing: -0.1,
+    textAlign: "center",
+    marginTop: 2,
+  },
+
+  noPrayerDataCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: "hidden",
+    marginVertical: 20,
+  },
+
+  noPrayerDataIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  noPrayerDataTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+
+  noPrayerDataText: {
+    fontSize: 15,
+    letterSpacing: -0.2,
+    textAlign: "center",
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
 
   // Scroll View

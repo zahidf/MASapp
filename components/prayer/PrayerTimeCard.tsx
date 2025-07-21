@@ -22,6 +22,7 @@ import {
 } from "@/types/notification";
 import { BlurView } from "expo-blur";
 import { SunriseCard } from "./SunriseCard";
+import { localizeTime } from "@/utils/numberLocalization";
 
 // Define the notification prayer type based on your actual prayers object
 type NotificationPrayerName = keyof NotificationPreferences["prayers"];
@@ -107,16 +108,17 @@ export function PrayerTimeCard({
 
   const formatTime = (timeString: string | undefined) => {
     if (!timeString) return "N/A";
-    if (timeString.length === 5 && timeString.includes(":")) {
-      return timeString;
-    }
+    let formattedTime = timeString;
+    
     if (timeString.includes(":")) {
       const parts = timeString.split(":");
       if (parts.length >= 2) {
-        return `${parts[0]}:${parts[1]}`;
+        formattedTime = `${parts[0]}:${parts[1]}`;
       }
     }
-    return timeString;
+    
+    // Localize the numbers based on current language
+    return localizeTime(formattedTime, t.languageCode || 'en');
   };
 
   const handleNotificationPress = () => {

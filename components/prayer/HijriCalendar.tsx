@@ -6,39 +6,40 @@ import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PrayerTime } from "@/types/prayer";
-import { getDaysInMonth, getTodayString } from "@/utils/dateHelpers";
-import { getDaysInHijriMonth, gregorianToHijri, hijriToGregorian } from "@/utils/hijriDateUtils";
-import { localizeDay } from "@/utils/numberLocalization";
+import { 
+  getDaysInHijriMonth, 
+  hijriToGregorian,
+  gregorianToHijri,
+  getHijriMonthName 
+} from "@/utils/hijriDateUtils";
+import { formatDateString } from "@/utils/dateHelpers";
+import { localizeDay, localizeYear } from "@/utils/numberLocalization";
 
-interface MonthlyCalendarProps {
-  month: number;
-  year: number;
+interface HijriCalendarProps {
+  month: number; // Hijri month (1-12)
+  year: number; // Hijri year
   monthData: PrayerTime[];
-  onDaySelect: (day: number) => void;
-  calendarType?: 'gregorian' | 'hijri';
-  hijriDate?: any;
+  onDaySelect: (hijriDay: number, gregorianDateStr: string, prayerData?: PrayerTime) => void;
 }
 
-export function MonthlyCalendar({
+export function HijriCalendar({
   month,
   year,
   monthData,
   onDaySelect,
-  calendarType = 'gregorian',
-  hijriDate,
-}: MonthlyCalendarProps) {
+}: HijriCalendarProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { t } = useLanguage();
-  const today = getTodayString();
-
-  const daysInMonth = calendarType === 'gregorian' 
-    ? getDaysInMonth(year, month)
-    : getDaysInHijriMonth(year, month + 1);
   
-  const firstDayOfMonth = calendarType === 'gregorian'
-    ? new Date(year, month, 1).getDay()
-    : hijriToGregorian(year, month + 1, 1).getDay();
+  // Get today's Hijri date for highlighting
+  const todayHijri = gregorianToHijri(new Date());
+  const isCurrentMonth = todayHijri.year === year && todayHijri.month === month;
+  const todayHijriDay = isCurrentMonth ? todayHijri.day : null;
+
+  const daysInMonth = getDaysInHijriMonth(year, month);
+  const firstDayGregorian = hijriToGregorian(year, month, 1);
+  const firstDayOfMonth = firstDayGregorian.getDay();
 
   const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -52,21 +53,13 @@ export function MonthlyCalendar({
 
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      let dateStr;
-      if (calendarType === 'gregorian') {
-        dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-          day
-        ).padStart(2, "0")}`;
-      } else {
-        // Convert Hijri date to Gregorian for data lookup
-        const gregorianDate = hijriToGregorian(year, month + 1, day);
-        dateStr = `${gregorianDate.getFullYear()}-${String(gregorianDate.getMonth() + 1).padStart(2, "0")}-${String(
-          gregorianDate.getDate()
-        ).padStart(2, "0")}`;
-      }
+      // Convert Hijri date to Gregorian to check if we have prayer data
+      const gregorianDate = hijriToGregorian(year, month, day);
+      const dateStr = formatDateString(gregorianDate);
       const dayData = monthData.find((pt) => pt.d_date === dateStr);
-      const isToday = dateStr === today;
-      const isRamadan = dayData?.is_ramadan === 1;
+      
+      const isToday = day === todayHijriDay;
+      const isRamadan = month === 9; // Ramadan is the 9th month in Hijri calendar
       const hasData = !!dayData;
 
       days.push(
@@ -74,17 +67,15 @@ export function MonthlyCalendar({
           key={day}
           style={({ pressed }) => [
             styles.dayCell,
-            hasData && styles.dayWithData,
+            styles.dayWithData, // Always make it clickable
             isToday && styles.todayCell,
-            pressed && hasData && styles.pressedCell,
-            !hasData && styles.emptyDataCell,
+            pressed && styles.pressedCell,
           ]}
-          onPress={() => hasData && onDaySelect(day)}
-          disabled={!hasData}
+          onPress={() => onDaySelect(day, dateStr, dayData)}
         >
           {({ pressed }) => (
             <BlurView
-              intensity={isToday ? 0 : pressed && hasData ? 60 : 0}
+              intensity={isToday ? 0 : pressed ? 60 : 0}
               tint={colorScheme === "dark" ? "dark" : "light"}
               style={[
                 styles.dayContent,
@@ -100,8 +91,7 @@ export function MonthlyCalendar({
                         colorScheme === "dark" ? "#B8860B20" : "#F9A82520",
                     },
                   ],
-                hasData &&
-                  !isToday &&
+                !isToday &&
                   !isRamadan && {
                     backgroundColor:
                       colorScheme === "dark"
@@ -115,10 +105,18 @@ export function MonthlyCalendar({
                   styles.dayText,
                   { color: colors.text },
                   isToday && styles.todayText,
-                  !hasData && styles.emptyDayText,
                 ]}
               >
                 {localizeDay(day, t?.languageCode || 'en')}
+              </Text>
+              {/* Show Gregorian date below */}
+              <Text
+                style={[
+                  styles.gregorianDate,
+                  { color: isToday ? "#fff" : colors.text + "60" },
+                ]}
+              >
+                {localizeDay(gregorianDate.getDate(), t?.languageCode || 'en')}
               </Text>
               {isRamadan && !isToday && (
                 <Text style={styles.ramadanIcon}>🌙</Text>
@@ -175,7 +173,7 @@ export function MonthlyCalendar({
         ]}
       >
         <Text style={[styles.helperText, { color: colors.text + "60" }]}>
-          {t?.calendar?.tapToViewPrayerTimes || 'Tap any highlighted day to view prayer times'}
+          {t?.calendar?.tapToViewDetails || 'Tap any day to view details'}
         </Text>
       </View>
     </BlurView>
@@ -188,6 +186,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
   },
+
 
   weekDaysContainer: {
     flexDirection: "row",
@@ -228,16 +227,13 @@ const styles = StyleSheet.create({
     cursor: "pointer",
   },
 
-  emptyDataCell: {
-    opacity: 0.4,
-  },
-
   dayContent: {
     flex: 1,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    position: "relative",
   },
 
   todayCell: {
@@ -263,17 +259,20 @@ const styles = StyleSheet.create({
 
   dayText: {
     fontSize: 17,
-    fontWeight: "500",
+    fontWeight: "600",
     letterSpacing: -0.4,
+  },
+
+  gregorianDate: {
+    fontSize: 11,
+    fontWeight: "400",
+    letterSpacing: -0.2,
+    marginTop: 2,
   },
 
   todayText: {
     color: "#fff",
     fontWeight: "700",
-  },
-
-  emptyDayText: {
-    opacity: 0.5,
   },
 
   ramadanIcon: {
@@ -295,5 +294,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: -0.08,
     textAlign: "center",
+  },
+
+  helperSubtext: {
+    fontSize: 11,
+    fontWeight: "400",
+    letterSpacing: -0.08,
+    textAlign: "center",
+    marginTop: 2,
   },
 });

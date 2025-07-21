@@ -37,9 +37,12 @@ import {
   getTodayString,
   parseTimeString,
 } from "@/utils/dateHelpers";
+import { getCurrentHijriDate, formatHijriDate } from "@/utils/hijriDateUtils";
+import { localizeNumbers } from "@/utils/numberLocalization";
 import { NotificationService } from "@/utils/notificationService";
 import { generatePDFHTML } from "@/utils/pdfGenerator";
 import { Asset } from "expo-asset";
+import { firebaseMosqueDetailsService } from "@/services/firebaseMosqueDetails";
 
 const { width, height } = Dimensions.get("window");
 
@@ -73,16 +76,17 @@ export default function TodayScreen() {
   // Helper function to format time to hh:mm
   const formatTime = (timeString: string | undefined) => {
     if (!timeString) return "N/A";
-    if (timeString.length === 5 && timeString.includes(":")) {
-      return timeString;
-    }
+    let formattedTime = timeString;
+    
     if (timeString.includes(":")) {
       const parts = timeString.split(":");
       if (parts.length >= 2) {
-        return `${parts[0]}:${parts[1]}`;
+        formattedTime = `${parts[0]}:${parts[1]}`;
       }
     }
-    return timeString;
+    
+    // Localize the numbers based on current language
+    return localizeNumbers(formattedTime, t.languageCode || 'en');
   };
 
   // Countdown calculation function
@@ -116,9 +120,9 @@ export default function TodayScreen() {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (hours > 0) {
-      return `${hours}${t.common.hours.charAt(0)} ${minutes}${t.common.minutes.charAt(0)}`;
+      return `${localizeNumbers(hours, t.languageCode || 'en')}${t.common.hours.charAt(0)} ${localizeNumbers(minutes, t.languageCode || 'en')}${t.common.minutes.charAt(0)}`;
     } else {
-      return `${minutes}${t.common.minutes.charAt(0)}`;
+      return `${localizeNumbers(minutes, t.languageCode || 'en')}${t.common.minutes.charAt(0)}`;
     }
   };
 
@@ -272,6 +276,11 @@ export default function TodayScreen() {
     });
   };
 
+  const formatCurrentHijriDate = () => {
+    const hijriDate = getCurrentHijriDate();
+    return formatHijriDate(hijriDate, t.languageCode || 'en', t);
+  };
+
   const handlePrint = async () => {
     setIsExporting(true);
 
@@ -282,7 +291,13 @@ export default function TodayScreen() {
         return;
       }
 
-      const html = await generatePDFHTML(monthData, "month");
+      // Fetch mosque details and Jumaah times
+      const [mosqueDetails, jumaahTimes] = await Promise.all([
+        firebaseMosqueDetailsService.getMosqueDetails(),
+        firebaseMosqueDetailsService.getJumaahTimes()
+      ]);
+
+      const html = await generatePDFHTML(monthData, "month", 'gregorian', mosqueDetails || undefined, jumaahTimes || undefined);
       const filename = `prayer-times-${getMonthName(
         currentMonth
       )}-${currentYear}.pdf`;
@@ -427,6 +442,11 @@ export default function TodayScreen() {
                   >
                     {formatCurrentDate()}
                   </Text>
+                  <Text
+                    style={[styles.headerHijriDate, { color: colors.text + "60" }]}
+                  >
+                    {formatCurrentHijriDate()}
+                  </Text>
                 </View>
 
                 {/* Mosque Logo */}
@@ -547,6 +567,11 @@ export default function TodayScreen() {
                   style={[styles.headerSubtitle, { color: colors.text + "80" }]}
                 >
                   {formatCurrentDate()}
+                </Text>
+                <Text
+                  style={[styles.headerHijriDate, { color: colors.text + "60" }]}
+                >
+                  {formatCurrentHijriDate()}
                 </Text>
               </View>
 
@@ -1197,6 +1222,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "400",
     letterSpacing: -0.4,
+  },
+
+  headerHijriDate: {
+    fontSize: 13,
+    fontWeight: "400",
+    letterSpacing: -0.2,
+    marginTop: 2,
   },
 
   headerActions: {
