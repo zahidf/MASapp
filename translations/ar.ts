@@ -4,6 +4,7 @@ export default {
     title: 'اختر لغتك',
     description: 'اختر اللغة المفضلة لديك للتطبيق',
     continue: 'متابعة',
+    changeNote: '[يمكنك تغيير هذا لاحقًا في [المزيد > الإعدادات',
   },
   
   // Prayer names
@@ -86,6 +87,12 @@ export default {
     whenPrayerBegins: 'عندما تبدأ الصلاة',
     remindBeforeJamah: 'ذكرني قبل الجماعة:',
     noNotificationsWarning: 'لم يتم تحديد أي إشعارات. لن تتلقى أي تذكيرات بالصلاة.',
+    // Prayer card notification settings
+    prayerNotifications: 'إشعارات {prayerName}',
+    prayerBeginTime: 'وقت بداية الصلاة',
+    notifyWhenPrayerBegins: 'أرسل إشعاراً عندما يحين وقت صلاة {prayerName}',
+    notifyWhenCongregationStarts: 'أرسل إشعاراً عندما تبدأ صلاة الجماعة',
+    reminderBeforeJamah: 'تذكير قبل الجماعة',
   },
   
   // Qibla screen
@@ -183,15 +190,6 @@ export default {
     error: 'خطأ',
     sharePrayerTimesPDF: 'مشاركة PDF أوقات الصلاة',
     tapToViewPrayerTimes: 'انقر على أي يوم مميز لعرض أوقات الصلاة',
-    weekdays: {
-      sun: 'الأحد',
-      mon: 'الإثنين',
-      tue: 'الثلاثاء',
-      wed: 'الأربعاء',
-      thu: 'الخميس',
-      fri: 'الجمعة',
-      sat: 'السبت',
-    },
     months: {
       january: 'يناير',
       february: 'فبراير',

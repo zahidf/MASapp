@@ -3,6 +3,7 @@ import React, { createContext, ReactNode, useEffect, useState } from "react";
 import { AppState, AppStateStatus } from "react-native";
 
 import { NotificationSetupModal } from "@/components/notifications/NotificationSetupModal";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -35,6 +36,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { prayerTimes } = usePrayerTimes();
+  const { hasSelectedLanguage } = useLanguage();
   const [preferences, setPreferences] = useState<NotificationPreferences>(
     DEFAULT_NOTIFICATION_PREFERENCES
   );
@@ -66,22 +68,23 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Check if we should show modal when prayer times are loaded
   useEffect(() => {
-    // Check modal conditions
+    // Check modal conditions - including language selection
 
     if (
       prayerTimes.length > 0 &&
       !preferences.hasAskedPermission &&
       !hasCheckedForModal &&
-      hasInitialized
+      hasInitialized &&
+      hasSelectedLanguage // Only show after language is selected
     ) {
       // All conditions met, showing modal
       setHasCheckedForModal(true);
-      // Delay to ensure smooth UI
+      // Delay to ensure smooth UI and language propagation
       setTimeout(() => {
         setShouldShowSetup(true);
-      }, 1000);
+      }, 300); // Short delay to ensure language modal is fully closed
     }
-  }, [prayerTimes.length, preferences.hasAskedPermission, hasInitialized, hasCheckedForModal]);
+  }, [prayerTimes.length, preferences.hasAskedPermission, hasInitialized, hasCheckedForModal, hasSelectedLanguage]);
 
   useEffect(() => {
     // Update notifications when prayer times change, but only after initialization

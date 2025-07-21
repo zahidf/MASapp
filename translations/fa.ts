@@ -4,6 +4,7 @@ export default {
     title: 'زبان خود را انتخاب کنید',
     description: 'زبان مورد نظر خود را برای برنامه انتخاب کنید',
     continue: 'ادامه',
+    changeNote: 'شما می توانید این را بعداً در بیشتر > تنظیمات تغییر دهید',
   },
   
   // Prayer names
@@ -86,6 +87,12 @@ export default {
     whenPrayerBegins: 'وقتی نماز شروع می‌شود',
     remindBeforeJamah: 'قبل از جماعت یادآوری کن:',
     noNotificationsWarning: 'هیچ اعلانی انتخاب نشده است. شما هیچ یادآوری نماز دریافت نخواهید کرد.',
+    // Prayer card notification settings
+    prayerNotifications: 'اعلان‌های {prayerName}',
+    prayerBeginTime: 'زمان شروع نماز',
+    notifyWhenPrayerBegins: 'وقتی نماز {prayerName} شروع می‌شود اطلاع بده',
+    notifyWhenCongregationStarts: 'وقتی نماز جماعت شروع می‌شود اطلاع بده',
+    reminderBeforeJamah: 'یادآوری قبل از جماعت',
   },
   
   // Qibla screen
@@ -183,15 +190,6 @@ export default {
     error: 'خطا',
     sharePrayerTimesPDF: 'اشتراک گذاری PDF اوقات نماز',
     tapToViewPrayerTimes: 'برای مشاهده اوقات نماز روی هر روز برجسته ضربه بزنید',
-    weekdays: {
-      sun: 'یک',
-      mon: 'دو',
-      tue: 'سه',
-      wed: 'چهار',
-      thu: 'پنج',
-      fri: 'جمعه',
-      sat: 'شنبه',
-    },
     months: {
       january: 'جنوری',
       february: 'فبروری',

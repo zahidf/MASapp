@@ -4,6 +4,7 @@ export default {
     title: 'خپله ژبه وټاکئ',
     description: 'د اپلیکیشن لپاره خپله غوره ژبه وټاکئ',
     continue: 'دوام ورکړئ',
+    changeNote: 'تاسو کولی شئ دا وروسته په نور > تنظیمات کې بدل کړئ',
   },
   
   // Prayer names
@@ -86,6 +87,12 @@ export default {
     whenPrayerBegins: 'کله چې لمونځ پیل کیږي',
     remindBeforeJamah: 'د جماعت څخه مخکې یادونه:',
     noNotificationsWarning: 'هیڅ یادونه نه ده ټاکل شوې. تاسو به د لمونځ هیڅ یادونه ترلاسه نه کړئ.',
+    // Prayer card notification settings
+    prayerNotifications: 'د {prayerName} یادونې',
+    prayerBeginTime: 'د لمانځه د پیل وخت',
+    notifyWhenPrayerBegins: 'کله چې د {prayerName} لمونځ پیل شي خبر ورکړئ',
+    notifyWhenCongregationStarts: 'کله چې د جماعت لمونځ پیل شي خبر ورکړئ',
+    reminderBeforeJamah: 'د جماعت څخه مخکې یادونه',
   },
   
   // Qibla screen
@@ -249,7 +256,7 @@ export default {
     donationMessage: 'د مرستې فیچر ډیر ژر راځي! د مسجد د ملاتړ په علاقمندۍ څخه مو مننه.',
     aboutMessage: 'د مسجد ابوبکر صدیق اپلیکیشن نسخه ۱.۰.۰\n\nد مسجد ابوبکر صدیق لپاره جوړ شوی ترڅو ټولنې ته د لمونځ دقیق وختونه او د مسجد معلومات وړاندې کړي.\n\n© ۲۰۲۵ مسجد ابوبکر صدیق',
     mosqueName: 'مسجد ابوبکر صدیق',
-    mosqueAddress: 'ګروو سړک، سمیت ویک، برمنګهم B66 2QS',
+    mosqueAddress: 'Grove St, Smethwick, Birmingham B66 2QS',
     dailyPrayers: 'ورځني لمونځونه',
     daysOpen: 'د خلاصولو ورځې',
     blessings: 'برکتونه',

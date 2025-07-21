@@ -10,9 +10,11 @@ import { useEffect, useState } from "react";
 import "react-native-reanimated";
 
 import { LanguageSetupModal } from "@/components/language/LanguageSetupModal";
+import { SetupFlowModals } from "@/components/SetupFlowModals";
 import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { PrayerTimesProvider } from "@/contexts/PrayerTimesContext";
+import { SetupFlowProvider } from "@/contexts/SetupFlowContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 
@@ -21,6 +23,8 @@ function RootLayoutContent() {
   const { hasSelectedLanguage } = useLanguage();
   const [showLanguageSetup, setShowLanguageSetup] = useState(false);
   const [hasCheckedLanguage, setHasCheckedLanguage] = useState(false);
+  const [languageSetupCompleted, setLanguageSetupCompleted] = useState(false);
+  const [isTestingSetup, setIsTestingSetup] = useState(false);
 
   useEffect(() => {
     // Check if we need to show language setup
@@ -33,27 +37,49 @@ function RootLayoutContent() {
     }
   }, [hasSelectedLanguage, hasCheckedLanguage]);
 
+  // Global function to start setup flow (for testing)
+  useEffect(() => {
+    (window as any).startSetupFlow = () => {
+      setIsTestingSetup(true);
+      setShowLanguageSetup(true);
+    };
+  }, []);
+
   const handleLanguageSetupComplete = () => {
     setShowLanguageSetup(false);
+    setLanguageSetupCompleted(true);
+    
+    // If testing setup flow, trigger notification modal immediately
+    if (isTestingSetup) {
+      // Use NotificationContext to show the modal
+      setTimeout(() => {
+        (window as any).showNotificationSetup?.();
+      }, 100);
+    }
   };
 
   return (
     <>
       <PrayerTimesProvider>
         <NotificationProvider>
-          <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" options={{ headerShown: true }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
+          <SetupFlowProvider>
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+              </Stack>
+              <StatusBar style="auto" />
+              
+              {/* Setup Flow Modals for testing */}
+              <SetupFlowModals />
+            </ThemeProvider>
+          </SetupFlowProvider>
         </NotificationProvider>
       </PrayerTimesProvider>
       
-      {/* Language Setup Modal */}
+      {/* Language Setup Modal for regular flow */}
       <LanguageSetupModal
         visible={showLanguageSetup}
         onComplete={handleLanguageSetupComplete}

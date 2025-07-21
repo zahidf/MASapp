@@ -861,7 +861,7 @@ export default function TodayScreen() {
                           color="#fff"
                         />
                         <ThemedText style={styles.printButtonText}>
-                          Print {getMonthName(currentMonth)} Timetable
+                          {t.home.printMonth} {t.calendar?.months?.[getMonthName(currentMonth).toLowerCase() as keyof typeof t.calendar.months] || getMonthName(currentMonth)} {t.home.timetable}
                         </ThemedText>
                       </>
                     )}
@@ -1009,7 +1009,7 @@ export default function TodayScreen() {
                             color="#fff"
                           />
                           <ThemedText style={styles.printButtonText}>
-                            {t.home.printMonth} {getMonthName(currentMonth)} {t.home.timetable}
+                            {t.home.printMonth} {t.calendar?.months?.[getMonthName(currentMonth).toLowerCase() as keyof typeof t.calendar.months] || getMonthName(currentMonth)} {t.home.timetable}
                           </ThemedText>
                         </>
                       )}
@@ -1519,4 +1519,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: -0.4,
   },
+
 });

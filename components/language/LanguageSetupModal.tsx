@@ -29,6 +29,13 @@ export function LanguageSetupModal({ visible, onComplete }: LanguageSetupModalPr
   const { language: currentLanguage, changeLanguage, completeLanguageSetup, t } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = React.useState<Language>(currentLanguage);
   
+  // Update selected language when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      setSelectedLanguage(currentLanguage);
+    }
+  }, [visible, currentLanguage]);
+  
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -61,8 +68,10 @@ export function LanguageSetupModal({ visible, onComplete }: LanguageSetupModalPr
 
   const handleContinue = async () => {
     try {
-      await changeLanguage(selectedLanguage);
+      // Complete the language setup
       await completeLanguageSetup();
+      
+      // Close modal immediately for seamless transition
       onComplete();
     } catch (error) {
       console.error('Error setting language:', error);
@@ -80,6 +89,7 @@ export function LanguageSetupModal({ visible, onComplete }: LanguageSetupModalPr
       transparent={true}
       statusBarTranslucent={true}
       presentationStyle="overFullScreen"
+      onRequestClose={() => {}}
     >
       <TouchableWithoutFeedback>
         <Animated.View
@@ -181,7 +191,11 @@ export function LanguageSetupModal({ visible, onComplete }: LanguageSetupModalPr
                             borderWidth: selectedLanguage === lang.code ? 2 : 1,
                           },
                         ]}
-                        onPress={() => setSelectedLanguage(lang.code as Language)}
+                        onPress={async () => {
+                          setSelectedLanguage(lang.code as Language);
+                          // Immediately apply the language change
+                          await changeLanguage(lang.code as Language);
+                        }}
                         activeOpacity={0.7}
                       >
                         <View style={styles.languageContent}>
@@ -203,6 +217,13 @@ export function LanguageSetupModal({ visible, onComplete }: LanguageSetupModalPr
                     ))}
                   </View>
                 </Animated.View>
+              </View>
+
+              {/* Note about changing later */}
+              <View style={styles.noteContainer}>
+                <Text style={[styles.noteText, { color: colors.text + '80' }]}>
+                  {t.languageSetup.changeNote}
+                </Text>
               </View>
 
               {/* Button Bar */}
@@ -340,6 +361,19 @@ const styles = StyleSheet.create({
   languageNativeName: {
     fontSize: 15,
     letterSpacing: -0.2,
+  },
+
+  noteContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    alignItems: 'center',
+  },
+
+  noteText: {
+    fontSize: 13,
+    letterSpacing: -0.08,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 
   buttonBar: {

@@ -46,29 +46,42 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const saveLanguagePreferences = async (newPreferences: LanguagePreferences) => {
+  const changeLanguage = async (language: Language) => {
+    // Create the new preferences object
+    const newPreferences = {
+      ...preferences,
+      language,
+    };
+    
+    // Update state immediately for instant UI update
+    setPreferences(newPreferences);
+    
+    // Then persist to storage with the same object
     try {
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, JSON.stringify(newPreferences));
-      setPreferences(newPreferences);
     } catch (error) {
-      console.error('Error saving language preferences:', error);
-      throw error;
+      console.error('Error saving language:', error);
     }
   };
 
-  const changeLanguage = async (language: Language) => {
-    await saveLanguagePreferences({
-      ...preferences,
-      language,
-    });
-  };
-
   const completeLanguageSetup = async () => {
-    await saveLanguagePreferences({
+    // Get current preferences from state
+    const updatedPreferences = {
       ...preferences,
       hasSelectedLanguage: true,
-    });
+    };
+    
+    // Update state
+    setPreferences(updatedPreferences);
+    
+    // Save to storage
+    try {
+      await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, JSON.stringify(updatedPreferences));
+    } catch (error) {
+      console.error('Error completing language setup:', error);
+    }
   };
+
 
   if (isLoading) {
     return null;

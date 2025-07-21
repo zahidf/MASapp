@@ -365,7 +365,7 @@ export function PrayerTimeCard({
       {prayerKey && notificationSettings && (
         <NotificationSettingsSheet
           visible={showNotificationSheet}
-          prayerName={name}
+          prayerName={t.prayers[name.toLowerCase() as keyof typeof t.prayers] || name}
           prayerKey={prayerKey}
           settings={notificationSettings}
           onClose={() => setShowNotificationSheet(false)}
@@ -394,6 +394,7 @@ function NotificationSettingsSheet({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { updatePrayerSettings } = useNotificationContext();
+  const { t } = useLanguage();
   const [slideAnim] = useState(new Animated.Value(0));
 
   React.useEffect(() => {
@@ -480,7 +481,7 @@ function NotificationSettingsSheet({
           {/* Header */}
           <View style={styles.sheetHeader}>
             <ThemedText style={[styles.sheetTitle, { color: colors.text }]}>
-              {prayerName} Notifications
+              {t.notifications.prayerNotifications.replace('{prayerName}', prayerName)}
             </ThemedText>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <IconSymbol name="xmark" size={20} color={colors.text + "80"} />
@@ -500,7 +501,7 @@ function NotificationSettingsSheet({
                 <ThemedText
                   style={[styles.settingTitle, { color: colors.text }]}
                 >
-                  Prayer Begin Time
+                  {t.notifications.prayerBeginTime}
                 </ThemedText>
                 <ThemedText
                   style={[
@@ -508,7 +509,7 @@ function NotificationSettingsSheet({
                     { color: colors.text + "60" },
                   ]}
                 >
-                  Notify when {prayerName} prayer time begins
+                  {t.notifications.notifyWhenPrayerBegins.replace('{prayerName}', prayerName)}
                 </ThemedText>
               </View>
               <Switch
@@ -533,7 +534,7 @@ function NotificationSettingsSheet({
                 <ThemedText
                   style={[styles.settingTitle, { color: colors.text }]}
                 >
-                  Jamah Time
+                  {t.notifications.jamahTime}
                 </ThemedText>
                 <ThemedText
                   style={[
@@ -541,7 +542,7 @@ function NotificationSettingsSheet({
                     { color: colors.text + "60" },
                   ]}
                 >
-                  Notify when congregation prayer starts
+                  {t.notifications.notifyWhenCongregationStarts}
                 </ThemedText>
               </View>
               <Switch
@@ -561,7 +562,7 @@ function NotificationSettingsSheet({
                 <ThemedText
                   style={[styles.reminderTitle, { color: colors.text }]}
                 >
-                  Reminder Before Jamah
+                  {t.notifications.reminderBeforeJamah}
                 </ThemedText>
                 <View style={styles.reminderOptions}>
                   {reminderOptions.map((minutes) => (

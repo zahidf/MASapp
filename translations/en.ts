@@ -4,6 +4,7 @@ export default {
     title: 'Choose Your Language',
     description: 'Select your preferred language for the app',
     continue: 'Continue',
+    changeNote: 'You can change this later in [More > Settings]',
   },
   
   // Tab names
@@ -73,6 +74,12 @@ export default {
     whenPrayerBegins: 'When prayer begins',
     remindBeforeJamah: 'Remind before Jamah:',
     noNotificationsWarning: 'No notifications selected. You won\'t receive any prayer reminders.',
+    // Prayer card notification settings
+    prayerNotifications: '{prayerName} Notifications',
+    prayerBeginTime: 'Prayer Begin Time',
+    notifyWhenPrayerBegins: 'Notify when {prayerName} prayer time begins',
+    notifyWhenCongregationStarts: 'Notify when congregation prayer starts',
+    reminderBeforeJamah: 'Reminder Before Jamah',
   },
   
   // Qibla screen
