@@ -30,14 +30,6 @@
         "NSLocationWhenInUseUsageDescription": "This app uses location to show directions to the mosque and Qibla direction.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses location to show the Qibla direction.",
         "NSMotionUsageDescription": "This app uses motion sensors to show the compass for Qibla direction.",
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLName": "Apple Auth",
-            "CFBundleURLSchemes": [
-              "com.zahidf.masjidabubakr"
-            ]
-          }
-        ],
         "ITSAppUsesNonExemptEncryption": false
       },
       "associatedDomains": [
@@ -58,8 +50,7 @@
             ]
           }
         ]
-      },
-      "usesAppleSignIn": false
+      }
     },
     "android": {
       "adaptiveIcon": {
