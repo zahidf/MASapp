@@ -7,10 +7,9 @@ import {
   getMonthName,
 } from "./dateHelpers";
 import {
-  gregorianToHijri,
   formatHijriDate,
-  getHijriMonthName,
   formatHijriMonthYear,
+  gregorianToHijri
 } from "./hijriDateUtils";
 
 interface MosqueDetails {
@@ -79,14 +78,37 @@ export const generatePDFHTML = async (
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html style="height: 100%; margin: 0; padding: 0; overflow: hidden;">
       <head>
         <meta charset="utf-8">
         <title>${title}</title>
         <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          
           @page {
             size: A4;
-            margin: 5mm;
+            margin: 8mm;
+          }
+          
+          @media print {
+            html, body {
+              height: auto !important;
+              overflow: visible !important;
+            }
+            .page-wrapper {
+              page-break-after: avoid !important;
+              page-break-inside: avoid !important;
+              height: auto !important;
+              max-height: 260mm !important;
+              overflow: hidden !important;
+            }
+            .content {
+              height: auto !important;
+            }
+            .side-content {
+              height: auto !important;
+              overflow: visible !important;
+            }
           }
 
           * {
@@ -94,54 +116,128 @@ export const generatePDFHTML = async (
             padding: 0;
             box-sizing: border-box;
           }
-
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            color: #212121;
-            line-height: 1.2;
-            font-size: 10px;
+          
+          /* Prevent orphaned content */
+          .month-table tr {
+            page-break-inside: avoid;
+          }
+          
+          /* Force single page */
+          @media print {
+            @page :first {
+              margin: 8mm;
+            }
+            @page :left {
+              display: none;
+            }
+            @page :right {
+              display: none;
+            }
+            @page :blank {
+              display: none;
+            }
           }
 
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1a1a1a;
+            line-height: 1.4;
+            font-size: 10px;
+            background-color: #ffffff;
+            position: relative;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+          }
+          
+
           .header {
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin-bottom: 6px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #1B5E20;
+            padding: 8px;
+            background: white;
+            border: 2px solid #1B5E20;
+            border-radius: 8px;
+            gap: 8px;
             flex-shrink: 0;
+          }
+          
+          .header-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
           }
 
           .logo {
-            width: 35px;
-            height: 35px;
-            margin: 0;
+            width: 50px;
+            height: 50px;
             object-fit: contain;
+            margin-bottom: 8px;
           }
 
           .mosque-name {
-            font-size: 13px;
+            font-size: 16px;
             font-weight: 800;
             color: #1B5E20;
             margin-bottom: 2px;
+            letter-spacing: 0.5px;
           }
 
           .document-title {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
-            color: #333;
+            color: #2E7D32;
             margin-bottom: 1px;
           }
 
-          .location {
-            font-size: 8px;
+          .date-range {
+            font-size: 9px;
             color: #666;
+            font-weight: 500;
+          }
+          
+          .date-range-hijri {
+            font-size: 8px;
+            color: #2E7D32;
+            font-style: italic;
           }
 
           .content {
             flex: 1;
             overflow: hidden;
+            display: flex !important;
+            gap: 10px;
+            width: 100%;
+            align-items: flex-start;
+            min-height: 0;
+          }
+          
+          .main-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+          }
+          
+          .side-content {
+            width: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+            overflow: hidden;
           }
 
           /* Day View Styles - Optimized for single page */
+          .day-view .content {
+            display: block !important;
+          }
+          
           .day-info h2 {
             color: #1B5E20;
             margin-bottom: 12px;
@@ -192,38 +288,60 @@ export const generatePDFHTML = async (
             color: #212121;
           }
 
-          /* Month View Styles - Maximized sizing for optimal page usage */
+          /* Month View Styles - Enhanced design */
           .month-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9px;
+            font-size: 7px;
             table-layout: fixed;
+            background: white;
+            border: 1px solid #ddd;
+            margin: 0;
           }
 
           .month-table th {
-            background-color: #1B5E20;
+            background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
             color: white;
-            padding: 6px 2px;
+            padding: 8px 3px;
             text-align: center;
             font-weight: 600;
             font-size: 8px;
             white-space: nowrap;
             overflow: hidden;
-            height: 28px;
+            height: 32px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #1B5E20;
+          }
+          
+          .month-table th:first-child {
+            border-top-left-radius: 8px;
+          }
+          
+          .month-table th:last-child {
+            border-top-right-radius: 8px;
           }
 
           .month-table td {
-            padding: 4px 2px;
+            padding: 5px 2px;
             text-align: center;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #f0f0f0;
             font-size: 8px;
             white-space: nowrap;
             overflow: hidden;
-            height: 20px;
+            height: 24px;
+            font-weight: 500;
+            color: #333;
+            background: white;
+            transition: background-color 0.2s;
           }
 
-          .month-table tr:nth-child(even) {
-            background-color: #f8f9fa;
+          .month-table tr:nth-child(even) td {
+            background-color: #fafbfc;
+          }
+          
+          .month-table tr:hover td {
+            background-color: #f0f7f0;
           }
 
           .month-table .date-cell {
@@ -231,47 +349,79 @@ export const generatePDFHTML = async (
             color: #1B5E20;
             text-align: center;
             width: 5%;
-            font-size: 9px;
+            font-size: 10px;
+            background: linear-gradient(90deg, rgba(27, 94, 32, 0.05) 0%, transparent 100%);
           }
 
           .month-table .day-cell {
             font-weight: 600;
             color: #1B5E20;
             text-align: center;
-            width: 6%;
-            font-size: 9px;
+            width: 3%;
+            font-size: 6px;
           }
 
           .month-table .time-cell {
-            width: 6%;
-            font-size: 8px;
+            width: auto;
+            font-size: 6px;
           }
 
           .month-table .header-cell {
-            font-size: 8px;
-            line-height: 1.1;
-            padding: 4px 2px;
+            font-size: 7px;
+            line-height: 1.2;
+            padding: 4px 1px;
+            font-weight: 700;
           }
 
           .month-table .monday-row {
-            background-color: #FFEB3B !important;
+            background: linear-gradient(90deg, #FFF8E1 0%, #FFFEF7 100%) !important;
+            font-weight: 600;
           }
 
           .month-table .monday-row td {
-            background-color: #FFEB3B !important;
+            background: inherit !important;
+            color: #F57C00;
+            font-weight: 600;
+            border-bottom: 2px solid #FFE082;
+          }
+          
+          .month-table .monday-row .date-cell,
+          .month-table .monday-row .day-cell {
+            color: #E65100;
+            font-weight: 700;
           }
 
-          .month-table .weekend {
-            background-color: #E8F5E9;
+          .month-table .weekend td {
+            background-color: #F1F8F4;
+            color: #2E7D32;
           }
 
-          .month-table .ramadan {
-            background-color: #FFF3E0;
+          .month-table .ramadan td {
+            background: linear-gradient(90deg, #FFF3E0 0%, #FFFEF7 100%);
+            position: relative;
+          }
+          
+          .month-table .ramadan td::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #FF9800 0%, transparent 100%);
           }
 
           .ramadan-indicator {
-            font-size: 8px;
-            margin-left: 3px;
+            font-size: 10px;
+            margin-left: 2px;
+            display: inline-block;
+            animation: pulse 2s infinite;
+          }
+          
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
           }
 
           /* Year View Styles - Very compact */
@@ -322,29 +472,11 @@ export const generatePDFHTML = async (
             width: 8%;
           }
 
-          /* Footer - Balanced size for optimal page usage */
-          .footer {
-            margin-top: 4px;
-            padding-top: 4px;
-            border-top: 1px solid #e0e0e0;
-            text-align: center;
-            font-size: 7px;
-            color: #666;
-            flex-shrink: 0;
-            height: 20px;
-          }
 
           .generated-date {
             margin-bottom: 3px;
           }
 
-          /* Specific optimizations for day view */
-          .day-view .content {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100%;
-          }
 
           .prayers-container {
             flex: 1;
@@ -354,9 +486,21 @@ export const generatePDFHTML = async (
             gap: 8px;
           }
 
-          /* Month view optimizations - Natural content sizing */
+          /* Month view optimizations - Two column layout */
           .month-view .content {
-            display: block;
+            display: flex !important;
+            gap: 10px;
+            align-items: flex-start;
+          }
+
+          .month-view .main-content {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .month-view .side-content {
+            width: 180px;
+            flex-shrink: 0;
           }
 
           .month-view .month-table-container {
@@ -367,22 +511,18 @@ export const generatePDFHTML = async (
             width: 100%;
           }
 
-          .month-view .month-table th:first-child {
-            width: 6%;
-          }
-
-          .month-view .month-table th:nth-child(2) {
-            width: 6%;
-          }
-
-          .month-view .month-table th:not(:first-child):not(:nth-child(2)) {
-            width: 7%;
-          }
-
           /* Print optimizations */
           @media print {
             body {
               height: auto;
+            }
+            
+            .content {
+              display: flex !important;
+            }
+            
+            .month-view .content {
+              display: flex !important;
             }
             
             .month-table {
@@ -399,18 +539,24 @@ export const generatePDFHTML = async (
           }
 
           /* Special layout for fitting content */
-          .compact-layout {
-            transform: scale(0.95);
-            transform-origin: top center;
+          
+          .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            background: white;
+            overflow: hidden;
+            box-sizing: border-box;
+            max-height: 280mm;
+            page-break-after: avoid;
+            page-break-inside: avoid;
           }
 
           /* Additional sections for mosque details */
           .info-section {
-            margin-top: 8px;
-            padding: 6px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #e0e0e0;
+            margin-top: 12px;
+            padding: 0;
+            background-color: transparent;
           }
 
           .info-row {
@@ -425,150 +571,219 @@ export const generatePDFHTML = async (
             flex: 1;
           }
 
-          .qr-container {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-            margin: 8px 0;
+          .qr-codes-box {
+            background: #F5F5F5;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 6px;
+            margin-bottom: 6px;
           }
-
-          .qr-item {
+          
+          .qr-codes-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: #1B5E20;
+            margin-bottom: 8px;
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
-
-          .qr-code {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 2px;
+          
+          .qr-codes-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
           }
-
-          .qr-label {
-            font-size: 7px;
-            color: #666;
+          
+          .qr-code-item {
+            text-align: center;
+            transition: transform 0.2s;
+          }
+          
+          .qr-code-item:hover {
+            transform: scale(1.05);
+          }
+          
+          .large-qr {
+            width: 80px;
+            height: 80px;
+            border-radius: 6px;
+            border: 2px solid #1B5E20;
+            padding: 4px;
+            background: white;
+            margin: 0 auto;
+          }
+          
+          .qr-code-label {
+            font-size: 9px;
+            color: #1B5E20;
+            font-weight: 600;
+            margin-top: 4px;
+            text-transform: uppercase;
           }
 
           .donation-box {
-            background-color: #FFEB3B;
+            background: #FFF8E1;
             border: 2px solid #F57C00;
-            border-radius: 4px;
+            border-radius: 6px;
             padding: 6px;
-            margin: 8px 0;
             text-align: center;
           }
 
           .donation-title {
-            font-size: 10px;
-            font-weight: 700;
+            font-size: 11px;
+            font-weight: 800;
             color: #E65100;
             margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
+          
 
           .donation-plea {
             font-size: 8px;
-            color: #333;
-            margin-bottom: 4px;
-            line-height: 1.3;
+            color: #5D4037;
+            margin-bottom: 6px;
+            line-height: 1.4;
+            font-weight: 500;
+            font-style: italic;
           }
 
           .donation-details {
-            background-color: white;
-            border-radius: 3px;
-            padding: 4px;
-            margin-top: 4px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            padding: 6px;
+            margin-top: 6px;
+            border: 1px solid #FFE082;
           }
 
           .donation-detail {
             font-size: 8px;
             margin: 2px 0;
-          }
-
-          .donation-detail strong {
-            color: #1B5E20;
-          }
-
-          .jumaah-box {
-            background-color: #E8F5E9;
-            border: 1px solid #1B5E20;
-            border-radius: 4px;
-            padding: 6px;
-            margin: 8px 0;
             text-align: center;
           }
 
+          .donation-detail strong {
+            color: #E65100;
+            font-weight: 600;
+          }
+          
+          .donation-detail span {
+            font-weight: 600;
+            color: #5D4037;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+          }
+
+          .jumaah-box {
+            background: #E8F5E9;
+            border: 1px solid #2E7D32;
+            border-radius: 6px;
+            padding: 6px;
+            text-align: center;
+            margin-bottom: 6px;
+          }
+          
+
           .jumaah-title {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             color: #1B5E20;
             margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
 
           .jumaah-time {
             font-size: 9px;
             margin: 2px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+          }
+          
+          .jumaah-time strong {
+            color: #1B5E20;
+            font-weight: 600;
+            min-width: 90px;
+            text-align: right;
+          }
+          
+          .jumaah-time span {
+            font-weight: 600;
+            color: #2E7D32;
+            font-size: 10px;
           }
 
           .services-box {
-            margin-top: 8px;
+            padding: 8px;
+            background: #FFF3E0;
+            border-radius: 6px;
+            border: 2px solid #FF9800;
+            margin-bottom: 6px;
           }
 
           .services-title {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
-            color: #1B5E20;
-            margin-bottom: 4px;
+            color: #E65100;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
           }
+          
 
           .services-grid {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 4px;
           }
 
           .service-item {
-            font-size: 8px;
-            background-color: #E8F5E9;
-            padding: 3px 6px;
-            border-radius: 3px;
-            color: #1B5E20;
+            font-size: 9px;
+            background: white;
+            padding: 6px 8px;
+            border-radius: 4px;
+            color: #5D4037;
+            font-weight: 600;
+            border: 1px solid #FFE082;
+            text-align: left;
+            line-height: 1.4;
+            word-break: break-word;
           }
 
           /* Hijri date column styles */
           .hijri-cell {
-            font-size: 8px;
-            color: #1B5E20;
+            font-size: 7px;
+            color: #2E7D32;
             font-style: italic;
+            font-weight: 500;
+            width: 4%;
           }
         </style>
       </head>
-      <body class="${type}-view">
-        <div class="header">
-          <img src="${mosqueLogoBase64}" alt="Mosque Logo" class="logo">
-          <div class="mosque-name">Masjid Abubakr Siddique</div>
-          <div class="document-title">${title}</div>
-          <div class="location">Birmingham, United Kingdom</div>
-        </div>
-
-        <div class="content ${
-          type === "month" && data.length > 25 ? "compact-layout" : ""
-        }">
-          ${
-            type === "month"
-              ? `<div class="month-table-container">${content}</div>`
-              : content
-          }
-        </div>
-
-        ${generateMosqueDetailsSection(mosqueDetails, jumaahTimes)}
-
-        <div class="footer">
-          <div class="generated-date">
-            Generated: ${new Date().toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
+      <body class="${type}-view" style="margin: 0; padding: 0; height: 100%; overflow: hidden;">
+        <div class="page-wrapper">
+        ${generateHeader(title, mosqueLogoBase64, mosqueDetails, data, calendarType)}
+        
+        <div class="content">
+          <div class="main-content">
+            ${
+              type === "month"
+                ? `<div class="month-table-container">${content}</div>`
+                : content
+            }
           </div>
+          
+          ${type === "month" ? `
+            <div class="side-content">
+              ${jumaahTimes ? generateJumaahSection(jumaahTimes) : ''}
+              ${mosqueDetails ? generateSideSection(mosqueDetails) : ''}
+            </div>
+          ` : ''}
+        </div>
         </div>
       </body>
     </html>
@@ -684,8 +899,7 @@ const generateMonthContent = (data: PrayerTime[], calendarType: 'gregorian' | 'h
 
     if (isMonday) {
       rowClass = "monday-row";
-      cellStyle =
-        "border: 3px solid #FF9800; border-left: 8px solid #FF9800; font-weight: bold; color: #E65100;";
+      cellStyle = "";
     } else if (isRamadan) {
       rowClass = "ramadan";
     } else if (isWeekend) {
@@ -694,24 +908,12 @@ const generateMonthContent = (data: PrayerTime[], calendarType: 'gregorian' | 'h
 
     content += `
       <tr class="${rowClass}" style="${cellStyle}">
-        <td class="date-cell" style="${
-          isMonday
-            ? "border-left: 8px solid #FF9800; border-top: 3px solid #FF9800; border-bottom: 3px solid #FF9800; font-weight: bold; color: #E65100;"
-            : ""
-        }">
+        <td class="date-cell">
           ${dateDisplay}
-          ${isRamadan ? '<span class="ramadan-indicator">🌙</span>' : ""}
+          ${isRamadan ? '<span class="ramadan-indicator">(R)</span>' : ""}
         </td>
-        <td class="hijri-cell" style="${
-          isMonday
-            ? "border-top: 3px solid #FF9800; border-bottom: 3px solid #FF9800; font-weight: bold; color: #E65100;"
-            : ""
-        }">${hijriDate.day}</td>
-        <td class="day-cell" style="${
-          isMonday
-            ? "border-top: 3px solid #FF9800; border-bottom: 3px solid #FF9800; font-weight: bold; color: #E65100;"
-            : ""
-        }">${dayDisplay}</td>
+        <td class="hijri-cell">${hijriDate.day}</td>
+        <td class="day-cell">${dayDisplay}</td>
     `;
 
     // Add prayer times in the correct order
@@ -721,26 +923,13 @@ const generateMonthContent = (data: PrayerTime[], calendarType: 'gregorian' | 'h
     prayerOrder.forEach((prayerName) => {
       const prayer = prayers.find((p) => p.name === prayerName);
       if (prayer) {
-        const isLastCell = cellIndex === 13; // Last column (Isha Iqamah)
-        const mondayStyle = isMonday
-          ? `border-top: 3px solid #FF9800; border-bottom: 3px solid #FF9800; ${
-              isLastCell ? "border-right: 3px solid #FF9800;" : ""
-            } font-weight: bold; color: #E65100;`
-          : "";
-
-        content += `<td class="time-cell" style="${mondayStyle}">${formatTimeForDisplay(
+        content += `<td class="time-cell">${formatTimeForDisplay(
           prayer.begins
         )}</td>`;
         cellIndex++;
 
         if (prayer.name !== "Sunrise") {
-          const isLastCellIqamah = cellIndex === 13;
-          const mondayStyleIqamah = isMonday
-            ? `border-top: 3px solid #FF9800; border-bottom: 3px solid #FF9800; ${
-                isLastCellIqamah ? "border-right: 3px solid #FF9800;" : ""
-              } font-weight: bold; color: #E65100;`
-            : "";
-          content += `<td class="time-cell" style="${mondayStyleIqamah}">${
+          content += `<td class="time-cell">${
             prayer.jamah && prayer.jamah.trim() !== ""
               ? formatTimeForDisplay(prayer.jamah)
               : "-"
@@ -821,7 +1010,7 @@ const generateYearContent = (data: PrayerTime[]): string => {
         <tr ${isRamadan ? 'class="ramadan"' : ""}>
           <td class="date-cell">
             ${date.getDate()}
-            ${isRamadan ? '<span class="ramadan-indicator">🌙</span>' : ""}
+            ${isRamadan ? '<span class="ramadan-indicator">(R)</span>' : ""}
           </td>
       `;
 
@@ -917,68 +1106,125 @@ const getMosqueLogoBase64 = async (): Promise<string> => {
   }
 };
 
-const generateMosqueDetailsSection = (mosqueDetails?: MosqueDetails, jumaahTimes?: JumaahTimes): string => {
-  let content = '<div class="info-section">';
+const generateHeader = (title: string, mosqueLogoBase64: string, mosqueDetails?: MosqueDetails, data?: PrayerTime[], calendarType?: string): string => {
+  // Get date range for the month
+  let dateRangeText = '';
+  let hijriRangeText = '';
   
-  // Jumaah times box
-  if (jumaahTimes) {
-    content += `
-      <div class="jumaah-box">
-        <div class="jumaah-title">Friday Prayer (Jumu'ah)</div>
-        <div class="jumaah-time"><strong>Khutbah Begins:</strong> ${jumaahTimes.khutbah_begins}</div>
-        <div class="jumaah-time"><strong>Prayer Begins:</strong> ${jumaahTimes.prayer_begins}</div>
-      </div>
-    `;
+  if (data && data.length > 0) {
+    const firstDate = new Date(data[0].d_date);
+    const lastDate = new Date(data[data.length - 1].d_date);
+    
+    // Gregorian date range
+    const monthYear = firstDate.toLocaleDateString('en-US', { month: 'numeric', year: 'numeric' });
+    dateRangeText = monthYear;
+    
+    // Hijri date range
+    const firstHijri = gregorianToHijri(firstDate);
+    const lastHijri = gregorianToHijri(lastDate);
+    
+    if (firstHijri.month === lastHijri.month) {
+      hijriRangeText = `${firstHijri.month}/${firstHijri.year} AH`;
+    } else {
+      hijriRangeText = `${firstHijri.month}-${lastHijri.month}/${firstHijri.year} AH`;
+    }
   }
   
-  // QR codes section
-  if (mosqueDetails && (mosqueDetails.ios_qr || mosqueDetails.android_qr || mosqueDetails.website_qr)) {
-    content += '<div class="qr-container">';
+  return `
+    <div class="header">
+      <div class="header-center">
+        <img src="${mosqueLogoBase64}" alt="Mosque Logo" class="logo">
+        <div class="mosque-name">Masjid Abubakr Siddique</div>
+        <div class="document-title">${title}</div>
+        <div class="date-range">${dateRangeText}</div>
+        <div class="date-range-hijri">${hijriRangeText}</div>
+      </div>
+    </div>
+  `;
+};
+
+const generateJumaahSection = (jumaahTimes: JumaahTimes): string => {
+  return `
+    <div class="jumaah-box">
+      <div class="jumaah-title">Friday Prayer (Jumu'ah)</div>
+      <div class="jumaah-time"><strong>Khutbah Begins:</strong> <span>${jumaahTimes.khutbah_begins}</span></div>
+      <div class="jumaah-time"><strong>Prayer Begins:</strong> <span>${jumaahTimes.prayer_begins}</span></div>
+    </div>
+  `;
+};
+
+const generateSideSection = (mosqueDetails: MosqueDetails): string => {
+  let content = '';
+  
+  // QR Codes section
+  const hasQRCodes = mosqueDetails.ios_qr || mosqueDetails.android_qr || mosqueDetails.website_qr;
+  if (hasQRCodes) {
+    content += `
+      <div class="qr-codes-box">
+        <div class="qr-codes-title">Scan QR Codes Below</div>
+        <div class="qr-codes-grid">
+    `;
     
     if (mosqueDetails.ios_qr) {
-      // Convert SVG to base64 if needed
-      const qrSrc = mosqueDetails.ios_qr.startsWith('<svg') 
-        ? `data:image/svg+xml;base64,${btoa(mosqueDetails.ios_qr)}`
-        : mosqueDetails.ios_qr;
       content += `
-        <div class="qr-item">
-          <img src="${qrSrc}" class="qr-code" alt="iOS App QR">
-          <div class="qr-label">iOS App</div>
+        <div class="qr-code-item">
+          <img src="${convertSvgToBase64(mosqueDetails.ios_qr)}" class="large-qr" alt="iOS App">
+          <div class="qr-code-label">iOS App</div>
         </div>
       `;
     }
     
     if (mosqueDetails.android_qr) {
-      // Convert SVG to base64 if needed
-      const qrSrc = mosqueDetails.android_qr.startsWith('<svg') 
-        ? `data:image/svg+xml;base64,${btoa(mosqueDetails.android_qr)}`
-        : mosqueDetails.android_qr;
       content += `
-        <div class="qr-item">
-          <img src="${qrSrc}" class="qr-code" alt="Android App QR">
-          <div class="qr-label">Android App</div>
+        <div class="qr-code-item">
+          <img src="${convertSvgToBase64(mosqueDetails.android_qr)}" class="large-qr" alt="Android App">
+          <div class="qr-code-label">Android App</div>
         </div>
       `;
     }
     
     if (mosqueDetails.website_qr) {
-      // Convert SVG to base64 if needed
-      const qrSrc = mosqueDetails.website_qr.startsWith('<svg') 
-        ? `data:image/svg+xml;base64,${btoa(mosqueDetails.website_qr)}`
-        : mosqueDetails.website_qr;
       content += `
-        <div class="qr-item">
-          <img src="${qrSrc}" class="qr-code" alt="Website QR">
-          <div class="qr-label">Website</div>
+        <div class="qr-code-item">
+          <img src="${convertSvgToBase64(mosqueDetails.website_qr)}" class="large-qr" alt="Website">
+          <div class="qr-code-label">Website</div>
         </div>
       `;
     }
     
-    content += '</div>';
+    content += `
+        </div>
+      </div>
+    `;
   }
   
+  // Services section - Always show even if empty for debugging
+  content += `
+    <div class="services-box">
+      <div class="services-title">Our Services</div>
+      <div class="services-grid">
+  `;
+  
+  if (mosqueDetails.services && Object.keys(mosqueDetails.services).length > 0) {
+    Object.entries(mosqueDetails.services).forEach(([key, value]) => {
+      // Handle both string values and nested objects
+      const displayValue = typeof value === 'string' ? value : (value as any).toString();
+      // Replace underscores with spaces for better display
+      const displayKey = key.replace(/_/g, ' ');
+      content += `<div class="service-item"><strong>${displayKey}:</strong> ${displayValue}</div>`;
+    });
+  } else {
+    // Show placeholder if no services
+    content += `<div class="service-item">Services information will be displayed here</div>`;
+  }
+  
+  content += `
+      </div>
+    </div>
+  `;
+  
   // Donation section
-  if (mosqueDetails?.donation_account) {
+  if (mosqueDetails.donation_account) {
     content += `
       <div class="donation-box">
         <div class="donation-title">Support Your Mosque</div>
@@ -987,32 +1233,19 @@ const generateMosqueDetailsSection = (mosqueDetails?: MosqueDetails, jumaahTimes
           PLEASE make a secure donation VIA bank account.
         </div>
         <div class="donation-details">
-          <div class="donation-detail"><strong>Account Name:</strong> ${mosqueDetails.donation_account.name}</div>
-          <div class="donation-detail"><strong>Sort Code:</strong> ${mosqueDetails.donation_account.sort_code}</div>
-          <div class="donation-detail"><strong>Account Number:</strong> ${mosqueDetails.donation_account.account_number}</div>
+          <div class="donation-detail"><strong>Account Name:</strong> <span>${mosqueDetails.donation_account.name}</span></div>
+          <div class="donation-detail"><strong>Sort Code:</strong> <span>${mosqueDetails.donation_account.sort_code}</span></div>
+          <div class="donation-detail"><strong>Account Number:</strong> <span>${mosqueDetails.donation_account.account_number}</span></div>
         </div>
       </div>
     `;
   }
   
-  // Services section
-  if (mosqueDetails?.services && Object.keys(mosqueDetails.services).length > 0) {
-    content += `
-      <div class="services-box">
-        <div class="services-title">Mosque Services</div>
-        <div class="services-grid">
-    `;
-    
-    Object.entries(mosqueDetails.services).forEach(([key, value]) => {
-      content += `<div class="service-item">${key}: ${value}</div>`;
-    });
-    
-    content += `
-        </div>
-      </div>
-    `;
-  }
-  
-  content += '</div>';
   return content;
+};
+
+const convertSvgToBase64 = (svgString: string): string => {
+  return svgString.startsWith('<svg') 
+    ? `data:image/svg+xml;base64,${btoa(svgString)}`
+    : svgString;
 };

@@ -226,7 +226,7 @@ export default function ExploreScreen() {
       items: [
         {
           title: t.explore.about,
-          subtitle: `${t.explore.version} 1.0.0`,
+          subtitle: `${t.explore.version} 1.1.5`,
           icon: "info.circle.fill",
           action: handleAbout,
         },
