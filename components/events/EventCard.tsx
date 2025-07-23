@@ -16,6 +16,7 @@ import { EventWithId, EventNotificationPreference } from '@/types/event';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEvents } from '@/contexts/EventsContext';
 
@@ -36,9 +37,11 @@ export const EventCard: React.FC<EventCardProps> = ({ event, expanded: initialEx
   const { setEventNotificationPreference, getEventNotificationPref } = useEvents();
   
   const backgroundColor = useThemeColor({}, 'background');
+  const surfaceColor = useThemeColor({}, 'surface');
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({}, 'tabIconDefault');
   const accentColor = useThemeColor({}, 'tint');
+  const colorScheme = useColorScheme() ?? 'light';
 
   useEffect(() => {
     loadNotificationPreference();
@@ -67,20 +70,24 @@ export const EventCard: React.FC<EventCardProps> = ({ event, expanded: initialEx
   const getEventStyles = () => {
     const appearance = event.appearance || {};
     const isExpanded = expanded;
+    const themeColors = appearance[colorScheme];
+    
+    // Use theme-specific colors if available, otherwise fall back to legacy colors
+    const bgColorExpanded = themeColors?.bgColorExpanded || appearance.bgColorExpanded || surfaceColor;
+    const bgColorCollapsed = themeColors?.bgColorCollapsed || appearance.bgColorCollapsed || surfaceColor;
+    const borderColorExpanded = themeColors?.borderColorExpanded || appearance.borderColorExpanded || borderColor;
+    const borderColorCollapsed = themeColors?.borderColorCollapsed || appearance.borderColorCollapsed || borderColor;
+    const fontColor = themeColors?.fontColor || appearance.fontColor || textColor;
     
     return {
       container: {
-        backgroundColor: isExpanded 
-          ? (appearance.bgColorExpanded || backgroundColor)
-          : (appearance.bgColorCollapsed || backgroundColor),
-        borderColor: isExpanded
-          ? (appearance.borderColorExpanded || borderColor)
-          : (appearance.borderColorCollapsed || borderColor),
+        backgroundColor: isExpanded ? bgColorExpanded : bgColorCollapsed,
+        borderColor: isExpanded ? borderColorExpanded : borderColorCollapsed,
       },
       text: {
         fontFamily: appearance.fontFamily || undefined,
         fontSize: appearance.fontSize ? parseInt(appearance.fontSize) : 16,
-        color: appearance.fontColor || textColor,
+        color: fontColor,
         fontWeight: appearance.fontBold ? 'bold' : 'normal' as any,
         fontStyle: appearance.fontItalic ? 'italic' : 'normal' as any,
       }
@@ -400,8 +407,8 @@ const baseStyles = StyleSheet.create({
   },
   eventImage: {
     width: '100%',
-    height: undefined,
-    aspectRatio: undefined,
+    height: 200,
+    aspectRatio: 16 / 9,
     borderRadius: 8,
   },
   imageLoader: {

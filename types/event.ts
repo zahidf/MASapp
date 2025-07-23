@@ -9,9 +9,29 @@ export type DayName = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'
 export interface EventAppearance {
   fontFamily?: string;
   fontSize?: string;
-  fontColor?: string;
   fontBold?: boolean;
   fontItalic?: boolean;
+  
+  // Light mode colors
+  light?: {
+    fontColor?: string;
+    bgColorExpanded?: string;
+    borderColorExpanded?: string;
+    bgColorCollapsed?: string;
+    borderColorCollapsed?: string;
+  };
+  
+  // Dark mode colors
+  dark?: {
+    fontColor?: string;
+    bgColorExpanded?: string;
+    borderColorExpanded?: string;
+    bgColorCollapsed?: string;
+    borderColorCollapsed?: string;
+  };
+  
+  // Backward compatibility (deprecated)
+  fontColor?: string;
   bgColorExpanded?: string;
   borderColorExpanded?: string;
   bgColorCollapsed?: string;

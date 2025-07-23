@@ -10,7 +10,8 @@ import {
   StatusBar,
   Text,
   Animated,
-  Dimensions
+  Dimensions,
+  Modal
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { ThemedView } from '@/components/ThemedView';
@@ -35,6 +36,7 @@ export default function EventsScreen() {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [attendeeFilter, setAttendeeFilter] = useState<AttendeeFilter>('all');
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [showFilterModal, setShowFilterModal] = useState(false);
   
   const colorScheme = useColorScheme();
   const backgroundColor = useThemeColor({}, 'background');
@@ -100,43 +102,27 @@ export default function EventsScreen() {
     return filtered;
   }, [events, todayEvents, filterType, attendeeFilter]);
 
-  const FilterButton: React.FC<{
-    label: string;
-    value: string;
-    currentValue: string;
-    onPress: () => void;
-    icon?: string;
-  }> = ({ label, value, currentValue, onPress, icon }) => {
-    const isSelected = value === currentValue;
-    return (
-      <TouchableOpacity
-        style={[
-          styles.filterButton,
-          { 
-            borderColor: isSelected ? accentColor : borderColor,
-            backgroundColor: isSelected ? accentColor + '15' : 'transparent',
-          }
-        ]}
-        onPress={onPress}
-      >
-        {icon && (
-          <Ionicons 
-            name={icon as any} 
-            size={16} 
-            color={isSelected ? accentColor : textColor} 
-            style={styles.filterIcon}
-          />
-        )}
-        <ThemedText 
-          style={[
-            styles.filterButtonText,
-            { color: isSelected ? accentColor : textColor }
-          ]}
-        >
-          {label}
-        </ThemedText>
-      </TouchableOpacity>
-    );
+  const getFilterLabel = () => {
+    const parts = [];
+    
+    // Add filter type label
+    if (filterType !== 'all') {
+      parts.push(t[filterType] || filterType);
+    }
+    
+    // Add attendee filter label
+    if (attendeeFilter !== 'all') {
+      parts.push(t[attendeeFilter] || attendeeFilter);
+    }
+    
+    return parts.length > 0 ? parts.join(' • ') : t.allEvents || 'All Events';
+  };
+
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filterType !== 'all') count++;
+    if (attendeeFilter !== 'all') count++;
+    return count;
   };
 
   if (loading) {
@@ -225,206 +211,27 @@ export default function EventsScreen() {
         }
       >
 
-        <View style={styles.filtersSection}>
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={60}
-              tint={colorScheme === "dark" ? "dark" : "light"}
-              style={[styles.filterCard, { borderColor }]}
-            >
-              <View style={styles.filterHeader}>
-                <Ionicons name="calendar-outline" size={18} color={textColor} />
-                <ThemedText style={styles.filterTitle}>{t.filterBy}</ThemedText>
-              </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterScroll}
-              >
-              <View style={styles.filterOptions}>
-                <FilterButton
-                  label={t.all}
-                  value="all"
-                  currentValue={filterType}
-                  onPress={() => setFilterType('all')}
-                  icon="list-outline"
-                />
-                <FilterButton
-                  label={t.today}
-                  value="today"
-                  currentValue={filterType}
-                  onPress={() => setFilterType('today')}
-                  icon="today-outline"
-                />
-                <FilterButton
-                  label={t.upcoming}
-                  value="upcoming"
-                  currentValue={filterType}
-                  onPress={() => setFilterType('upcoming')}
-                  icon="arrow-forward-circle-outline"
-                />
-                <FilterButton
-                  label={t.recurring}
-                  value="recurring"
-                  currentValue={filterType}
-                  onPress={() => setFilterType('recurring')}
-                  icon="repeat-outline"
-                />
-              </View>
-            </ScrollView>
-            </BlurView>
-          ) : (
-            <View style={[styles.filterCard, { backgroundColor: surfaceColor, borderColor }]}>
-              <View style={styles.filterHeader}>
-                <Ionicons name="calendar-outline" size={18} color={textColor} />
-                <ThemedText style={styles.filterTitle}>{t.filterBy}</ThemedText>
-              </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterScroll}
-              >
-                <View style={styles.filterOptions}>
-                  <FilterButton
-                    label={t.all}
-                    value="all"
-                    currentValue={filterType}
-                    onPress={() => setFilterType('all')}
-                    icon="list-outline"
-                  />
-                  <FilterButton
-                    label={t.today}
-                    value="today"
-                    currentValue={filterType}
-                    onPress={() => setFilterType('today')}
-                    icon="today-outline"
-                  />
-                  <FilterButton
-                    label={t.upcoming}
-                    value="upcoming"
-                    currentValue={filterType}
-                    onPress={() => setFilterType('upcoming')}
-                    icon="arrow-forward-circle-outline"
-                  />
-                  <FilterButton
-                    label={t.recurring}
-                    value="recurring"
-                    currentValue={filterType}
-                    onPress={() => setFilterType('recurring')}
-                    icon="repeat-outline"
-                  />
-                </View>
-              </ScrollView>
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+            style={[styles.filterDropdown, { borderColor }]}
+            onPress={() => setShowFilterModal(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.filterDropdownLeft}>
+              <Ionicons name="filter-outline" size={18} color={textColor} />
+              <ThemedText style={styles.filterDropdownText}>
+                {getFilterLabel()}
+              </ThemedText>
             </View>
-          )}
-
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={60}
-              tint={colorScheme === "dark" ? "dark" : "light"}
-              style={[styles.filterCard, { borderColor }]}
-            >
-              <View style={styles.filterHeader}>
-                <Ionicons name="people-outline" size={18} color={textColor} />
-                <ThemedText style={styles.filterTitle}>{t.attendees}</ThemedText>
-              </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterScroll}
-              >
-              <View style={styles.filterOptions}>
-                <FilterButton
-                  label={t.all}
-                  value="all"
-                  currentValue={attendeeFilter}
-                  onPress={() => setAttendeeFilter('all')}
-                />
-                <FilterButton
-                  label={t.everyone}
-                  value="everyone"
-                  currentValue={attendeeFilter}
-                  onPress={() => setAttendeeFilter('everyone')}
-                />
-                <FilterButton
-                  label={t.men}
-                  value="men"
-                  currentValue={attendeeFilter}
-                  onPress={() => setAttendeeFilter('men')}
-                />
-                <FilterButton
-                  label={t.women}
-                  value="women"
-                  currentValue={attendeeFilter}
-                  onPress={() => setAttendeeFilter('women')}
-                />
-                <FilterButton
-                  label={t.youth}
-                  value="youth"
-                  currentValue={attendeeFilter}
-                  onPress={() => setAttendeeFilter('youth')}
-                />
-                <FilterButton
-                  label={t.children}
-                  value="children"
-                  currentValue={attendeeFilter}
-                  onPress={() => setAttendeeFilter('children')}
-                />
-              </View>
-            </ScrollView>
-            </BlurView>
-          ) : (
-            <View style={[styles.filterCard, { backgroundColor: surfaceColor, borderColor }]}>
-              <View style={styles.filterHeader}>
-                <Ionicons name="people-outline" size={18} color={textColor} />
-                <ThemedText style={styles.filterTitle}>{t.attendees}</ThemedText>
-              </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterScroll}
-              >
-                <View style={styles.filterOptions}>
-                  <FilterButton
-                    label={t.all}
-                    value="all"
-                    currentValue={attendeeFilter}
-                    onPress={() => setAttendeeFilter('all')}
-                  />
-                  <FilterButton
-                    label={t.everyone}
-                    value="everyone"
-                    currentValue={attendeeFilter}
-                    onPress={() => setAttendeeFilter('everyone')}
-                  />
-                  <FilterButton
-                    label={t.men}
-                    value="men"
-                    currentValue={attendeeFilter}
-                    onPress={() => setAttendeeFilter('men')}
-                  />
-                  <FilterButton
-                    label={t.women}
-                    value="women"
-                    currentValue={attendeeFilter}
-                    onPress={() => setAttendeeFilter('women')}
-                  />
-                  <FilterButton
-                    label={t.youth}
-                    value="youth"
-                    currentValue={attendeeFilter}
-                    onPress={() => setAttendeeFilter('youth')}
-                  />
-                  <FilterButton
-                    label={t.children}
-                    value="children"
-                    currentValue={attendeeFilter}
-                    onPress={() => setAttendeeFilter('children')}
-                  />
+            <View style={styles.filterDropdownRight}>
+              {getActiveFilterCount() > 0 && (
+                <View style={[styles.filterBadge, { backgroundColor: accentColor }]}>
+                  <Text style={styles.filterBadgeText}>{getActiveFilterCount()}</Text>
                 </View>
-              </ScrollView>
+              )}
+              <Ionicons name="chevron-down" size={18} color={textColor} />
             </View>
-          )}
+          </TouchableOpacity>
         </View>
 
         {filteredEvents.length === 0 ? (
@@ -441,6 +248,237 @@ export default function EventsScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={showFilterModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalOverlayTouch} 
+            activeOpacity={1}
+            onPress={() => setShowFilterModal(false)}
+          />
+          <View style={[styles.modalContent, { backgroundColor }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>{t.filters || 'Filters'}</ThemedText>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={24} color={textColor} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterSection}>
+              <ThemedText style={styles.filterSectionTitle}>{t.eventType || 'Event Type'}</ThemedText>
+              <View style={styles.filterOptionsGrid}>
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    filterType === 'all' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setFilterType('all')}
+                >
+                  <Ionicons 
+                    name="list-outline" 
+                    size={20} 
+                    color={filterType === 'all' ? '#fff' : textColor} 
+                  />
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    filterType === 'all' && { color: '#fff' }
+                  ]}>
+                    {t.all || 'All'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    filterType === 'today' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setFilterType('today')}
+                >
+                  <Ionicons 
+                    name="today-outline" 
+                    size={20} 
+                    color={filterType === 'today' ? '#fff' : textColor} 
+                  />
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    filterType === 'today' && { color: '#fff' }
+                  ]}>
+                    {t.today || 'Today'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    filterType === 'upcoming' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setFilterType('upcoming')}
+                >
+                  <Ionicons 
+                    name="arrow-forward-circle-outline" 
+                    size={20} 
+                    color={filterType === 'upcoming' ? '#fff' : textColor} 
+                  />
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    filterType === 'upcoming' && { color: '#fff' }
+                  ]}>
+                    {t.upcoming || 'Upcoming'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    filterType === 'recurring' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setFilterType('recurring')}
+                >
+                  <Ionicons 
+                    name="repeat-outline" 
+                    size={20} 
+                    color={filterType === 'recurring' ? '#fff' : textColor} 
+                  />
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    filterType === 'recurring' && { color: '#fff' }
+                  ]}>
+                    {t.recurring || 'Recurring'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.filterSection}>
+              <ThemedText style={styles.filterSectionTitle}>{t.attendees || 'Attendees'}</ThemedText>
+              <View style={styles.filterOptionsGrid}>
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    attendeeFilter === 'all' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setAttendeeFilter('all')}
+                >
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    attendeeFilter === 'all' && { color: '#fff' }
+                  ]}>
+                    {t.all || 'All'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    attendeeFilter === 'everyone' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setAttendeeFilter('everyone')}
+                >
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    attendeeFilter === 'everyone' && { color: '#fff' }
+                  ]}>
+                    {t.everyone || 'Everyone'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    attendeeFilter === 'men' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setAttendeeFilter('men')}
+                >
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    attendeeFilter === 'men' && { color: '#fff' }
+                  ]}>
+                    {t.men || 'Men'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    attendeeFilter === 'women' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setAttendeeFilter('women')}
+                >
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    attendeeFilter === 'women' && { color: '#fff' }
+                  ]}>
+                    {t.women || 'Women'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    attendeeFilter === 'youth' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setAttendeeFilter('youth')}
+                >
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    attendeeFilter === 'youth' && { color: '#fff' }
+                  ]}>
+                    {t.youth || 'Youth'}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.filterOption,
+                    { borderColor },
+                    attendeeFilter === 'children' && { backgroundColor: accentColor, borderColor: accentColor }
+                  ]}
+                  onPress={() => setAttendeeFilter('children')}
+                >
+                  <ThemedText style={[
+                    styles.filterOptionText,
+                    attendeeFilter === 'children' && { color: '#fff' }
+                  ]}>
+                    {t.children || 'Children'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.clearButton, { borderColor }]}
+                onPress={() => {
+                  setFilterType('all');
+                  setAttendeeFilter('all');
+                }}
+              >
+                <ThemedText style={styles.clearButtonText}>{t.clearAll || 'Clear All'}</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.applyButton, { backgroundColor: accentColor }]}
+                onPress={() => setShowFilterModal(false)}
+              >
+                <ThemedText style={styles.applyButtonText}>{t.apply || 'Apply'}</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -474,7 +512,7 @@ const styles = StyleSheet.create({
     }),
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : (StatusBar.currentHeight || 24) + 8,
+    paddingTop: Platform.OS === 'ios' ? 60 : StatusBar.currentHeight || 24,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
@@ -515,58 +553,135 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  filtersSection: {
+  filterContainer: {
     paddingHorizontal: 16,
-    marginBottom: 16,
-    gap: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
-  filterCard: {
-    borderRadius: 16,
+  filterDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    overflow: 'hidden',
-    paddingVertical: 12,
-    ...Platform.select({
-      ios: {
-        backgroundColor: 'transparent',
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    backgroundColor: 'transparent',
   },
-  filterHeader: {
+  filterDropdownLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    flex: 1,
   },
-  filterTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  filterDropdownText: {
+    fontSize: 15,
+    fontWeight: '500',
   },
-  filterScroll: {
-    paddingHorizontal: 12,
-  },
-  filterOptions: {
+  filterDropdownRight: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  filterButton: {
+  filterBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalOverlayTouch: {
+    flex: 1,
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  filterSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  filterOptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  filterOption: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
+    minWidth: 100,
   },
-  filterIcon: {
-    marginRight: 2,
-  },
-  filterButtonText: {
+  filterOptionText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  clearButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  applyButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   eventsList: {
     paddingVertical: 8,
