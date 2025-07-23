@@ -15,6 +15,7 @@ import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { PrayerTimesProvider } from "@/contexts/PrayerTimesContext";
 import { SetupFlowProvider } from "@/contexts/SetupFlowContext";
+import { EventsProvider } from "@/contexts/EventsContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { firebasePrayerTimesService } from "@/services/firebasePrayerTimes";
 
@@ -61,22 +62,24 @@ function RootLayoutContent() {
   return (
     <>
       <PrayerTimesProvider>
-        <NotificationProvider>
-          <SetupFlowProvider>
-            <ThemeProvider
-              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-            >
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" options={{ headerShown: true }} />
-              </Stack>
-              <StatusBar style="auto" />
-              
-              {/* Setup Flow Modals for testing */}
-              <SetupFlowModals />
-            </ThemeProvider>
-          </SetupFlowProvider>
-        </NotificationProvider>
+        <EventsProvider>
+          <NotificationProvider>
+            <SetupFlowProvider>
+              <ThemeProvider
+                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+              >
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+                </Stack>
+                <StatusBar style="auto" />
+                
+                {/* Setup Flow Modals for testing */}
+                <SetupFlowModals />
+              </ThemeProvider>
+            </SetupFlowProvider>
+          </NotificationProvider>
+        </EventsProvider>
       </PrayerTimesProvider>
       
       {/* Language Setup Modal for regular flow */}

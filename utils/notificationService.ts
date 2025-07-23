@@ -1,3 +1,4 @@
+import { EventNotificationPreference, EventWithId } from "@/types/event";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   NotificationPreferences,
@@ -457,6 +458,71 @@ export class NotificationService {
       await this.scheduleNotificationsForDays(prayerTimes, preferences);
     } else {
       await this.cancelAllNotifications();
+    }
+  }
+
+  // Event notification methods
+  static async scheduleEventNotification(
+    event: EventWithId,
+    preference: EventNotificationPreference
+  ): Promise<void> {
+    if (!preference.enabled || !event.calculatedStartTime) return;
+
+    try {
+      // Cancel existing notification for this event
+      await Notifications.cancelScheduledNotificationAsync(`event_${event.id}`);
+
+      const notificationTime = new Date(event.calculatedStartTime);
+      notificationTime.setMinutes(
+        notificationTime.getMinutes() - preference.minutesBefore
+      );
+
+      // Only schedule if notification time is in the future
+      if (notificationTime > new Date()) {
+        await Notifications.scheduleNotificationAsync({
+          identifier: `event_${event.id}`,
+          content: {
+            title: `🗓️ ${event.header}`,
+            body: event.subheader || `Event starts in ${preference.minutesBefore} minutes`,
+            sound: true,
+            priority: Notifications.AndroidNotificationPriority.HIGH,
+            categoryIdentifier: Platform.OS === "android" ? "events" : undefined,
+            data: {
+              type: "event",
+              eventId: event.id,
+            },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: notificationTime,
+          },
+        });
+
+        // Store that we scheduled this notification
+        preference.lastNotificationTime = new Date().toISOString();
+      }
+    } catch (error) {
+      // Error scheduling event notification
+    }
+  }
+
+  static async cancelEventNotification(eventId: string): Promise<void> {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(`event_${eventId}`);
+    } catch (error) {
+      // Error canceling event notification
+    }
+  }
+
+  static async scheduleAllEventNotifications(
+    events: EventWithId[],
+    preferences: EventNotificationPreference[]
+  ): Promise<void> {
+    for (const event of events) {
+      const preference = preferences.find(p => p.eventId === event.id);
+      if (preference) {
+        await this.scheduleEventNotification(event, preference);
+      }
     }
   }
 }

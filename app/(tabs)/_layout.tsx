@@ -65,6 +65,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="events"
+        options={{
+          title: t.tabs.events,
+          tabBarIcon: ({ color, focused }) => (
+            <IconSymbol
+              size={28}
+              name={focused ? "megaphone.fill" : "megaphone"}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="qibla"
         options={{
           title: t.tabs.qibla,

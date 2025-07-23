@@ -43,6 +43,7 @@ import { NotificationService } from "@/utils/notificationService";
 import { generatePDFHTML } from "@/utils/pdfGenerator";
 import { Asset } from "expo-asset";
 import { firebaseMosqueDetailsService } from "@/services/firebaseMosqueDetails";
+import { HomePageEvents } from "@/components/events/HomePageEvents";
 
 const { width, height } = Dimensions.get("window");
 
@@ -724,6 +725,9 @@ export default function TodayScreen() {
                   ]}
                 />
               </View>
+
+              {/* Home Page Events Section */}
+              <HomePageEvents />
 
               {/* Quick Actions - Enhanced with Notifications and Print */}
               <Animated.View
