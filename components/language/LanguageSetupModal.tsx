@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
@@ -28,6 +29,7 @@ export function LanguageSetupModal({ visible, onComplete }: LanguageSetupModalPr
   const colors = Colors[colorScheme ?? 'light'];
   const { language: currentLanguage, changeLanguage, completeLanguageSetup, t } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = React.useState<Language>(currentLanguage);
+  const insets = useSafeAreaInsets();
   
   // Update selected language when modal becomes visible
   useEffect(() => {
@@ -233,6 +235,7 @@ export function LanguageSetupModal({ visible, onComplete }: LanguageSetupModalPr
                   {
                     borderTopColor: colors.text + '10',
                     backgroundColor: colors.background,
+                    paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
                   },
                 ]}
               >

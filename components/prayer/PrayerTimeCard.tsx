@@ -23,6 +23,7 @@ import {
 import { BlurView } from "expo-blur";
 import { SunriseCard } from "./SunriseCard";
 import { localizeTime } from "@/utils/numberLocalization";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Define the notification prayer type based on your actual prayers object
 type NotificationPrayerName = keyof NotificationPreferences["prayers"];
@@ -398,6 +399,7 @@ function NotificationSettingsSheet({
   const { updatePrayerSettings } = useNotificationContext();
   const { t } = useLanguage();
   const [slideAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
     if (visible) {
@@ -458,6 +460,7 @@ function NotificationSettingsSheet({
             styles.sheetContainer,
             {
               backgroundColor: colors.background,
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 24,
               transform: [
                 {
                   translateY: slideAnim.interpolate({
@@ -750,7 +753,6 @@ const styles = StyleSheet.create({
   sheetContainer: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === "ios" ? 34 : 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,

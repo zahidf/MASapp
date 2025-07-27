@@ -12,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 import { IconSymbol } from "@/components/ui/IconSymbol";
@@ -45,6 +46,7 @@ export function NotificationSetupModal({
   );
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPrayer, setSelectedPrayer] = useState<string>("fajr");
+  const insets = useSafeAreaInsets();
   
   // Use useRef for animation values to prevent recreation
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -673,6 +675,7 @@ export function NotificationSetupModal({
                   {
                     borderTopColor: colors.text + "10",
                     backgroundColor: colors.background,
+                    paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
                   },
                 ]}
               >

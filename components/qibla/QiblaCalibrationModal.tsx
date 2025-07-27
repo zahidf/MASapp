@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface QiblaCalibrationModalProps {
   showCalibrationModal: boolean;
@@ -29,6 +30,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
   colorScheme,
 }) => {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   // Modal animation values
   const modalSlideAnim = useRef(new Animated.Value(0)).current;
   const modalFadeAnim = useRef(new Animated.Value(0)).current;
@@ -119,7 +121,7 @@ export const QiblaCalibrationModal: React.FC<QiblaCalibrationModalProps> = ({
               </View>
               
               {/* Content */}
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 24 : 24 }]}>
                 <View style={[
                   styles.modalIconContainer,
                   { backgroundColor: colors.tint + "15" }
@@ -183,7 +185,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -205,7 +206,6 @@ const styles = StyleSheet.create({
   modalContent: {
     padding: 24,
     paddingTop: 8,
-    paddingBottom: 24,
     alignItems: 'center',
   },
   modalIconContainer: {
