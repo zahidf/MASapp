@@ -21,6 +21,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Language, LANGUAGES } from "@/types/language";
+import { localizeNumbers } from "@/utils/numberLocalization";
 
 interface MenuSection {
   title: string;
@@ -212,7 +213,7 @@ export default function ExploreScreen() {
       items: [
         {
           title: t.explore.about,
-          subtitle: `${t.explore.version} 1.1.5`,
+          subtitle: `${t.explore.version} ${localizeNumbers('1.1.5', t.languageCode || 'en')}`,
           icon: "info.circle.fill",
           action: handleAbout,
         },
@@ -366,7 +367,7 @@ export default function ExploreScreen() {
             <View style={styles.mosqueStats}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: colors.tint }]}>
-                  5
+                  {localizeNumbers('5', t.languageCode || 'en')}
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
                   {t.explore.dailyPrayers}
@@ -380,7 +381,7 @@ export default function ExploreScreen() {
               />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: colors.tint }]}>
-                  365
+                  {localizeNumbers('365', t.languageCode || 'en')}
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.text + "60" }]}>
                   {t.explore.daysOpen}
@@ -438,7 +439,7 @@ export default function ExploreScreen() {
               Masjid Abubakr Siddique App
             </Text>
             <Text style={[styles.footerVersion, { color: colors.text + "30" }]}>
-              Version 1.1.1
+              {t.explore.version} {localizeNumbers('1.1.1', t.languageCode || 'en')}
             </Text>
             
             {__DEV__ && (

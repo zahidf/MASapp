@@ -252,12 +252,25 @@ export default function TodayScreen() {
   };
 
   const formatCurrentDate = () => {
-    return currentTime.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    
+    const weekday = weekdays[currentTime.getDay()];
+    const month = months[currentTime.getMonth()];
+    const day = currentTime.getDate();
+    const year = currentTime.getFullYear();
+    
+    const weekdayTranslated = t.common?.weekdays?.[weekday as keyof typeof t.common.weekdays] || weekday;
+    const monthTranslated = t.common?.months?.[month as keyof typeof t.common.months] || month;
+    const dayLocalized = localizeNumbers(day.toString(), t.languageCode || 'en');
+    const yearLocalized = localizeNumbers(year.toString(), t.languageCode || 'en');
+    
+    // Format based on language
+    if (t.languageCode === 'ar' || t.languageCode === 'fa' || t.languageCode === 'ps') {
+      return `${weekdayTranslated}، ${dayLocalized} ${monthTranslated} ${yearLocalized}`;
+    } else {
+      return `${weekdayTranslated}, ${monthTranslated} ${dayLocalized}, ${yearLocalized}`;
+    }
   };
 
   const formatCurrentHijriDate = () => {
@@ -541,7 +554,7 @@ export default function TodayScreen() {
             <View style={styles.headerMainRow}>
               <View style={styles.headerTextSection}>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>
-                  Today
+                  {t.home.today}
                 </Text>
                 <Text
                   style={[styles.headerSubtitle, { color: colors.text + "80" }]}
