@@ -18,8 +18,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
-import { SvgXml } from "react-native-svg";
 
 
 import { PrayerTimesDisplay } from "@/components/prayer/PrayerTimesDisplay";
@@ -41,7 +41,6 @@ import { getCurrentHijriDate, formatHijriDate } from "@/utils/hijriDateUtils";
 import { localizeNumbers } from "@/utils/numberLocalization";
 import { NotificationService } from "@/utils/notificationService";
 import { generatePDFHTML } from "@/utils/pdfGenerator";
-import { Asset } from "expo-asset";
 import { firebaseMosqueDetailsService } from "@/services/firebaseMosqueDetails";
 import { HomePageEvents } from "@/components/events/HomePageEvents";
 
@@ -65,7 +64,6 @@ export default function TodayScreen() {
   const [pulseAnim] = useState(new Animated.Value(1));
   const [monthData, setMonthData] = useState<PrayerTime[]>([]);
   const [isExporting, setIsExporting] = useState(false);
-  const [logoSvg, setLogoSvg] = useState<string>("");
   const [slideAnim] = useState(new Animated.Value(0));
   const [notificationSlideAnim] = useState(new Animated.Value(0));
 
@@ -127,23 +125,8 @@ export default function TodayScreen() {
     }
   };
 
-  // Load SVG logo
-  useEffect(() => {
-    const loadLogo = async () => {
-      try {
-        const asset = Asset.fromModule(
-          require("@/assets/logos/mosqueLogo.svg")
-        );
-        await asset.downloadAsync();
-        const response = await fetch(asset.localUri || asset.uri);
-        const svgContent = await response.text();
-        setLogoSvg(svgContent);
-      } catch (error) {
-        // Error loading logo
-      }
-    };
-    loadLogo();
-  }, []);
+  // Logo image source
+  const mosqueLogoSource = require("@/assets/logos/mosqueLogo.png");
 
   // Keep all your existing useEffect hooks exactly the same
   useEffect(() => {
@@ -452,15 +435,11 @@ export default function TodayScreen() {
 
                 {/* Mosque Logo */}
                 <View style={styles.logoContainer}>
-                  {logoSvg ? (
-                    <SvgXml xml={logoSvg} width={32} height={32} />
-                  ) : (
-                    <IconSymbol
-                      name="building.2"
-                      size={28}
-                      color={colors.text + "60"}
-                    />
-                  )}
+                  <Image 
+                    source={mosqueLogoSource} 
+                    style={{ width: 32, height: 32 }}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
             </View>
@@ -579,15 +558,11 @@ export default function TodayScreen() {
               <View style={styles.headerActions}>
                 {/* Mosque Logo */}
                 <View style={styles.logoContainer}>
-                  {logoSvg ? (
-                    <SvgXml xml={logoSvg} width={48} height={48} />
-                  ) : (
-                    <IconSymbol
-                      name="building.2"
-                      size={28}
-                      color={colors.text + "60"}
-                    />
-                  )}
+                  <Image 
+                    source={mosqueLogoSource} 
+                    style={{ width: 48, height: 48 }}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
             </View>
@@ -1064,15 +1039,11 @@ export default function TodayScreen() {
                   ]}
                 >
                   <View style={styles.mosqueLogoContainer}>
-                    {logoSvg ? (
-                      <SvgXml xml={logoSvg} width={32} height={32} />
-                    ) : (
-                      <IconSymbol
-                        name="building.2"
-                        size={20}
-                        color={colors.text + "60"}
-                      />
-                    )}
+                    <Image 
+                      source={mosqueLogoSource} 
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
+                    />
                   </View>
                   <View style={styles.mosqueInfoContent}>
                     <ThemedText
@@ -1104,15 +1075,11 @@ export default function TodayScreen() {
                   ]}
                 >
                   <View style={styles.mosqueLogoContainer}>
-                    {logoSvg ? (
-                      <SvgXml xml={logoSvg} width={32} height={32} />
-                    ) : (
-                      <IconSymbol
-                        name="building.2"
-                        size={20}
-                        color={colors.text + "60"}
-                      />
-                    )}
+                    <Image 
+                      source={mosqueLogoSource} 
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
+                    />
                   </View>
                   <View style={styles.mosqueInfoContent}>
                     <ThemedText

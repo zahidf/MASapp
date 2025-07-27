@@ -1,4 +1,3 @@
-import { Asset } from "expo-asset";
 import { BlurView } from "expo-blur";
 import React from "react";
 import {
@@ -13,8 +12,8 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  Image,
 } from "react-native";
-import { SvgXml } from "react-native-svg";
 
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
@@ -44,25 +43,12 @@ export default function ExploreScreen() {
   const { showSetupModal } = useNotificationContext();
   const [fadeAnim] = React.useState(new Animated.Value(0));
   const [headerAnim] = React.useState(new Animated.Value(0));
-  const [logoSvg, setLogoSvg] = React.useState<string>("");
   const [showLanguageMenu, setShowLanguageMenu] = React.useState(false);
 
+  // Logo image source
+  const mosqueLogoSource = require("@/assets/logos/mosqueLogo.png");
+
   React.useEffect(() => {
-    // Load SVG logo
-    const loadLogo = async () => {
-      try {
-        const asset = Asset.fromModule(
-          require("@/assets/logos/mosqueLogo.svg")
-        );
-        await asset.downloadAsync();
-        const response = await fetch(asset.localUri || asset.uri);
-        const svgContent = await response.text();
-        setLogoSvg(svgContent);
-      } catch (error) {
-        // Error loading logo
-      }
-    };
-    loadLogo();
 
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -362,15 +348,11 @@ export default function ExploreScreen() {
                   { backgroundColor: colors.tint + "15" },
                 ]}
               >
-                {logoSvg ? (
-                  <SvgXml xml={logoSvg} width={48} height={48} />
-                ) : (
-                  <IconSymbol
-                    name="building.2.fill"
-                    size={32}
-                    color={colors.tint}
-                  />
-                )}
+                <Image 
+                  source={mosqueLogoSource} 
+                  style={{ width: 48, height: 48 }}
+                  resizeMode="contain"
+                />
               </View>
             </View>
 

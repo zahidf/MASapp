@@ -1057,17 +1057,20 @@ const getMosqueLogoBase64 = async (): Promise<string> => {
     const asset = Asset.fromModule(require("../assets/logos/mosqueLogo.png"));
     await asset.downloadAsync();
 
-    if (!asset.localUri) {
-      throw new Error("Could not get local URI for PNG asset");
+    // Use localUri if available (iOS), otherwise fall back to uri (Android)
+    const uri = asset.localUri || asset.uri;
+    if (!uri) {
+      throw new Error("Could not get URI for PNG asset");
     }
 
-    // Read as base64 directly for PNG
-    const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
+    // Read as base64 directly
+    const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
 
     return `data:image/png;base64,${base64}`;
   } catch (error) {
+    console.error('Error loading mosque logo:', error);
     // Error loading mosque logo
 
     // Fallback to a simple mosque icon if the file can't be loaded
